@@ -6,6 +6,7 @@ export interface ProfileDto {
   nickname: string | null;
   first_name: string | null;
   last_name: string | null;
+  date_of_birth: string | null;
   email: string | null;
   phone: string | null;
   avatar_url: string | null;
@@ -33,6 +34,7 @@ export interface UpdateMePayload {
   nickname?: string | null;
   first_name?: string | null;
   last_name?: string | null;
+  date_of_birth?: string | null;
   email?: string | null;
   phone?: string | null;
   user_prompt?: string | null;

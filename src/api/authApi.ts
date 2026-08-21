@@ -23,6 +23,7 @@ function toProfile(dto: ProfileDto): Profile {
     nickname: dto.nickname,
     firstName: dto.first_name,
     lastName: dto.last_name,
+    dateOfBirth: dto.date_of_birth,
     email: dto.email,
     phone: dto.phone,
     avatarUrl: dto.avatar_url,

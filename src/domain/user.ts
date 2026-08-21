@@ -9,6 +9,7 @@ export interface User {
   nickname: string | null;
   firstName: string | null;
   lastName: string | null;
+  dateOfBirth: string | null;
   email: string | null;
   phone: string | null;
   avatarUrl: string | null;

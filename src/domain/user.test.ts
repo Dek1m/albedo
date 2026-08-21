@@ -9,6 +9,7 @@ function user(partial: Partial<User>): User {
     nickname: null,
     firstName: null,
     lastName: null,
+    dateOfBirth: null,
     email: null,
     phone: null,
     avatarUrl: null,

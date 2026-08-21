@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import type { ChipDisplayMode } from '../../domain/chipDisplayMode';
 import { chipLabel } from '../../domain/user';
 import { humanMessage } from '../../api/errors';
 import { Avatar } from '../../shared/ui/Avatar';
+import { DatePicker } from '../../shared/ui/DatePicker';
 import { toast } from '../../shared/toast/toastStore';
 import { COUNTRIES, formatPhone, phonePayload, type Country } from '../../shared/ui/phone';
 import { selectDisplayMode } from './displayMutex';
@@ -19,6 +20,7 @@ const schema = z.object({
   nickname: z.string(),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  dateOfBirth: z.string(),
   email: z.string(),
   phone: z.string(),
   username: z.string().min(1, 'Username is required'),
@@ -27,8 +29,26 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+function buildAutoPrompt(values: {
+  nickname: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+}): string {
+  const lines: string[] = [];
+  const name = [values.firstName, values.lastName].filter(Boolean).join(' ');
+  if (name) lines.push(`**Name:** ${name}`);
+  if (values.nickname) lines.push(`**Nickname:** ${values.nickname}`);
+  if (values.dateOfBirth) {
+    const [y, m, d] = values.dateOfBirth.split('-');
+    if (y && m && d) lines.push(`**Date of birth:** ${d}.${m}.${y}`);
+  }
+  return lines.join('\n');
+}
+
 export function GeneralTab(): ReactElement | null {
   const profile = useAuthStore((state) => state.profile);
+  const setProfile = useAuthStore((state) => state.setProfile);
   const [mode, setMode] = useState<ChipDisplayMode>(profile?.chipDisplayMode ?? 'nickname');
   const [country, setCountry] = useState<Country>(COUNTRIES[0] as Country);
   const [phoneDisplay, setPhoneDisplay] = useState(profile?.phone ? formatPhone(profile.phone, COUNTRIES[0] as Country) : '');
@@ -48,6 +68,7 @@ export function GeneralTab(): ReactElement | null {
       nickname: profile?.nickname ?? '',
       firstName: profile?.firstName ?? '',
       lastName: profile?.lastName ?? '',
+      dateOfBirth: profile?.dateOfBirth ?? '',
       email: profile?.email ?? '',
       phone: profile?.phone ?? '',
       username: profile?.username ?? '',
@@ -58,9 +79,14 @@ export function GeneralTab(): ReactElement | null {
   const nickname = watch('nickname');
   const firstName = watch('firstName');
   const lastName = watch('lastName');
+  const dateOfBirth = watch('dateOfBirth');
+  const userPrompt = watch('userPrompt');
 
   const hasNickname = nickname.trim().length > 0;
   const hasFullName = firstName.trim().length > 0 && lastName.trim().length > 0;
+
+  const autoPrompt = useMemo(() => buildAutoPrompt({ nickname, firstName, lastName, dateOfBirth }), [nickname, firstName, lastName, dateOfBirth]);
+  const showAutoHint = !userPrompt.trim();
 
   // Auto-switch display mode when fields change
   useEffect(() => {
@@ -124,6 +150,10 @@ export function GeneralTab(): ReactElement | null {
     reader.readAsText(file);
   };
 
+  const onApplyAutoPrompt = () => {
+    setValue('userPrompt', autoPrompt, { shouldDirty: true });
+  };
+
   const hasSensitiveChanges = (values: FormValues): boolean => {
     return (
       values.email !== (profile.email ?? '') ||
@@ -138,11 +168,14 @@ export function GeneralTab(): ReactElement | null {
         nickname: values.nickname,
         first_name: values.firstName,
         last_name: values.lastName,
+        date_of_birth: values.dateOfBirth || null,
         email: values.email,
         phone: values.phone,
         user_prompt: values.userPrompt,
         chip_display_mode: mode,
       });
+      // Update local profile with new date_of_birth
+      setProfile({ ...profile, dateOfBirth: values.dateOfBirth || null });
       if (values.username !== profile.username) {
         if (!password) {
           toast('Password required to change username');
@@ -251,6 +284,14 @@ export function GeneralTab(): ReactElement | null {
           </label>
         </div>
 
+        {/* Date of birth */}
+        <DatePicker
+          id="dateOfBirth"
+          label="Date of birth"
+          value={dateOfBirth}
+          onChange={(iso) => setValue('dateOfBirth', iso, { shouldDirty: true })}
+        />
+
         {/* Email */}
         <label className="form-label" htmlFor="email">
           Email
@@ -285,10 +326,19 @@ export function GeneralTab(): ReactElement | null {
         </label>
         <input id="username" className="form-control form-control-sm" autoComplete="username" {...register('username')} />
 
-        {/* Prompt */}
+        {/* System prompt */}
         <label className="form-label" htmlFor="userPrompt">
           System prompt
         </label>
+        {showAutoHint ? (
+          <div className="albedo-auto-prompt-hint">
+            <p className="albedo-auto-prompt-text">Auto-generated from profile:</p>
+            <pre className="albedo-auto-prompt-preview">{autoPrompt}</pre>
+            <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={onApplyAutoPrompt}>
+              Apply
+            </button>
+          </div>
+        ) : null}
         <textarea id="userPrompt" className="form-control form-control-sm" rows={3} {...register('userPrompt')} />
         <label className="btn btn-sm albedo-ghost-btn align-self-start">
           Upload .txt / .md
