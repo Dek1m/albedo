@@ -20,7 +20,7 @@ services:
       ALBEDO_LISTEN_PORT: ${ALBEDO_LISTEN_PORT:-8080}
       ALBEDO_API_URL: ${ALBEDO_API_URL:-http://belle:8080}
     ports:
-      - "${ALBEDO_PUBLISH_HOST:-0.0.0.0}:${ALBEDO_PUBLISH_PORT:-8080}:${ALBEDO_LISTEN_PORT:-8080}"
+      - "${ALBEDO_PUBLISH_HOST:-0.0.0.0}:${ALBEDO_PUBLISH_PORT:-5173}:${ALBEDO_LISTEN_PORT:-8080}"
     volumes:
       - ./config:/etc/albedo:ro
     depends_on:
