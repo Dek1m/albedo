@@ -83,7 +83,7 @@ export function BootstrapPage(): ReactElement {
           </label>
           <input
             id="bootstrap-username"
-            className="form-control"
+            className="form-control form-control-sm"
             autoComplete="username"
             {...register('username')}
           />
@@ -95,7 +95,7 @@ export function BootstrapPage(): ReactElement {
           <input
             id="bootstrap-password"
             type="password"
-            className="form-control"
+            className="form-control form-control-sm"
             autoComplete="new-password"
             {...register('password')}
           />
@@ -107,14 +107,14 @@ export function BootstrapPage(): ReactElement {
           <input
             id="bootstrap-email"
             type="email"
-            className="form-control"
+            className="form-control form-control-sm"
             autoComplete="email"
             {...register('email')}
           />
 
           {formError ? <p className="albedo-auth-error">{formError}</p> : null}
 
-          <button className="btn btn-albedo-primary w-100" type="submit" disabled={isSubmitting}>
+          <button className="btn btn-sm btn-albedo-primary w-100" type="submit" disabled={isSubmitting}>
             Создать
           </button>
         </form>

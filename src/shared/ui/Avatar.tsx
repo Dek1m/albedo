@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { initials } from '../../domain/user';
 
@@ -7,9 +8,13 @@ interface AvatarProps {
   size?: number;
 }
 
-export function Avatar({ label, src, size = 36 }: AvatarProps): ReactElement {
+export function Avatar({ label, src, size = 28 }: AvatarProps): ReactElement {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    setBroken(false);
+  }, [src]);
   const dim = { width: size, height: size };
-  if (src) {
+  if (src && !broken) {
     return (
       <img
         className="albedo-avatar-img"
@@ -18,6 +23,7 @@ export function Avatar({ label, src, size = 36 }: AvatarProps): ReactElement {
         width={size}
         height={size}
         referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
       />
     );
   }

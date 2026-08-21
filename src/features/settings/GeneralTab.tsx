@@ -115,7 +115,7 @@ export function GeneralTab(): ReactElement | null {
   return (
     <form className="albedo-settings-form" onSubmit={onSubmit} noValidate>
       <div className="albedo-settings-avatar">
-        <Avatar label={chipLabel({ ...profile, chipDisplayMode: mode })} src={profile.avatarUrl} size={88} />
+        <Avatar label={chipLabel({ ...profile, chipDisplayMode: mode })} src={profile.avatarUrl} size={56} />
         <label className="btn btn-albedo-primary btn-sm">
           Загрузить
           <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onAvatar} />
@@ -127,7 +127,7 @@ export function GeneralTab(): ReactElement | null {
           <label className="form-label" htmlFor="nickname">
             Никнейм
           </label>
-          <input id="nickname" className="form-control" {...register('nickname')} />
+          <input id="nickname" className="form-control form-control-sm" {...register('nickname')} />
         </div>
         <label className="form-check albedo-settings-check">
           <input
@@ -146,13 +146,13 @@ export function GeneralTab(): ReactElement | null {
             <label className="form-label" htmlFor="firstName">
               Firstname
             </label>
-            <input id="firstName" className="form-control" {...register('firstName')} />
+              <input id="firstName" className="form-control form-control-sm" {...register('firstName')} />
           </div>
           <div className="flex-grow-1">
             <label className="form-label" htmlFor="lastName">
               Lastname
             </label>
-            <input id="lastName" className="form-control" {...register('lastName')} />
+              <input id="lastName" className="form-control form-control-sm" {...register('lastName')} />
           </div>
         </div>
         <label className="form-check albedo-settings-check">
@@ -169,19 +169,19 @@ export function GeneralTab(): ReactElement | null {
       <label className="form-label" htmlFor="email">
         E-mail
       </label>
-      <input id="email" type="email" className="form-control" {...register('email')} />
+      <input id="email" type="email" className="form-control form-control-sm" {...register('email')} />
 
       <label className="form-label" htmlFor="phone">
         Телефон
       </label>
-      <input id="phone" className="form-control" {...register('phone')} />
+      <input id="phone" className="form-control form-control-sm" {...register('phone')} />
 
       <div className="albedo-settings-row">
         <div className="flex-grow-1">
           <label className="form-label" htmlFor="username">
             Логин
           </label>
-          <input id="username" className="form-control" autoComplete="username" {...register('username')} />
+          <input id="username" className="form-control form-control-sm" autoComplete="username" {...register('username')} />
         </div>
         <div className="flex-grow-1">
           <label className="form-label" htmlFor="password">
@@ -190,7 +190,7 @@ export function GeneralTab(): ReactElement | null {
           <input
             id="password"
             type="password"
-            className="form-control"
+            className="form-control form-control-sm"
             autoComplete="current-password"
             {...register('password')}
           />
@@ -200,7 +200,7 @@ export function GeneralTab(): ReactElement | null {
       <label className="form-label" htmlFor="userPrompt">
         Пользовательский промпт
       </label>
-      <textarea id="userPrompt" className="form-control" rows={5} {...register('userPrompt')} />
+      <textarea id="userPrompt" className="form-control form-control-sm" rows={3} {...register('userPrompt')} />
       <label className="btn btn-sm albedo-ghost-btn align-self-start">
         Загрузить .txt / .md
         <input type="file" accept=".txt,.md,text/plain,text/markdown" hidden onChange={onPromptFile} />
@@ -209,7 +209,7 @@ export function GeneralTab(): ReactElement | null {
       {error ? <p className="albedo-auth-error">{error}</p> : null}
       {ok ? <p className="albedo-auth-hint">{ok}</p> : null}
 
-      <button className="btn btn-albedo-primary" type="submit" disabled={isSubmitting}>
+      <button className="btn btn-sm btn-albedo-primary" type="submit" disabled={isSubmitting}>
         Сохранить
       </button>
     </form>

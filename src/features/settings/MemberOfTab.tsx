@@ -78,7 +78,7 @@ export function MemberOfTab(): ReactElement | null {
 
       <div className="albedo-member-actions">
         <select
-          className="form-control"
+          className="form-control form-control-sm"
           value={addId}
           onChange={(event) => setAddId(event.target.value)}
         >
@@ -89,12 +89,12 @@ export function MemberOfTab(): ReactElement | null {
             </option>
           ))}
         </select>
-        <button type="button" className="btn btn-albedo-primary" onClick={() => void onAdd()} disabled={!addId}>
+        <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => void onAdd()} disabled={!addId}>
           Add
         </button>
         <button
           type="button"
-          className="btn albedo-ghost-btn"
+          className="btn btn-sm albedo-ghost-btn"
           onClick={() => void onRemove()}
           disabled={!allowRemove}
           title={blocked ?? undefined}

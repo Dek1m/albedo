@@ -28,7 +28,7 @@ export function Modal({ open, title, onClose, children }: ModalProps): ReactElem
   return (
     <div className="modal d-block albedo-modal" role="dialog" aria-modal="true" aria-label={title}>
       <div className="albedo-modal-backdrop" onClick={onClose} />
-      <div className="modal-dialog modal-lg modal-dialog-centered">
+      <div className="modal-dialog modal-dialog-centered albedo-modal-dialog">
         <div className="modal-content">
           <div className="modal-header">
             <h2 className="modal-title fs-5">{title}</h2>

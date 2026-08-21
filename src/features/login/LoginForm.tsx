@@ -52,7 +52,7 @@ export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
       </label>
       <input
         id="username"
-        className="form-control"
+        className="form-control form-control-sm"
         autoComplete="username"
         {...register('username')}
       />
@@ -64,7 +64,7 @@ export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
       <input
         id="password"
         type="password"
-        className="form-control"
+        className="form-control form-control-sm"
         autoComplete="current-password"
         {...register('password')}
       />
@@ -72,7 +72,7 @@ export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
 
       {formError ? <p className="albedo-auth-error">{formError}</p> : null}
 
-      <button className="btn btn-albedo-primary w-100" type="submit" disabled={isSubmitting}>
+      <button className="btn btn-sm btn-albedo-primary w-100" type="submit" disabled={isSubmitting}>
         Войти
       </button>
     </form>

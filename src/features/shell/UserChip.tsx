@@ -22,7 +22,7 @@ export function UserChip(): ReactElement | null {
           </span>
         ) : null}
       </span>
-      <Avatar label={label} src={profile.avatarUrl} size={36} />
+      <Avatar label={label} src={profile.avatarUrl} size={26} />
     </button>
   );
 }
