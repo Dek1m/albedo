@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -11,15 +11,16 @@ import { chipLabel } from '../../domain/user';
 import { humanMessage } from '../../api/errors';
 import { Avatar } from '../../shared/ui/Avatar';
 import { toast } from '../../shared/toast/toastStore';
+import { COUNTRIES, formatPhone, phonePayload, type Country } from '../../shared/ui/phone';
 import { selectDisplayMode } from './displayMutex';
 
 const schema = z.object({
   nickname: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   email: z.string(),
   phone: z.string(),
-  username: z.string().min(1),
+  username: z.string().min(1, 'Username is required'),
   password: z.string(),
   userPrompt: z.string(),
 });
@@ -29,11 +30,13 @@ type FormValues = z.infer<typeof schema>;
 export function GeneralTab(): ReactElement | null {
   const profile = useAuthStore((state) => state.profile);
   const [mode, setMode] = useState<ChipDisplayMode>(profile?.chipDisplayMode ?? 'nickname');
-  const [ok, setOk] = useState<string | null>(null);
+  const [country, setCountry] = useState<Country>(COUNTRIES[0] as Country);
+  const [phoneDisplay, setPhoneDisplay] = useState(profile?.phone ? formatPhone(profile.phone, COUNTRIES[0] as Country) : '');
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
@@ -48,6 +51,37 @@ export function GeneralTab(): ReactElement | null {
     },
   });
 
+  const nickname = watch('nickname');
+  const firstName = watch('firstName');
+  const lastName = watch('lastName');
+
+  const hasNickname = nickname.trim().length > 0;
+  const hasFullName = firstName.trim().length > 0 && lastName.trim().length > 0;
+
+  const onPhoneChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.value;
+      const formatted = formatPhone(raw, country);
+      setPhoneDisplay(formatted);
+      setValue('phone', phonePayload(formatted), { shouldDirty: true });
+    },
+    [country, setValue],
+  );
+
+  const onCountryChange = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) => {
+      const next = COUNTRIES.find((c) => c.code === e.target.value) ?? (COUNTRIES[0] as Country);
+      setCountry(next);
+      setPhoneDisplay((prev) => {
+        const digits = prev.replace(/\D/g, '');
+        const formatted = formatPhone(digits, next);
+        setValue('phone', phonePayload(formatted), { shouldDirty: true });
+        return formatted;
+      });
+    },
+    [setValue],
+  );
+
   if (!profile) {
     return null;
   }
@@ -60,7 +94,7 @@ export function GeneralTab(): ReactElement | null {
     }
     try {
       await uploadAvatar(file);
-      toast('Аватар обновлён', 'ok');
+      toast('Avatar updated', 'ok');
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -82,10 +116,9 @@ export function GeneralTab(): ReactElement | null {
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    setOk(null);
     const parsed = schema.safeParse(values);
     if (!parsed.success) {
-      toast(parsed.error.issues[0]?.message ?? 'Проверьте поля');
+      toast(parsed.error.issues[0]?.message ?? 'Check fields');
       return;
     }
     try {
@@ -100,12 +133,12 @@ export function GeneralTab(): ReactElement | null {
       });
       if (parsed.data.username !== profile.username) {
         if (!parsed.data.password) {
-          toast('Для смены логина нужен текущий пароль');
+          toast('Current password required to change username');
           return;
         }
         await changeUsername(parsed.data.username, parsed.data.password);
       }
-      toast('Сохранено', 'ok');
+      toast('Saved', 'ok');
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -116,15 +149,16 @@ export function GeneralTab(): ReactElement | null {
       <div className="albedo-settings-avatar">
         <Avatar label={chipLabel({ ...profile, chipDisplayMode: mode })} src={profile.avatarUrl} size={56} />
         <label className="btn btn-albedo-primary btn-sm">
-          Загрузить
+          Upload
           <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onAvatar} />
         </label>
       </div>
 
+      {/* Nickname */}
       <div className="albedo-settings-row">
         <div className="flex-grow-1">
           <label className="form-label" htmlFor="nickname">
-            Никнейм
+            Nickname
           </label>
           <input id="nickname" className="form-control form-control-sm" {...register('nickname')} />
         </div>
@@ -133,23 +167,25 @@ export function GeneralTab(): ReactElement | null {
             className="form-check-input"
             type="checkbox"
             checked={mode === 'nickname'}
+            disabled={!hasNickname}
             onChange={() => setMode(selectDisplayMode('nickname'))}
           />
-          <span className="form-check-label">отображать</span>
+          <span className="form-check-label">display</span>
         </label>
       </div>
 
+      {/* First / Last name */}
       <div className="albedo-settings-row">
         <div className="flex-grow-1 d-flex gap-2">
           <div className="flex-grow-1">
             <label className="form-label" htmlFor="firstName">
-              Firstname
+              First name *
             </label>
             <input id="firstName" className="form-control form-control-sm" {...register('firstName')} />
           </div>
           <div className="flex-grow-1">
             <label className="form-label" htmlFor="lastName">
-              Lastname
+              Last name *
             </label>
             <input id="lastName" className="form-control form-control-sm" {...register('lastName')} />
           </div>
@@ -159,32 +195,52 @@ export function GeneralTab(): ReactElement | null {
             className="form-check-input"
             type="checkbox"
             checked={mode === 'full_name'}
+            disabled={!hasFullName}
             onChange={() => setMode(selectDisplayMode('full_name'))}
           />
-          <span className="form-check-label">отображать</span>
+          <span className="form-check-label">display</span>
         </label>
       </div>
 
+      {/* Email */}
       <label className="form-label" htmlFor="email">
-        E-mail
+        Email
       </label>
       <input id="email" type="email" className="form-control form-control-sm" {...register('email')} />
 
+      {/* Phone */}
       <label className="form-label" htmlFor="phone">
-        Телефон
+        Phone
       </label>
-      <input id="phone" className="form-control form-control-sm" {...register('phone')} />
+      <div className="albedo-phone-row">
+        <select className="form-control form-control-sm albedo-phone-country" value={country.code} onChange={onCountryChange}>
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.flag} {c.dial}
+            </option>
+          ))}
+        </select>
+        <input
+          id="phone"
+          className="form-control form-control-sm"
+          value={phoneDisplay}
+          onChange={onPhoneChange}
+          placeholder={country.placeholder}
+          maxLength={18}
+        />
+      </div>
 
+      {/* Username + Password */}
       <div className="albedo-settings-row">
         <div className="flex-grow-1">
           <label className="form-label" htmlFor="username">
-            Логин
+            Username *
           </label>
           <input id="username" className="form-control form-control-sm" autoComplete="username" {...register('username')} />
         </div>
         <div className="flex-grow-1">
           <label className="form-label" htmlFor="password">
-            Пароль (для смены логина)
+            Password (to change username)
           </label>
           <input
             id="password"
@@ -196,19 +252,18 @@ export function GeneralTab(): ReactElement | null {
         </div>
       </div>
 
+      {/* Prompt */}
       <label className="form-label" htmlFor="userPrompt">
-        Пользовательский промпт
+        System prompt
       </label>
       <textarea id="userPrompt" className="form-control form-control-sm" rows={3} {...register('userPrompt')} />
       <label className="btn btn-sm albedo-ghost-btn align-self-start">
-        Загрузить .txt / .md
+        Upload .txt / .md
         <input type="file" accept=".txt,.md,text/plain,text/markdown" hidden onChange={onPromptFile} />
       </label>
 
-      {ok ? <p className="albedo-auth-hint">{ok}</p> : null}
-
       <button className="btn btn-sm btn-albedo-primary" type="submit" disabled={isSubmitting}>
-        Сохранить
+        Save
       </button>
     </form>
   );

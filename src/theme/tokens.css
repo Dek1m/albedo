@@ -249,6 +249,17 @@ body {
   gap: 0.55rem;
 }
 
+.albedo-phone-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.albedo-phone-country {
+  width: auto;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
 .albedo-member-actions {
   display: flex;
   flex-wrap: wrap;
