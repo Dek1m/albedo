@@ -1,4 +1,4 @@
-// Bootstrap — только контролы. Хром продукта задаёт tokens.css.
+// Bootstrap overrides — gray chrome, violet focus ring.
 
 body {
   background-color: var(--bg-base);
@@ -7,17 +7,18 @@ body {
 
 .form-control,
 .form-control-sm {
-  background-color: #08080c;
+  background-color: var(--bg-surface);
   color: var(--text-primary);
-  border-color: var(--line);
-  border-radius: 3px;
-  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  transition: border-color 0.15s;
 
   &:focus {
-    background-color: #08080c;
+    background-color: var(--bg-surface);
     color: var(--text-primary);
-    border-color: #6d28d9;
-    box-shadow: var(--focus-ring);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
   }
 
   &::placeholder {
@@ -26,27 +27,28 @@ body {
 }
 
 .form-check-input {
-  background-color: #08080c;
-  border-color: var(--line);
+  background-color: var(--bg-surface);
+  border-color: var(--border);
 
   &:focus {
-    box-shadow: var(--focus-ring);
-    border-color: #6d28d9;
+    box-shadow: 0 0 0 1px var(--accent);
+    border-color: var(--accent);
   }
 
   &:checked {
-    background-color: #6d28d9;
-    border-color: #6d28d9;
+    background-color: var(--accent);
+    border-color: var(--accent);
   }
 }
 
 .nav-tabs {
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--border);
 
   .nav-link {
     color: var(--text-muted);
     font-size: 0.78rem;
     padding: 0.3rem 0.55rem;
+    transition: color 0.15s;
 
     &:hover {
       color: var(--text-primary);
@@ -54,25 +56,29 @@ body {
     }
 
     &.active {
-      color: #8b5cf6;
-      background-color: var(--bg-elevated);
-      border-color: var(--line) var(--line) var(--bg-elevated);
+      color: var(--text-primary);
+      background-color: var(--bg-surface);
+      border-color: var(--border) var(--border) var(--bg-surface);
     }
   }
 }
 
 .list-group-item {
-  background-color: #08080c;
+  background-color: var(--bg-surface);
   color: var(--text-primary);
-  border-color: var(--line);
+  border-color: var(--border);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   padding: 0.4rem 0.65rem;
+  transition: border-color 0.15s;
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
 
   &.active {
-    background-image: none;
-    background-color: rgb(109 40 217 / 16%);
-    border-color: var(--line-strong);
+    background-color: var(--accent-bg);
+    border-color: var(--accent);
     color: var(--text-primary);
   }
 }
@@ -80,48 +86,46 @@ body {
 .modal-content {
   background-color: var(--bg-elevated);
   color: var(--text-primary);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  box-shadow: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .modal-header {
-  border-bottom-color: var(--line);
-  padding: 0.55rem 0.8rem;
+  border-bottom-color: var(--border);
+  padding: 0.6rem 0.85rem;
 }
 
 .modal-title {
   font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .modal-body {
-  padding: 0.7rem 0.8rem 0.85rem;
+  padding: 0.75rem 0.85rem 0.9rem;
 }
 
 .form-label {
-  color: var(--text-muted);
-  margin-bottom: 0.12rem;
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.15rem;
+  font-size: 0.75rem;
 }
 
 .form-control:disabled {
-  background-color: #060608;
+  background-color: var(--bg-base);
   color: var(--text-muted);
 }
 
 .btn-albedo-primary {
-  color: #e9e9f2;
-  border: 1px solid #6d28d9;
-  background: rgb(109 40 217 / 18%);
-  box-shadow: none;
+  color: #fff;
+  border: 1px solid var(--accent);
+  background: var(--accent-bg);
+  transition: background 0.15s, border-color 0.15s;
 
   &:hover,
   &:focus-visible {
     color: #fff;
-    background: rgb(109 40 217 / 32%);
-    border-color: #8b5cf6;
-    box-shadow: none;
+    background: rgb(124 92 191 / 22%);
+    border-color: var(--accent-hover);
   }
 }
