@@ -35,9 +35,11 @@ export function BootstrapPage(): ReactElement {
           navigate('/login', { replace: true });
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
-          navigate('/login', { replace: true });
+          setFormError(
+            error instanceof ApiError ? error.message : 'Не удалось проверить bootstrap',
+          );
         }
       });
     return () => {

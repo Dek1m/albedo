@@ -25,10 +25,13 @@ server {
     }
 
     # Same-origin API. Браузер ходит только на albedo.
-    # proxy_pass без URI-path: /api/v1/... уходит на belle как /api/v1/...
+    # Переменная + docker DNS: после recreate belle IP меняется, статический
+    # proxy_pass держит мёртвый адрес → 502.
     # ALBEDO_API_URL — origin без хвостового слэша (http://belle:8080).
     location /api/ {
-        proxy_pass ${ALBEDO_API_URL};
+        resolver 127.0.0.11 valid=10s ipv6=off;
+        set $albedo_upstream ${ALBEDO_API_URL};
+        proxy_pass $albedo_upstream;
         proxy_http_version 1.1;
 
         # Host страницы (= host браузера). __Host- сядет на него, не на belle.
