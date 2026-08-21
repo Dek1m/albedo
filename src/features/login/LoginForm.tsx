@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ApiError } from '../../api/errors';
+import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 
 const loginSchema = z.object({
@@ -39,7 +39,7 @@ export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
     try {
       await onSubmit(parsed.data);
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'Не удалось войти');
+      toast(humanMessage(error));
     }
   });
 

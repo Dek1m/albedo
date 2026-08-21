@@ -8,6 +8,7 @@ import { uploadAvatar } from '../../application/profile/uploadAvatar';
 import { useAuthStore } from '../../auth/AuthStore';
 import type { ChipDisplayMode } from '../../domain/chipDisplayMode';
 import { chipLabel } from '../../domain/user';
+import { humanMessage } from '../../api/errors';
 import { Avatar } from '../../shared/ui/Avatar';
 import { toast } from '../../shared/toast/toastStore';
 import { selectDisplayMode } from './displayMutex';
@@ -61,7 +62,7 @@ export function GeneralTab(): ReactElement | null {
       await uploadAvatar(file);
       toast('Аватар обновлён', 'ok');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Не удалось загрузить аватар');
+      toast(humanMessage(err));
     }
   };
 
@@ -106,7 +107,7 @@ export function GeneralTab(): ReactElement | null {
       }
       toast('Сохранено', 'ok');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Не удалось сохранить');
+      toast(humanMessage(err));
     }
   });
 

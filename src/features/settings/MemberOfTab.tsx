@@ -5,6 +5,7 @@ import { addMembership } from '../../application/groups/addMembership';
 import { loadMyGroups } from '../../application/groups/loadMyGroups';
 import { removeMembership } from '../../application/groups/removeMembership';
 import { authApi } from '../../api/authApi';
+import { humanMessage } from '../../api/errors';
 import { useAuthStore } from '../../auth/AuthStore';
 import { canRemove, removeBlockedReason } from '../../domain/group';
 import type { Group } from '../../domain/group';
@@ -42,7 +43,7 @@ export function MemberOfTab(): ReactElement | null {
       setAddId('');
       await refresh();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Не удалось добавить');
+      toast(humanMessage(err));
     }
   };
 
@@ -55,7 +56,7 @@ export function MemberOfTab(): ReactElement | null {
       setSelected(null);
       await refresh();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Не удалось удалить');
+      toast(humanMessage(err));
     }
   };
 

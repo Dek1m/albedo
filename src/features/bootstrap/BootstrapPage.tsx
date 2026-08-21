@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { z } from 'zod';
 import { authApi } from '../../api/authApi';
-import { ApiError } from '../../api/errors';
+import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ToastView } from '../../shared/toast/ToastView';
 
@@ -38,7 +38,7 @@ export function BootstrapPage(): ReactElement {
       })
       .catch((error) => {
         if (!cancelled) {
-          toast(error instanceof ApiError ? error.message : 'Не удалось проверить bootstrap');
+          toast(humanMessage(error));
         }
       });
     return () => {
@@ -61,7 +61,7 @@ export function BootstrapPage(): ReactElement {
       await authApi.bootstrap(parsed.data);
       navigate('/login', { state: { created: true }, replace: true });
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'Не удалось создать администратора');
+      toast(humanMessage(error));
     }
   });
 
