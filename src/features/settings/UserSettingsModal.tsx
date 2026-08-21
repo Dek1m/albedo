@@ -22,7 +22,7 @@ export function UserSettingsModal(): ReactElement | null {
   };
 
   return (
-    <Modal open={open} title="Настройки" onClose={() => setSettingsOpen(false)}>
+    <Modal open={open} title="Settings" onClose={() => setSettingsOpen(false)}>
       <ul className="nav nav-tabs mb-2">
         <li className="nav-item">
           <button
@@ -30,7 +30,7 @@ export function UserSettingsModal(): ReactElement | null {
             className={`nav-link${tab === 'general' ? ' active' : ''}`}
             onClick={() => setTab('general')}
           >
-            Общая
+            General
           </button>
         </li>
         <li className="nav-item">
@@ -46,7 +46,7 @@ export function UserSettingsModal(): ReactElement | null {
       {tab === 'general' ? <GeneralTab /> : <MemberOfTab />}
       <div className="albedo-settings-footer">
         <button type="button" className="btn btn-sm albedo-danger-btn" onClick={() => void onLogout()}>
-          Выйти
+          Sign out
         </button>
       </div>
     </Modal>

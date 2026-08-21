@@ -20,7 +20,7 @@ export function AppShell(): ReactElement {
         <div className="albedo-header-actions">
           <UserChip />
           <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => void onLogout()}>
-            Выйти
+            Sign out
           </button>
         </div>
       </header>

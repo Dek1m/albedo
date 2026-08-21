@@ -207,6 +207,7 @@ body {
 
 .albedo-modal-dialog {
   max-width: min(480px, calc(100vw - 1.25rem));
+  min-height: 320px;
   margin: 0.75rem auto;
 }
 
@@ -405,6 +406,48 @@ body {
 
 .albedo-toast-close:hover {
   color: var(--text-primary);
+}
+
+/* ── Confirm dialog ───────────────────────── */
+
+.albedo-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 50%);
+}
+
+.albedo-confirm-dialog {
+  width: min(340px, calc(100vw - 2rem));
+  padding: 1.1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.albedo-confirm-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.albedo-confirm-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.albedo-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
 }
 
 @keyframes toast-in {
