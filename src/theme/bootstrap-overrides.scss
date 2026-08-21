@@ -1,0 +1,104 @@
+// Bootstrap — только контролы. Хром продукта задаёт tokens.css.
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
+.form-control {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: #3b2760;
+
+  &:focus {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    border-color: #a78bfa;
+    box-shadow: var(--focus-ring);
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+.form-check-input {
+  background-color: var(--bg-elevated);
+  border-color: #3b2760;
+
+  &:focus {
+    box-shadow: var(--focus-ring);
+    border-color: #a78bfa;
+  }
+
+  &:checked {
+    background-color: #6d28d9;
+    border-color: #6d28d9;
+  }
+}
+
+.nav-tabs {
+  border-bottom-color: #3b2760;
+
+  .nav-link {
+    color: var(--text-muted);
+
+    &:hover {
+      color: var(--text-primary);
+      border-color: transparent;
+    }
+
+    &.active {
+      color: var(--text-primary);
+      background-color: var(--bg-elevated);
+      border-color: #3b2760 #3b2760 var(--bg-elevated);
+    }
+  }
+}
+
+.list-group-item {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: #3b2760;
+  cursor: pointer;
+
+  &.active {
+    background-image: var(--grad-violet);
+    border-color: #6d28d9;
+    color: var(--text-primary);
+  }
+}
+
+.modal-content {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: #3b2760;
+  box-shadow: var(--shadow-glow);
+}
+
+.modal-header {
+  border-bottom-color: #3b2760;
+}
+
+.form-label {
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.form-control:disabled {
+  background-color: #100818;
+  color: var(--text-muted);
+}
+
+.btn-albedo-primary {
+  color: var(--text-primary);
+  border: 0;
+  background-image: var(--grad-violet);
+  box-shadow: var(--shadow-glow);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--text-primary);
+    box-shadow: 0 0 28px rgb(167 139 250 / 45%);
+  }
+}

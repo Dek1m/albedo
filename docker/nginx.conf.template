@@ -1,0 +1,64 @@
+# Шаблон nginx. envsubst подставляет только ALBEDO_*.
+# $host / $uri / $http_* остаются переменными nginx.
+#
+# Запрещено: proxy_cookie_domain, proxy_cookie_path, cookieDomainRewrite.
+# Set-Cookie от belle уходит в браузер as-is. Domain не пишем — это бэк (__Host-).
+
+server {
+    listen ${ALBEDO_LISTEN_HOST}:${ALBEDO_LISTEN_PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    server_tokens off;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Healthcheck контейнера. Не трогает SPA.
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Same-origin API. Браузер ходит только на albedo.
+    # proxy_pass без URI-path: /api/v1/... уходит на belle как /api/v1/...
+    # ALBEDO_API_URL — origin без хвостового слэша (http://belle:8080).
+    location /api/ {
+        proxy_pass ${ALBEDO_API_URL};
+        proxy_http_version 1.1;
+
+        # Host страницы (= host браузера). __Host- сядет на него, не на belle.
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+
+        # Cookie / Set-Cookie as-is. Не переписывать.
+        proxy_set_header Cookie $http_cookie;
+        proxy_pass_header Set-Cookie;
+
+        # CORS продукта нет. Не отдаём чужой ACAO, если belle вдруг прислал.
+        proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Credentials;
+
+        client_max_body_size 1m;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    location /assets/ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

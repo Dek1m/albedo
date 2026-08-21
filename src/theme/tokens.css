@@ -1,0 +1,209 @@
+:root {
+  --bg-base: #0b0614;
+  --bs-body-bg: #0b0614;
+  --bs-body-color: #f5f3ff;
+  --bs-primary: #6d28d9;
+  --bg-elevated: #140a22;
+  --bg-chip: rgb(20 10 34 / 72%);
+  --grad-violet: linear-gradient(135deg, #2e1064 0%, #6d28d9 50%, #a78bfa 100%);
+  --text-primary: #f5f3ff;
+  --text-muted: #a89bbf;
+  --email-domain: #e9d5ff;
+  --danger: #f87171;
+  --radius-chip: 12px;
+  --shadow-glow: 0 0 24px rgb(109 40 217 / 35%);
+  --focus-ring: 0 0 0 0.25rem rgb(167 139 250 / 35%);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.albedo-stage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at center, transparent 42%, rgb(0 0 0 / 55%) 100%),
+    linear-gradient(160deg, #0b0614 0%, #2e1064 46%, #140a22 100%);
+}
+
+.albedo-brand {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text-primary);
+  text-shadow: var(--shadow-glow);
+}
+
+.albedo-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at center, transparent 42%, rgb(0 0 0 / 55%) 100%),
+    linear-gradient(160deg, #0b0614 0%, #2e1064 46%, #140a22 100%);
+}
+
+.albedo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.4rem;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-glow);
+}
+
+.albedo-workspace {
+  flex: 1;
+}
+
+.albedo-auth-card {
+  width: min(420px, calc(100vw - 2rem));
+  padding: 2rem 1.75rem;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-chip);
+  box-shadow: var(--shadow-glow);
+}
+
+.albedo-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+}
+
+.albedo-auth-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.albedo-auth-hint {
+  margin: 0.75rem 0 0;
+  color: var(--text-muted);
+}
+
+.albedo-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.55rem 0.35rem 0.9rem;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: var(--bg-chip);
+  box-shadow: var(--shadow-glow);
+  color: var(--text-primary);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.albedo-chip:hover {
+  box-shadow: 0 0 28px rgb(167 139 250 / 45%);
+}
+
+.albedo-chip-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.albedo-chip-name {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.albedo-chip-email {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.albedo-chip-domain {
+  color: var(--email-domain);
+}
+
+.albedo-avatar-img,
+.albedo-avatar-fallback {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.albedo-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-image: var(--grad-violet);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.albedo-modal {
+  z-index: 1050;
+}
+
+.albedo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(5 2 12 / 72%);
+}
+
+.albedo-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.albedo-settings-avatar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.albedo-settings-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.85rem;
+}
+
+.albedo-settings-check {
+  margin: 0 0 0.35rem;
+  white-space: nowrap;
+}
+
+.albedo-member-of {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.albedo-member-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.albedo-badge {
+  margin-left: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--email-domain);
+}
+
+.albedo-ghost-btn {
+  color: var(--text-primary);
+  border: 1px solid #3b2760;
+  background: transparent;
+}
+
+.albedo-ghost-btn:disabled {
+  opacity: 0.45;
+}

@@ -1,0 +1,96 @@
+import { isEnvelope } from './envelope';
+import { ApiError, toApiError } from './errors';
+import type { Envelope } from './envelope';
+
+const REFRESH_LOCK = 'albedo-refresh';
+
+export interface CallOptions {
+  skipRefresh?: boolean;
+}
+
+export class ApiClient {
+  private refreshInFlight: Promise<void> | null = null;
+
+  async call<T>(
+    module: string,
+    fn: string,
+    kwargs: object = {},
+    options: CallOptions = {},
+  ): Promise<T> {
+    try {
+      return await this.request<T>(module, fn, kwargs);
+    } catch (error) {
+      if (!this.shouldRefresh(error, fn, options.skipRefresh)) {
+        throw error;
+      }
+      await this.refreshSingleFlight();
+      return await this.request<T>(module, fn, kwargs);
+    }
+  }
+
+  private shouldRefresh(error: unknown, fn: string, skip?: boolean): boolean {
+    if (skip || fn === 'refresh_token' || fn === 'login' || fn === 'logout') {
+      return false;
+    }
+    return error instanceof ApiError && error.statusCode === 401;
+  }
+
+  private async refreshSingleFlight(): Promise<void> {
+    const run = async (): Promise<void> => {
+      await this.request<unknown>('auth', 'refresh_token', {});
+    };
+    const locks = globalThis.navigator?.locks;
+    if (locks?.request) {
+      await locks.request(REFRESH_LOCK, run);
+      return;
+    }
+    if (this.refreshInFlight === null) {
+      this.refreshInFlight = run().finally(() => {
+        this.refreshInFlight = null;
+      });
+    }
+    await this.refreshInFlight;
+  }
+
+  private async request<T>(
+    module: string,
+    fn: string,
+    kwargs: object,
+  ): Promise<T> {
+    const response = await fetch(`/api/v1/${module}/${fn}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Albedo-Client': 'spa',
+      },
+      // Токены придут cookie с бэка. Не Bearer. Не sessionStorage.
+      credentials: 'include',
+      body: JSON.stringify(kwargs),
+    });
+
+    const envelope = await this.parseEnvelope<T>(response);
+    if (envelope.error) {
+      throw toApiError(envelope.error);
+    }
+    if (envelope.data === null) {
+      throw new ApiError('empty_data', 'RPC returned no data');
+    }
+    return envelope.data;
+  }
+
+  private async parseEnvelope<T>(response: Response): Promise<Envelope<T>> {
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new ApiError('invalid_json', `HTTP ${String(response.status)}`, undefined, response.status);
+    }
+    if (!isEnvelope<T>(body)) {
+      throw new ApiError('invalid_envelope', `HTTP ${String(response.status)}`, undefined, response.status);
+    }
+    return body;
+  }
+}
+
+export const apiClient = new ApiClient();

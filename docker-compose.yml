@@ -1,0 +1,51 @@
+# Albedo SPA + nginx same-origin proxy.
+# Консолидируется корневым ~/app/docker-compose.yml (include).
+services:
+  albedo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CACHEBUST: ${CACHEBUST:-1}
+        GIT_REF: ${ALBEDO_GIT_REF:-main}
+        GIT_URL: ${ALBEDO_GIT_URL:-https://github.com/Dek1m/albedo.git}
+        ALBEDO_LISTEN_PORT: ${ALBEDO_LISTEN_PORT:-8080}
+    image: albedo:latest
+    container_name: albedo
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SERVICE_NAME: albedo
+      ALBEDO_LISTEN_HOST: ${ALBEDO_LISTEN_HOST:-0.0.0.0}
+      ALBEDO_LISTEN_PORT: ${ALBEDO_LISTEN_PORT:-8080}
+      ALBEDO_API_URL: ${ALBEDO_API_URL:-http://belle:8080}
+    ports:
+      - "${ALBEDO_PUBLISH_HOST:-0.0.0.0}:${ALBEDO_PUBLISH_PORT:-8080}:${ALBEDO_LISTEN_PORT:-8080}"
+    volumes:
+      - ./config:/etc/albedo:ro
+    depends_on:
+      belle:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS \"http://127.0.0.1:${ALBEDO_LISTEN_PORT:-8080}/healthz\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.50"
+        reservations:
+          memory: 32M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  default:
+    name: app-net
