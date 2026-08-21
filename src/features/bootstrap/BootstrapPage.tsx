@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { z } from 'zod';
 import { authApi } from '../../api/authApi';
 import { ApiError } from '../../api/errors';
+import { toast } from '../../shared/toast/toastStore';
+import { ToastView } from '../../shared/toast/ToastView';
 
 const bootstrapSchema = z.object({
   username: z.string().min(1, 'Введите имя пользователя'),
@@ -16,7 +18,6 @@ type BootstrapValues = z.infer<typeof bootstrapSchema>;
 
 export function BootstrapPage(): ReactElement {
   const navigate = useNavigate();
-  const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -37,9 +38,7 @@ export function BootstrapPage(): ReactElement {
       })
       .catch((error) => {
         if (!cancelled) {
-          setFormError(
-            error instanceof ApiError ? error.message : 'Не удалось проверить bootstrap',
-          );
+          toast(error instanceof ApiError ? error.message : 'Не удалось проверить bootstrap');
         }
       });
     return () => {
@@ -48,7 +47,6 @@ export function BootstrapPage(): ReactElement {
   }, [navigate]);
 
   const onSubmit = handleSubmit(async (values) => {
-    setFormError(null);
     const parsed = bootstrapSchema.safeParse(values);
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
@@ -60,22 +58,17 @@ export function BootstrapPage(): ReactElement {
       return;
     }
     try {
-      const email = parsed.data.email?.trim();
-      await authApi.bootstrap({
-        username: parsed.data.username,
-        password: parsed.data.password,
-        ...(email ? { email } : {}),
-      });
-      navigate('/login', { replace: true, state: { created: true } });
+      await authApi.bootstrap(parsed.data);
+      navigate('/login', { state: { created: true }, replace: true });
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : 'Не удалось создать администратора');
+      toast(error instanceof ApiError ? error.message : 'Не удалось создать администратора');
     }
   });
 
   return (
     <main className="albedo-stage">
       <section className="albedo-auth-card">
-        <h1 className="albedo-brand">Albedo</h1>
+        <h1 className="albedo-brand">albedo</h1>
         <p className="albedo-auth-hint">Создание первого администратора</p>
         <form className="albedo-auth-form" onSubmit={onSubmit} noValidate>
           <label className="form-label" htmlFor="bootstrap-username">
@@ -112,13 +105,12 @@ export function BootstrapPage(): ReactElement {
             {...register('email')}
           />
 
-          {formError ? <p className="albedo-auth-error">{formError}</p> : null}
-
           <button className="btn btn-sm btn-albedo-primary w-100" type="submit" disabled={isSubmitting}>
             Создать
           </button>
         </form>
       </section>
+      <ToastView />
     </main>
   );
 }

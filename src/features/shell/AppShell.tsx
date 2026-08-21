@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
 import type { ReactElement } from 'react';
 import { logoutSession } from '../../application/session/logoutSession';
+import { ToastView } from '../../shared/toast/ToastView';
 import { UserSettingsModal } from '../settings/UserSettingsModal';
 import { UserChip } from './UserChip';
 
@@ -24,6 +25,7 @@ export function AppShell(): ReactElement {
         </div>
       </header>
       <main className="albedo-workspace" />
+      <ToastView />
       <UserSettingsModal />
     </div>
   );

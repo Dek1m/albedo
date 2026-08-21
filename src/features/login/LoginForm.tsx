@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiError } from '../../api/errors';
+import { toast } from '../../shared/toast/toastStore';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Введите имя пользователя'),
@@ -16,7 +16,6 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
-  const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -27,7 +26,6 @@ export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
   });
 
   const submit = handleSubmit(async (values) => {
-    setFormError(null);
     const parsed = loginSchema.safeParse(values);
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
@@ -41,7 +39,7 @@ export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
     try {
       await onSubmit(parsed.data);
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : 'Не удалось войти');
+      toast(error instanceof ApiError ? error.message : 'Не удалось войти');
     }
   });
 
@@ -69,8 +67,6 @@ export function LoginForm({ onSubmit }: LoginFormProps): ReactElement {
         {...register('password')}
       />
       {errors.password ? <p className="albedo-auth-error">{errors.password.message}</p> : null}
-
-      {formError ? <p className="albedo-auth-error">{formError}</p> : null}
 
       <button className="btn btn-sm btn-albedo-primary w-100" type="submit" disabled={isSubmitting}>
         Войти

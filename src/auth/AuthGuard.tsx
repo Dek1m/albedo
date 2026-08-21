@@ -42,7 +42,7 @@ export function AuthGuard({ children }: AuthGuardProps): ReactElement {
   if (!restoreFailed) {
     return (
       <main className="albedo-stage">
-        <h1 className="albedo-brand">Albedo</h1>
+        <h1 className="albedo-brand">albedo</h1>
       </main>
     );
   }

@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { authApi } from '../../api/authApi';
 import { useAuthStore } from '../../auth/AuthStore';
+import { ToastView } from '../../shared/toast/ToastView';
 import { LoginForm } from './LoginForm';
 import type { LoginValues } from './LoginForm';
 
@@ -46,10 +47,11 @@ export function LoginPage(): ReactElement {
   return (
     <main className="albedo-stage">
       <section className="albedo-auth-card">
-        <h1 className="albedo-brand">Albedo</h1>
+        <h1 className="albedo-brand">albedo</h1>
         {created ? <p className="albedo-auth-hint">Админ создан. Войдите.</p> : null}
         <LoginForm onSubmit={onSubmit} />
       </section>
+      <ToastView />
     </main>
   );
 }

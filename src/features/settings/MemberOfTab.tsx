@@ -8,13 +8,13 @@ import { authApi } from '../../api/authApi';
 import { useAuthStore } from '../../auth/AuthStore';
 import { canRemove, removeBlockedReason } from '../../domain/group';
 import type { Group } from '../../domain/group';
+import { toast } from '../../shared/toast/toastStore';
 
 export function MemberOfTab(): ReactElement | null {
   const profile = useAuthStore((state) => state.profile);
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [addId, setAddId] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   const mine = useQuery({ queryKey: ['auth', 'groups'], queryFn: loadMyGroups });
   const catalog = useQuery({ queryKey: ['auth', 'groups', 'all'], queryFn: () => authApi.listGroups() });
@@ -37,13 +37,12 @@ export function MemberOfTab(): ReactElement | null {
     if (!addId) {
       return;
     }
-    setError(null);
     try {
       await addMembership(addId);
       setAddId('');
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось добавить');
+      toast(err instanceof Error ? err.message : 'Не удалось добавить');
     }
   };
 
@@ -51,13 +50,12 @@ export function MemberOfTab(): ReactElement | null {
     if (!selectedGroup || !allowRemove) {
       return;
     }
-    setError(null);
     try {
       await removeMembership(selectedGroup.id);
       setSelected(null);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось удалить');
+      toast(err instanceof Error ? err.message : 'Не удалось удалить');
     }
   };
 
@@ -102,7 +100,6 @@ export function MemberOfTab(): ReactElement | null {
           Remove
         </button>
       </div>
-      {error ? <p className="albedo-auth-error">{error}</p> : null}
     </div>
   );
 }
