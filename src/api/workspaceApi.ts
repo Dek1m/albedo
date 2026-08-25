@@ -123,10 +123,24 @@ export const workspaceApi = {
     });
   },
 
-  async trashHome(workspaceId: string, relPath: string): Promise<void> {
+  async createHome(name: string, parentRel: string, kind: 'folder' | 'file'): Promise<HomeEntry> {
+    const dto = await apiClient.call<HomeDto>('workspace', 'create_home_path', {
+      name,
+      parent_rel: parentRel,
+      kind,
+    });
+    return {
+      name: dto.name,
+      kind: dto.kind,
+      relPath: dto.rel_path,
+      linked: Boolean(dto.linked),
+    };
+  },
+
+  async trashHome(relPath: string, workspaceId?: string): Promise<void> {
     await apiClient.call('workspace', 'trash_home_path', {
-      workspace_id: workspaceId,
       rel_path: relPath,
+      workspace_id: workspaceId ?? null,
     });
   },
 

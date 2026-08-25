@@ -1061,64 +1061,156 @@ body {
   border-radius: 2px;
 }
 
-.albedo-home-root {
-  margin: 0 0 0.45rem;
+.albedo-home-pane {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #12100e;
+  overflow: hidden;
+}
+
+.albedo-home-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: #161412;
+}
+
+.albedo-home-crumb {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.albedo-home-tools {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.albedo-home-tools .albedo-icon-btn {
+  color: var(--text-secondary);
+  padding: 0.2rem 0.3rem;
+  border-radius: var(--radius);
+}
+
+.albedo-home-tools .albedo-icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .albedo-home-tree {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0.25rem 0;
   max-height: 280px;
   overflow: auto;
 }
 
 .albedo-home-tree .albedo-home-tree {
-  padding-left: 0.9rem;
+  padding-left: 0.85rem;
+  margin-left: 0.45rem;
+  border-left: 1px solid #221f1c;
 }
 
 .albedo-home-row {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.12rem 0;
+  gap: 0.3rem;
+  padding: 0.18rem 0.5rem;
   animation: albedo-fade-in 160ms var(--ease);
+  cursor: pointer;
+  color: #e8e4dc;
 }
 
-.albedo-home-row .albedo-home-label {
+.albedo-home-row:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.albedo-home-row.is-focus {
+  background: rgb(255 122 26 / 12%);
+}
+
+.albedo-home-row.is-draft {
+  cursor: default;
+  background: rgb(255 255 255 / 4%);
+}
+
+.albedo-home-name {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
 }
 
 .albedo-home-toggle,
 .albedo-home-leaf {
-  width: 1.1rem;
+  width: 1rem;
   border: 0;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
+  font-size: 0.7rem;
 }
 
 .albedo-home-leaf {
   cursor: default;
 }
 
-.albedo-home-label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0;
-  font-size: 0.82rem;
-  cursor: pointer;
+.albedo-home-row > .bi {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
-.albedo-home-hint {
-  margin: 0.45rem 0 0;
-  font-size: 0.75rem;
+.albedo-home-pin,
+.albedo-home-ghost {
+  border: 0;
+  background: transparent;
   color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.1rem;
+  opacity: 0;
+}
+
+.albedo-home-row:hover .albedo-home-pin,
+.albedo-home-row:hover .albedo-home-ghost,
+.albedo-home-row.is-focus .albedo-home-pin,
+.albedo-home-row.is-focus .albedo-home-ghost,
+.albedo-home-pin.is-on {
+  opacity: 1;
+}
+
+.albedo-home-pin.is-on {
+  color: var(--brand);
+}
+
+.albedo-home-ghost:hover {
+  color: var(--danger);
+}
+
+.albedo-home-draft {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border-focus);
+  background: #0e0d0c;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius);
+  outline: none;
 }
 
 /* ── Responsive ────────────────────────────── */
