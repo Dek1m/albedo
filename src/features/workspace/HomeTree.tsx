@@ -35,14 +35,33 @@ function parseAddress(raw: string): string {
   return value;
 }
 
-function nestedInside(rel: string, linked: Set<string>): string | null {
-  for (const parent of linked) {
-    if (rel !== parent && rel.startsWith(`${parent}/`)) {
-      return parent;
+export type FolderOverlap = 'linked' | 'nested' | 'contains';
+
+export function folderOverlap(rel: string, linked: Iterable<string>): FolderOverlap | null {
+  const path = rel.replace(/^\/+|\/+$/g, '');
+  for (const raw of linked) {
+    const other = raw.replace(/^\/+|\/+$/g, '');
+    if (!other) {
+      continue;
+    }
+    if (path === other) {
+      return 'linked';
+    }
+    if (path.startsWith(`${other}/`)) {
+      return 'nested';
+    }
+    if (other.startsWith(`${path}/`)) {
+      return 'contains';
     }
   }
   return null;
 }
+
+const OVERLAP_TOAST: Record<FolderOverlap, string> = {
+  linked: 'Уже в workspace',
+  nested: 'Эта папка уже внутри добавленной в проект',
+  contains: 'В проекте уже есть вложенная папка — сначала убери её',
+};
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) {
@@ -138,7 +157,9 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
       toast(humanMessage(err));
       return;
     }
-    if (nestedInside(rel, selected) || selected.has(rel)) {
+    const overlap = folderOverlap(rel, selected);
+    if (overlap) {
+      toast(OVERLAP_TOAST[overlap]);
       if (created.length) {
         folderToast('created', created);
       }

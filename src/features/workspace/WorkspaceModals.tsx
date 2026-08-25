@@ -7,7 +7,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { BusyDots } from '../../shared/ui/BusyDots';
 import { workspaceHue } from '../../domain/workspace';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
-import { HomeTree } from './HomeTree';
+import { HomeTree, folderOverlap } from './HomeTree';
 import { applySavedWorkspaceChrome } from '../../workspace/layoutPersist';
 import { loadCatalog } from './WorkspaceMenu';
 
@@ -163,9 +163,18 @@ export function WorkspaceModals({
                 const next = new Set(prev);
                 if (next.has(rel)) {
                   next.delete(rel);
-                } else {
-                  next.add(rel);
+                  return next;
                 }
+                const overlap = folderOverlap(rel, next);
+                if (overlap === 'nested') {
+                  toast('Эта папка уже внутри добавленной в проект');
+                  return prev;
+                }
+                if (overlap === 'contains') {
+                  toast('В проекте уже есть вложенная папка — сначала убери её');
+                  return prev;
+                }
+                next.add(rel);
                 return next;
               });
             }}

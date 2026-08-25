@@ -27,7 +27,8 @@ const CODE_MESSAGES: Record<string, string> = {
   TIMEOUT: 'Сервис не успел ответить, попробуй ещё раз',
   METHOD_NOT_FOUND: 'Метод не найден',
   WORKER_NOT_READY: 'Сервис временно недоступен',
-  ALREADY_NESTED: 'Папка уже внутри добавленной в workspace',
+  ALREADY_NESTED: 'Эта папка уже внутри добавленной в проект',
+  CONTAINS_LINKED: 'В проекте уже есть вложенная папка — сначала убери её',
   ALREADY_LINKED: 'Уже в workspace',
   ALREADY_EXISTS: 'Такой файл уже есть',
 };
