@@ -6,6 +6,7 @@ import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
+import { folderToast, newSegments, pathTail } from './folderToast';
 
 interface HomeTreeProps {
   selected: Set<string>;
@@ -63,7 +64,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   const [hidden, setHidden] = useState(false);
   const [showSize, setShowSize] = useState(false);
   const [alsoDisk, setAlsoDisk] = useState<Set<string>>(() => new Set());
-  const [ask, setAsk] = useState<{ rel: string; body: string } | null>(null);
+  const [ask, setAsk] = useState<{ rel: string; body: string; detach: boolean } | null>(null);
 
   const reload = useCallback(async (): Promise<void> => {
     setRoot(await workspaceApi.listHome('', workspaceId, { hidden, size: showSize }));
@@ -129,22 +130,22 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
       toast('Выбери папку или файл');
       return;
     }
-    const inside = nestedInside(rel, selected);
-    if (inside) {
-      toast(`Папка уже внутри «${inside}»`);
-      return;
-    }
-    if (selected.has(rel)) {
-      toast('Уже в workspace');
-      return;
-    }
+    const created = newSegments(rel, selected);
     try {
-      await workspaceApi.createHome(rel, '', focusKind);
-      onToggle(rel);
+      await workspaceApi.createHome(rel, '', 'folder');
       setTick((value) => value + 1);
     } catch (err) {
       toast(humanMessage(err));
+      return;
     }
+    if (nestedInside(rel, selected) || selected.has(rel)) {
+      if (created.length) {
+        folderToast('created', created);
+      }
+      return;
+    }
+    onToggle(rel);
+    folderToast('added', created.length > 1 ? created : [pathTail(rel)]);
   };
 
   const refresh = async (): Promise<void> => {
@@ -160,6 +161,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   const runTrash = async (relPath: string): Promise<void> => {
     try {
       await workspaceApi.trashHome(relPath, workspaceId);
+      folderToast('deleted', [pathTail(relPath)]);
       setTick((value) => value + 1);
       onTrashed?.();
     } catch (err) {
@@ -174,10 +176,11 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         setAsk({
           rel: relPath,
           body: `В «${relPath}» есть файлы и папки. Удалить всё с диска?`,
+          detach: false,
         });
         return;
       }
-      setAsk({ rel: relPath, body: `Удалить «${relPath}» с диска?` });
+      setAsk({ rel: relPath, body: `Удалить «${relPath}» с диска?`, detach: false });
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -283,9 +286,20 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
                 onClick={() => {
                   void (async () => {
                     if (alsoDisk.has(rel)) {
-                      await trash(rel);
+                      try {
+                        const stat = await workspaceApi.homeStat(rel);
+                        const body =
+                          stat.kind === 'folder' && stat.childCount > 0
+                            ? `В «${rel}» есть файлы и папки. Удалить всё с диска?`
+                            : `Удалить «${rel}» с диска?`;
+                        setAsk({ rel, body, detach: true });
+                      } catch (err) {
+                        toast(humanMessage(err));
+                      }
+                      return;
                     }
                     onToggle(rel);
+                    folderToast('removed', [pathTail(rel)]);
                   })();
                 }}
               >
@@ -303,9 +317,16 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         danger
         onClose={() => setAsk(null)}
         onConfirm={() => {
-          if (ask) {
-            void runTrash(ask.rel);
+          if (!ask) {
+            return;
           }
+          const rel = ask.rel;
+          const detach = ask.detach;
+          void runTrash(rel).then(() => {
+            if (detach) {
+              onToggle(rel);
+            }
+          });
         }}
       />
     </div>

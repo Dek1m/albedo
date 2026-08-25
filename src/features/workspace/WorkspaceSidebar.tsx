@@ -9,6 +9,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
+import { folderToast, pathTail } from './folderToast';
 import { HomeTree } from './HomeTree';
 import { WorkspaceDiskTree } from './WorkspaceDiskTree';
 
@@ -110,6 +111,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
     setMenuOpen(false);
     try {
       await workspaceApi.unlinkHome(active.id, selectedRel);
+      folderToast('removed', [pathTail(selectedRel)]);
       setSelectedRel(null);
       await reload();
     } catch (err) {
@@ -137,6 +139,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
   const runTrash = async (rel: string): Promise<void> => {
     try {
       await workspaceApi.trashHome(rel, active.id);
+      folderToast('deleted', [pathTail(rel)]);
       setSelectedRel(null);
       await reload();
     } catch (err) {
