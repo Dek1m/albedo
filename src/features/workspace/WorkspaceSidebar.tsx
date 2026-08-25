@@ -114,7 +114,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
     if (!selected) {
       return;
     }
-    if (!window.confirm('Удалить в корзину на сервере? Файлы уйдут в ~/Trash/albedo/.')) {
+    if (!window.confirm('Удалить файлы на сервере?')) {
       return;
     }
     try {

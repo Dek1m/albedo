@@ -31,7 +31,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     if (!workspaceId) {
       return;
     }
-    if (!window.confirm(`Удалить «${relPath}» в корзину на сервере?`)) {
+    if (!window.confirm(`Удалить «${relPath}» на сервере?`)) {
       return;
     }
     try {
@@ -53,7 +53,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         workspaceId={workspaceId}
         onTrash={workspaceId ? trash : undefined}
       />
-      <p className="albedo-home-hint">Галочка — в проекте. Корзина — с диска в ~/Trash/albedo/.</p>
+      <p className="albedo-home-hint">Галочка — в проекте. Корзина — удалить файлы на сервере.</p>
     </div>
   );
 }
