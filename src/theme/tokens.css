@@ -909,6 +909,7 @@ body {
 
 .albedo-tree-item.is-drop {
   background: rgb(255 122 26 / 18%);
+  border-radius: 6px;
 }
 
 .albedo-tree-name {
@@ -993,6 +994,7 @@ body {
 
 .albedo-tree-item.is-selected {
   background: var(--bg-hover);
+  border-radius: 6px;
 }
 
 .albedo-sidebar-resizer {
@@ -1272,6 +1274,7 @@ body {
 
 .albedo-home-row.is-focus {
   background: rgb(255 122 26 / 12%);
+  border-radius: 6px;
 }
 
 .albedo-home-row.is-linked,

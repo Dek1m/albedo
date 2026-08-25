@@ -198,7 +198,16 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   };
 
   return (
-    <div className="albedo-home-pane">
+    <div
+      className="albedo-home-pane"
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest('.albedo-home-row, .albedo-home-toolbar, .albedo-home-attached')) {
+          return;
+        }
+        setFocusRel('');
+        setFocusKind('folder');
+      }}
+    >
       <div className="albedo-home-toolbar">
         <input
           className="albedo-home-address"

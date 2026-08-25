@@ -148,7 +148,17 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
   };
 
   return (
-    <aside className="albedo-sidebar" style={{ width }}>
+    <aside
+      className="albedo-sidebar"
+      style={{ width }}
+      onClick={(event) => {
+        const node = event.target as HTMLElement;
+        if (node.closest('.albedo-tree-item, .albedo-kebab, .albedo-ws-drop, .albedo-icon-btn, .albedo-sidebar-sessions')) {
+          return;
+        }
+        setSelectedRel(null);
+      }}
+    >
       <h2 className="albedo-sidebar-title">{active.name}</h2>
       <div className="albedo-sidebar-rule" />
       <button type="button" className="albedo-sidebar-sessions" onClick={onOpenSessions}>
