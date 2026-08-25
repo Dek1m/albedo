@@ -34,6 +34,8 @@ export interface HomeEntry {
   kind: 'folder' | 'file';
   relPath: string;
   linked: boolean;
+  inherited: boolean;
+  excluded: boolean;
   sizeBytes: number;
 }
 

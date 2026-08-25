@@ -16,7 +16,7 @@ export function Modal({ open, title, onClose, children }: ModalProps): ReactElem
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const resize = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
-  const dialog = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) {
@@ -33,29 +33,19 @@ export function Modal({ open, title, onClose, children }: ModalProps): ReactElem
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  const pinBox = (): DOMRect | null => {
-    const box = dialog.current?.getBoundingClientRect();
-    if (!box) {
-      return null;
-    }
-    if (!pos) {
-      setPos({ x: box.left, y: box.top });
-    }
-    if (!size) {
-      setSize({ w: box.width, h: box.height });
-    }
-    return box;
-  };
+  const visualBox = (): DOMRect | null => content.current?.getBoundingClientRect() ?? null;
 
   const onHeaderDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     if ((event.target as HTMLElement).closest('button')) {
       return;
     }
-    const box = pinBox();
+    const box = visualBox();
     if (!box) {
       return;
     }
     drag.current = { dx: event.clientX - box.left, dy: event.clientY - box.top };
+    setPos({ x: box.left, y: box.top });
+    setSize({ w: box.width, h: box.height });
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
@@ -75,9 +65,12 @@ export function Modal({ open, title, onClose, children }: ModalProps): ReactElem
 
   const onResizeDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     event.stopPropagation();
-    const box = pinBox();
+    const box = visualBox();
     if (!box) {
       return;
+    }
+    if (!pos) {
+      setPos({ x: box.left, y: box.top });
     }
     resize.current = { x: event.clientX, y: event.clientY, w: box.width, h: box.height };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -123,11 +116,10 @@ export function Modal({ open, title, onClose, children }: ModalProps): ReactElem
     <div className="modal d-block albedo-modal" role="dialog" aria-modal="true" aria-label={title}>
       <div className="albedo-modal-backdrop" onClick={onClose} />
       <div
-        ref={dialog}
         className={`modal-dialog${placed ? '' : ' modal-dialog-centered'} albedo-modal-dialog`}
         style={Object.keys(style).length ? style : undefined}
       >
-        <div className="modal-content">
+        <div className="modal-content" ref={content}>
           <div
             className="modal-header albedo-modal-drag"
             onPointerDown={onHeaderDown}

@@ -449,12 +449,18 @@ function HomeNode({
   }, [open, item.kind, item.relPath, workspaceId, tick, hidden, showSize]);
 
   const focused = focusRel === item.relPath;
-  const inProject = selected.has(item.relPath) || item.linked;
+  const cover = item.excluded
+    ? ' is-excluded'
+    : item.inherited
+      ? ' is-inherited'
+      : item.linked || selected.has(item.relPath)
+        ? ' is-linked'
+        : '';
 
   return (
     <li>
       <div
-        className={`albedo-home-row${focused ? ' is-focus' : ''}${inProject ? ' is-linked' : ''}`}
+        className={`albedo-home-row${focused ? ' is-focus' : ''}${cover}`}
         draggable
         onClick={() => onFocus(item.relPath, item.kind)}
         onDragStart={(event) => {

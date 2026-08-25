@@ -156,6 +156,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
       </button>
       <div className="albedo-sidebar-section">
         <button type="button" className="albedo-sidebar-fold" onClick={() => setFoldersOpen(!foldersOpen)}>
+          <i className={`bi ${foldersOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
           Folders and files
         </button>
         <button type="button" className="albedo-icon-btn" title="New folder" onClick={() => { setSelectedRel(null); addFolder(); }}>

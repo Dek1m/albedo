@@ -854,11 +854,14 @@ body {
 
 .albedo-sidebar-fold {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   border: 0;
   background: transparent;
   color: var(--text-secondary);
   font-size: 0.72rem;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -906,6 +909,38 @@ body {
 
 .albedo-tree-item.is-drop {
   background: rgb(255 122 26 / 18%);
+}
+
+.albedo-tree-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.albedo-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.05rem;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.albedo-tree-item:hover .albedo-row-actions,
+.albedo-home-row:hover .albedo-row-actions {
+  opacity: 1;
+}
+
+.albedo-tree-item.is-inherited,
+.albedo-home-row.is-inherited {
+  box-shadow: inset 2px 0 0 rgb(255 122 26 / 35%);
+  opacity: 0.72;
+}
+
+.albedo-tree-item.is-excluded,
+.albedo-home-row.is-excluded {
+  opacity: 0.38;
 }
 
 .albedo-tree-nested {
@@ -1221,9 +1256,9 @@ body {
   background: rgb(255 122 26 / 12%);
 }
 
-.albedo-home-row.is-linked {
+.albedo-home-row.is-linked,
+.albedo-tree-item.is-linked {
   box-shadow: inset 2px 0 0 var(--brand);
-  color: var(--text-primary);
 }
 
 .albedo-home-row.is-draft {

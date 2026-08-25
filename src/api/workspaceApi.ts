@@ -87,6 +87,8 @@ interface HomeDto {
   kind: 'folder' | 'file';
   rel_path: string;
   linked?: boolean;
+  inherited?: boolean;
+  excluded?: boolean;
   size_bytes?: number;
 }
 
@@ -112,6 +114,8 @@ export const workspaceApi = {
       kind: item.kind,
       relPath: item.rel_path,
       linked: Boolean(item.linked),
+      inherited: Boolean(item.inherited),
+      excluded: Boolean(item.excluded),
       sizeBytes: item.size_bytes ?? 0,
     }));
   },
@@ -142,6 +146,8 @@ export const workspaceApi = {
       kind: dto.kind,
       relPath: dto.rel_path,
       linked: Boolean(dto.linked),
+      inherited: Boolean(dto.inherited),
+      excluded: Boolean(dto.excluded),
       sizeBytes: dto.size_bytes ?? 0,
     };
   },
@@ -168,6 +174,29 @@ export const workspaceApi = {
       workspace_id: workspaceId ?? null,
     });
     return result.rel_path;
+  },
+
+  async renameHome(src: string, newName: string, workspaceId?: string): Promise<string> {
+    const result = await apiClient.call<{ rel_path: string }>('workspace', 'rename_home_path', {
+      src,
+      new_name: newName,
+      workspace_id: workspaceId ?? null,
+    });
+    return result.rel_path;
+  },
+
+  async excludeHome(workspaceId: string, relPath: string): Promise<void> {
+    await apiClient.call('workspace', 'exclude_home_path', {
+      workspace_id: workspaceId,
+      rel_path: relPath,
+    });
+  },
+
+  async includeHome(workspaceId: string, relPath: string): Promise<void> {
+    await apiClient.call('workspace', 'include_home_path', {
+      workspace_id: workspaceId,
+      rel_path: relPath,
+    });
   },
 
   async trashHome(relPath: string, workspaceId?: string): Promise<void> {
