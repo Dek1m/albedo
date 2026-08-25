@@ -92,6 +92,31 @@ interface HomeDto {
   size_bytes?: number;
 }
 
+const homeInflight = new Map<string, Promise<HomeEntry[]>>();
+const homeCache = new Map<string, { at: number; items: HomeEntry[] }>();
+const HOME_TTL_MS = 8000;
+
+function homeKey(relPath: string, workspaceId?: string, opts?: { hidden?: boolean; size?: boolean }): string {
+  return JSON.stringify([relPath, workspaceId ?? '', Boolean(opts?.hidden), Boolean(opts?.size)]);
+}
+
+function mapHome(item: HomeDto): HomeEntry {
+  return {
+    name: item.name,
+    kind: item.kind,
+    relPath: item.rel_path,
+    linked: Boolean(item.linked),
+    inherited: Boolean(item.inherited),
+    excluded: Boolean(item.excluded),
+    sizeBytes: item.size_bytes ?? 0,
+  };
+}
+
+function invalidateHomeCache(): void {
+  homeCache.clear();
+  homeInflight.clear();
+}
+
 export const workspaceApi = {
   async ensureHome(): Promise<string> {
     const result = await apiClient.call<{ home: string }>('workspace', 'ensure_home', {});
@@ -103,21 +128,32 @@ export const workspaceApi = {
     workspaceId?: string,
     opts?: { hidden?: boolean; size?: boolean },
   ): Promise<HomeEntry[]> {
-    const result = await apiClient.call<{ items: HomeDto[] }>('workspace', 'list_home', {
-      rel_path: relPath,
-      workspace_id: workspaceId ?? null,
-      include_hidden: Boolean(opts?.hidden),
-      include_size: Boolean(opts?.size),
-    });
-    return (result.items ?? []).map((item) => ({
-      name: item.name,
-      kind: item.kind,
-      relPath: item.rel_path,
-      linked: Boolean(item.linked),
-      inherited: Boolean(item.inherited),
-      excluded: Boolean(item.excluded),
-      sizeBytes: item.size_bytes ?? 0,
-    }));
+    const key = homeKey(relPath, workspaceId, opts);
+    const cached = homeCache.get(key);
+    if (cached && Date.now() - cached.at < HOME_TTL_MS) {
+      return cached.items;
+    }
+    const pending = homeInflight.get(key);
+    if (pending) {
+      return pending;
+    }
+    const request = apiClient
+      .call<{ items: HomeDto[] }>('workspace', 'list_home', {
+        rel_path: relPath,
+        workspace_id: workspaceId ?? null,
+        include_hidden: Boolean(opts?.hidden),
+        include_size: Boolean(opts?.size),
+      })
+      .then((result) => {
+        const items = (result.items ?? []).map(mapHome);
+        homeCache.set(key, { at: Date.now(), items });
+        return items;
+      })
+      .finally(() => {
+        homeInflight.delete(key);
+      });
+    homeInflight.set(key, request);
+    return request;
   },
 
   async linkHome(workspaceId: string, relPath: string): Promise<WsNode> {
@@ -125,6 +161,7 @@ export const workspaceApi = {
       workspace_id: workspaceId,
       rel_path: relPath,
     });
+    invalidateHomeCache();
     return toNode(dto);
   },
 
@@ -133,6 +170,7 @@ export const workspaceApi = {
       workspace_id: workspaceId,
       rel_path: relPath,
     });
+    invalidateHomeCache();
   },
 
   async createHome(name: string, parentRel: string, kind: 'folder' | 'file'): Promise<HomeEntry> {
@@ -141,6 +179,7 @@ export const workspaceApi = {
       parent_rel: parentRel,
       kind,
     });
+    invalidateHomeCache();
     return {
       name: dto.name,
       kind: dto.kind,
@@ -156,6 +195,7 @@ export const workspaceApi = {
     await apiClient.call('workspace', 'refresh_home', {
       workspace_id: workspaceId ?? null,
     });
+    invalidateHomeCache();
   },
 
   async homeStat(relPath: string): Promise<{ kind: 'folder' | 'file'; childCount: number }> {
@@ -173,6 +213,7 @@ export const workspaceApi = {
       dest_dir: destDir,
       workspace_id: workspaceId ?? null,
     });
+    invalidateHomeCache();
     return result.rel_path;
   },
 
@@ -182,6 +223,7 @@ export const workspaceApi = {
       new_name: newName,
       workspace_id: workspaceId ?? null,
     });
+    invalidateHomeCache();
     return result.rel_path;
   },
 
@@ -190,6 +232,7 @@ export const workspaceApi = {
       workspace_id: workspaceId,
       rel_path: relPath,
     });
+    invalidateHomeCache();
   },
 
   async includeHome(workspaceId: string, relPath: string): Promise<void> {
@@ -197,6 +240,7 @@ export const workspaceApi = {
       workspace_id: workspaceId,
       rel_path: relPath,
     });
+    invalidateHomeCache();
   },
 
   async trashHome(relPath: string, workspaceId?: string): Promise<void> {
@@ -204,6 +248,7 @@ export const workspaceApi = {
       rel_path: relPath,
       workspace_id: workspaceId ?? null,
     });
+    invalidateHomeCache();
   },
 
   async trashNode(workspaceId: string, nodeId: string): Promise<void> {
@@ -211,6 +256,7 @@ export const workspaceApi = {
       workspace_id: workspaceId,
       node_id: nodeId,
     });
+    invalidateHomeCache();
   },
 
   async list(): Promise<Workspace[]> {

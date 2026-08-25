@@ -1,6 +1,22 @@
 import { create } from 'zustand';
 import type { SessionId, Workspace, WorkspaceId, WsSession } from '../domain/workspace';
 
+function withAncestors(paths: string[]): string[] {
+  const out = new Set<string>();
+  for (const path of paths) {
+    if (!path) {
+      continue;
+    }
+    const parts = path.split('/').filter(Boolean);
+    let acc = '';
+    for (const part of parts) {
+      acc = acc ? `${acc}/${part}` : part;
+      out.add(acc);
+    }
+  }
+  return [...out];
+}
+
 interface WorkspaceState {
   catalog: Workspace[];
   active: Workspace | null;
@@ -41,13 +57,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setFocused: (focusedSessionId) => set({ focusedSessionId }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
   setFoldersOpen: (foldersOpen) => set({ foldersOpen }),
-  setExpanded: (expanded) => set({ expanded }),
+  setExpanded: (expanded) => set({ expanded: withAncestors(expanded) }),
   toggleExpanded: (path) =>
-    set((state) => ({
-      expanded: state.expanded.includes(path)
-        ? state.expanded.filter((item) => item !== path)
-        : [...state.expanded, path],
-    })),
+    set((state) => {
+      if (state.expanded.includes(path)) {
+        return {
+          expanded: state.expanded.filter(
+            (item) => item !== path && !item.startsWith(`${path}/`),
+          ),
+        };
+      }
+      return { expanded: withAncestors([...state.expanded, path]) };
+    }),
   reset: () =>
     set({
       catalog: [],

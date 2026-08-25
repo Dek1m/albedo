@@ -24,6 +24,7 @@ const CODE_MESSAGES: Record<string, string> = {
   ACCOUNT_DISABLED: 'Аккаунт отключён',
   AUTH_ERROR: 'Ошибка авторизации',
   PAYLOAD_NOT_SERIALIZABLE: 'Некорректный запрос',
+  TIMEOUT: 'Сервис не успел ответить, попробуй ещё раз',
   METHOD_NOT_FOUND: 'Метод не найден',
   WORKER_NOT_READY: 'Сервис временно недоступен',
   ALREADY_NESTED: 'Папка уже внутри добавленной в workspace',
