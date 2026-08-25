@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import { workspaceApi } from '../../api/workspaceApi';
+import type { GitRepo } from '../../api/workspaceApi';
+import { GitBranch } from './GitBranch';
 import { humanMessage } from '../../api/errors';
 import type { WsNode } from '../../domain/workspace';
 import { toast } from '../../shared/toast/toastStore';
@@ -31,6 +33,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
   const [ask, setAsk] = useState<{ rel: string; body: string } | null>(null);
   const [filePrompt, setFilePrompt] = useState(false);
   const [diskRev, setDiskRev] = useState(0);
+  const [gitRepos, setGitRepos] = useState<GitRepo[]>([]);
   const kebab = useRef<HTMLDivElement>(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   useClickOutside(menuOpen, kebab, closeMenu);
@@ -40,6 +43,11 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
       return;
     }
     setNodes(await workspaceApi.listNodes(active.id, null));
+    try {
+      setGitRepos(await workspaceApi.listGit(active.id));
+    } catch {
+      setGitRepos([]);
+    }
   }, [active]);
 
   useEffect(() => {
@@ -206,9 +214,19 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
           ) : null}
         </div>
       </div>
+      {foldersOpen && gitRepos.length === 1 && gitRepos[0] ? (
+        <div className="albedo-git-bar">
+          <GitBranch repo={gitRepos[0]} />
+        </div>
+      ) : null}
       {foldersOpen ? (
         <WorkspaceDiskTree
-          roots={nodes.map((node) => ({ name: node.name, relPath: node.relPath, kind: node.kind }))}
+          roots={nodes.map((node) => ({
+            name: node.name,
+            relPath: node.relPath,
+            kind: node.kind,
+            git: gitRepos.length > 1 ? gitRepos.find((repo) => repo.relPath === node.relPath) : undefined,
+          }))}
           workspaceId={active.id}
           selectedRel={selectedRel}
           onSelect={(rel) => setSelectedRel(rel)}

@@ -852,6 +852,28 @@ body {
   padding: 0 0.35rem;
 }
 
+.albedo-git-bar {
+  padding: 0.15rem 0.75rem 0.35rem;
+}
+
+.albedo-git {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  padding: 0;
+}
+
+.albedo-git--link {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.albedo-git--link:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
+
 .albedo-sidebar-fold {
   flex: 1;
   display: flex;

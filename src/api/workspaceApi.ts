@@ -82,6 +82,20 @@ function toMessage(dto: EventDto): ChatMessage {
   };
 }
 
+export interface GitRepo {
+  relPath: string;
+  branch: string;
+  dirty: boolean;
+  url: string | null;
+}
+
+interface GitDto {
+  rel_path: string;
+  branch: string;
+  dirty?: boolean;
+  url?: string | null;
+}
+
 interface HomeDto {
   name: string;
   kind: 'folder' | 'file';
@@ -118,6 +132,18 @@ function invalidateHomeCache(): void {
 }
 
 export const workspaceApi = {
+  async listGit(workspaceId: string): Promise<GitRepo[]> {
+    const result = await apiClient.call<{ items: GitDto[] }>('workspace', 'list_git', {
+      workspace_id: workspaceId,
+    });
+    return (result.items ?? []).map((item) => ({
+      relPath: item.rel_path,
+      branch: item.branch,
+      dirty: Boolean(item.dirty),
+      url: item.url ?? null,
+    }));
+  },
+
   async ensureHome(): Promise<string> {
     const result = await apiClient.call<{ home: string }>('workspace', 'ensure_home', {});
     return result.home;

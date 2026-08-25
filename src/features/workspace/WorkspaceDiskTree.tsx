@@ -8,12 +8,15 @@ import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
+import { GitBranch } from './GitBranch';
 import { folderToast, pathTail } from './folderToast';
+import type { GitRepo } from '../../api/workspaceApi';
 
 interface Root {
   name: string;
   relPath: string;
   kind: 'folder' | 'file';
+  git?: GitRepo;
 }
 
 interface WorkspaceDiskTreeProps {
@@ -98,6 +101,7 @@ export function WorkspaceDiskTree({
             workspaceId={workspaceId}
             selectedRel={selectedRel}
             onSelect={onSelect}
+            git={root.git}
             onMoved={onMoved}
             rev={rev}
             onNewFolder={(rel) => setPrompt({ mode: 'folder', rel })}
@@ -169,6 +173,7 @@ export function WorkspaceDiskTree({
 
 interface NodeProps {
   item: HomeEntry;
+  git?: GitRepo;
   workspaceId: string;
   selectedRel: string | null;
   onSelect: (rel: string, kind: 'folder' | 'file') => void;
@@ -187,6 +192,7 @@ interface NodeProps {
 
 function DiskNode({
   item,
+  git,
   workspaceId,
   selectedRel,
   onSelect,
@@ -292,6 +298,7 @@ function DiskNode({
         ) : (
           <span className="albedo-tree-name">{item.name}</span>
         )}
+        {git ? <GitBranch repo={git} compact /> : null}
         <span className="albedo-row-actions">
           {item.kind === 'folder' ? (
             <>
