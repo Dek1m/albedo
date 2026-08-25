@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import { workspaceApi } from '../../api/workspaceApi';
 import { humanMessage } from '../../api/errors';
 import type { NodeId, WsNode } from '../../domain/workspace';
 import { toast } from '../../shared/toast/toastStore';
+import { Modal } from '../../shared/ui/Modal';
+import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
+import { HomeTree } from './HomeTree';
 
 interface WorkspaceSidebarProps {
   onOpenSessions: () => void;
@@ -18,7 +21,12 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
   const setFoldersOpen = useWorkspaceStore((s) => s.setFoldersOpen);
   const [nodes, setNodes] = useState<WsNode[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
   const [selected, setSelected] = useState<NodeId | null>(null);
+  const kebab = useRef<HTMLDivElement>(null);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  useClickOutside(menuOpen, kebab, closeMenu);
 
   const reload = useCallback(async (): Promise<void> => {
     if (!active) {
@@ -50,13 +58,25 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
     return null;
   }
 
-  const addFolder = async (): Promise<void> => {
-    const name = window.prompt('Folder name');
-    if (!name?.trim()) {
-      return;
-    }
+  const addFolder = (): void => {
+    setMenuOpen(false);
+    setPicked(new Set(nodes.map((node) => node.relPath)));
+    setPickerOpen(true);
+  };
+
+  const toggleLive = async (rel: string): Promise<void> => {
     try {
-      await workspaceApi.createFolder(active.id, name.trim(), selected);
+      if (picked.has(rel)) {
+        await workspaceApi.unlinkHome(active.id, rel);
+        setPicked((prev) => {
+          const next = new Set(prev);
+          next.delete(rel);
+          return next;
+        });
+      } else {
+        await workspaceApi.linkHome(active.id, rel);
+        setPicked((prev) => new Set(prev).add(rel));
+      }
       await reload();
     } catch (err) {
       toast(humanMessage(err));
@@ -83,6 +103,24 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
     try {
       await workspaceApi.deleteNode(active.id, selected);
       setSelected(null);
+      setMenuOpen(false);
+      await reload();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const trashSelected = async (): Promise<void> => {
+    if (!selected) {
+      return;
+    }
+    if (!window.confirm('Удалить в корзину на сервере? Файлы уйдут в ~/Trash/albedo/.')) {
+      return;
+    }
+    try {
+      await workspaceApi.trashNode(active.id, selected);
+      setSelected(null);
+      setMenuOpen(false);
       await reload();
     } catch (err) {
       toast(humanMessage(err));
@@ -103,7 +141,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
         <button type="button" className="albedo-icon-btn" title="New folder" onClick={() => { setSelected(null); void addFolder(); }}>
           <i className="bi bi-folder-plus" />
         </button>
-        <div className="albedo-kebab">
+        <div className="albedo-kebab" ref={kebab}>
           <button type="button" className="albedo-icon-btn" onClick={() => setMenuOpen((v) => !v)}>
             <i className="bi bi-three-dots-vertical" />
           </button>
@@ -128,7 +166,10 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
                 Expand all
               </button>
               <button type="button" className="albedo-ws-drop-item" disabled={!selected} onClick={() => void removeSelected()}>
-                Delete
+                Remove from project
+              </button>
+              <button type="button" className="albedo-ws-drop-item" disabled={!selected} onClick={() => void trashSelected()}>
+                Delete…
               </button>
             </div>
           ) : null}
@@ -151,6 +192,17 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
         </ul>
       ) : null}
       <div className="albedo-sidebar-resizer" onMouseDown={onDrag} />
+      <Modal open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
+        <HomeTree
+          selected={picked}
+          workspaceId={active.id}
+          onToggle={(rel) => void toggleLive(rel)}
+          onTrashed={() => void reload()}
+        />
+        <button type="button" className="btn btn-sm btn-albedo-primary mt-2" onClick={() => setPickerOpen(false)}>
+          Done
+        </button>
+      </Modal>
     </aside>
   );
 }

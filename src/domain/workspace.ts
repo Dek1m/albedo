@@ -29,6 +29,13 @@ export interface WsNode {
   fileCount: number;
 }
 
+export interface HomeEntry {
+  name: string;
+  kind: 'folder' | 'file';
+  relPath: string;
+  linked: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   sessionId: SessionId;

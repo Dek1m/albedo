@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { authApi } from '../../api/authApi';
+import { workspaceApi } from '../../api/workspaceApi';
 import { useAuthStore } from '../../auth/AuthStore';
 import { ToastView } from '../../shared/toast/ToastView';
 import { LoginForm } from './LoginForm';
@@ -41,6 +42,7 @@ export function LoginPage(): ReactElement {
     await authApi.login(values.username, values.password);
     const profile = await authApi.getMe();
     markAuthenticated(profile);
+    await workspaceApi.ensureHome().catch(() => undefined);
     navigate('/', { replace: true });
   };
 

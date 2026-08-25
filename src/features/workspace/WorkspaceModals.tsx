@@ -7,6 +7,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { BusyDots } from '../../shared/ui/BusyDots';
 import { sessionHue } from '../../domain/workspace';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
+import { HomeTree } from './HomeTree';
 import { loadCatalog } from './WorkspaceMenu';
 
 interface Props {
@@ -35,7 +36,7 @@ export function WorkspaceModals({
   const setSessions = useWorkspaceStore((s) => s.setSessions);
   const setFocused = useWorkspaceStore((s) => s.setFocused);
   const [name, setName] = useState('');
-  const [folders, setFolders] = useState('');
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
   const [sessionTitle, setSessionTitle] = useState('');
 
   const openWs = async (id: string): Promise<void> => {
@@ -55,16 +56,12 @@ export function WorkspaceModals({
       return;
     }
     try {
-      const folderNames = folders
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
-      const ws = await workspaceApi.create(name.trim(), folderNames);
+      const ws = await workspaceApi.create(name.trim(), [...picked]);
       await loadCatalog();
       const list = await workspaceApi.listSessions(ws.id);
       openDashboard(ws, list);
       setName('');
-      setFolders('');
+      setPicked(new Set());
       onCloseCreate();
     } catch (err) {
       toast(humanMessage(err));
@@ -154,16 +151,23 @@ export function WorkspaceModals({
           Name
         </label>
         <input id="ws-name" className="form-control form-control-sm" value={name} onChange={(e) => setName(e.target.value)} />
-        <label className="form-label mt-2" htmlFor="ws-folders">
-          Folders (optional, comma-separated)
-        </label>
-        <input
-          id="ws-folders"
-          className="form-control form-control-sm"
-          value={folders}
-          onChange={(e) => setFolders(e.target.value)}
-          placeholder="docs, src"
-        />
+        <label className="form-label mt-2">Folders from ~/</label>
+        {createOpen ? (
+          <HomeTree
+            selected={picked}
+            onToggle={(rel) => {
+              setPicked((prev) => {
+                const next = new Set(prev);
+                if (next.has(rel)) {
+                  next.delete(rel);
+                } else {
+                  next.add(rel);
+                }
+                return next;
+              });
+            }}
+          />
+        ) : null}
         <button type="button" className="btn btn-sm btn-albedo-primary mt-3" onClick={() => void createWs()}>
           Create
         </button>

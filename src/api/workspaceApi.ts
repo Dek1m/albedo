@@ -1,4 +1,4 @@
-import type { ChatMessage, WsNode, WsSession, Workspace } from '../domain/workspace';
+import type { ChatMessage, HomeEntry, WsNode, WsSession, Workspace } from '../domain/workspace';
 import { asNodeId, asSessionId, asWorkspaceId } from '../domain/workspace';
 import { apiClient } from './client';
 
@@ -82,7 +82,61 @@ function toMessage(dto: EventDto): ChatMessage {
   };
 }
 
+interface HomeDto {
+  name: string;
+  kind: 'folder' | 'file';
+  rel_path: string;
+  linked?: boolean;
+}
+
 export const workspaceApi = {
+  async ensureHome(): Promise<string> {
+    const result = await apiClient.call<{ home: string }>('workspace', 'ensure_home', {});
+    return result.home;
+  },
+
+  async listHome(relPath: string, workspaceId?: string): Promise<HomeEntry[]> {
+    const result = await apiClient.call<{ items: HomeDto[] }>('workspace', 'list_home', {
+      rel_path: relPath,
+      workspace_id: workspaceId ?? null,
+    });
+    return (result.items ?? []).map((item) => ({
+      name: item.name,
+      kind: item.kind,
+      relPath: item.rel_path,
+      linked: Boolean(item.linked),
+    }));
+  },
+
+  async linkHome(workspaceId: string, relPath: string): Promise<WsNode> {
+    const dto = await apiClient.call<NodeDto>('workspace', 'link_home_path', {
+      workspace_id: workspaceId,
+      rel_path: relPath,
+    });
+    return toNode(dto);
+  },
+
+  async unlinkHome(workspaceId: string, relPath: string): Promise<void> {
+    await apiClient.call('workspace', 'unlink_home_path', {
+      workspace_id: workspaceId,
+      rel_path: relPath,
+    });
+  },
+
+  async trashHome(workspaceId: string, relPath: string): Promise<void> {
+    await apiClient.call('workspace', 'trash_home_path', {
+      workspace_id: workspaceId,
+      rel_path: relPath,
+    });
+  },
+
+  async trashNode(workspaceId: string, nodeId: string): Promise<void> {
+    await apiClient.call('workspace', 'trash_node', {
+      workspace_id: workspaceId,
+      node_id: nodeId,
+    });
+  },
+
   async list(): Promise<Workspace[]> {
     const result = await apiClient.call<{ items: WorkspaceDto[] }>('workspace', 'list_workspaces', {});
     return (result.items ?? []).map(toWorkspace);

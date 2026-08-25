@@ -6,6 +6,7 @@ import { ToastView } from '../../shared/toast/ToastView';
 import { UserSettingsModal } from '../settings/UserSettingsModal';
 import { ChatPane } from '../workspace/ChatPane';
 import { SessionTabs } from '../workspace/SessionTabs';
+import { workspaceApi } from '../../api/workspaceApi';
 import { WorkspaceMenu, loadCatalog } from '../workspace/WorkspaceMenu';
 import { WorkspaceModals } from '../workspace/WorkspaceModals';
 import { WorkspaceSidebar } from '../workspace/WorkspaceSidebar';
@@ -20,6 +21,7 @@ export function AppShell(): ReactElement {
   const [sessionsOpen, setSessionsOpen] = useState(false);
 
   useEffect(() => {
+    void workspaceApi.ensureHome().catch(() => undefined);
     void loadCatalog();
   }, []);
 
