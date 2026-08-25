@@ -1,34 +1,30 @@
 :root {
-  /* ── Base ─────────────────────────────────── */
-  --bg-base: #111114;
-  --bg-elevated: #18181c;
-  --bg-surface: #1e1e24;
-  --bg-hover: #25252d;
-  --bg-active: #2a2a34;
+  /* Чернильная бумага: тёплый уголь, ртуть, фиолет только у бренда */
+  --bg-base: #0e0d0c;
+  --bg-elevated: #161412;
+  --bg-surface: #1a1816;
+  --bg-hover: #201e1b;
+  --bg-active: #262320;
 
-  /* ── Borders ─────────────────────────────── */
-  --border: #2a2a34;
-  --border-hover: #3a3a48;
-  --border-focus: #7c5cbf;
+  --border: #221f1c;
+  --border-hover: #2e2a26;
+  --border-focus: #c4c0b8;
 
-  /* ── Text ─────────────────────────────────── */
-  --text-primary: #e2e2e8;
-  --text-secondary: #a0a0ac;
-  --text-muted: #6a6a78;
+  --text-primary: #e8e4dc;
+  --text-secondary: #9a958c;
+  --text-muted: #6a655e;
 
-  /* ── Accent (violet — only on interaction) ── */
-  --accent: #7c5cbf;
-  --accent-hover: #9474d6;
-  --accent-bg: rgb(124 92 191 / 12%);
+  --accent: #c4c0b8;
+  --accent-hover: #d8d4cc;
+  --accent-bg: rgb(196 192 184 / 10%);
+  --brand: #6d5a9a;
 
-  /* ── Semantic ─────────────────────────────── */
-  --danger: #e05555;
-  --success: #4caf7c;
+  --danger: #c45c4a;
+  --success: #6a9a72;
 
-  /* ── Sizing / motion ──────────────────────── */
-  --radius: 4px;
-  --shadow: 0 8px 32px rgb(0 0 0 / 40%);
-  --dur: 200ms;
+  --radius: 3px;
+  --shadow: 0 1px 0 rgb(255 255 255 / 3%) inset, 0 16px 48px rgb(0 0 0 / 45%);
+  --dur: 180ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -46,7 +42,7 @@ body,
 }
 
 body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -55,57 +51,35 @@ body {
 .albedo-stage,
 .albedo-shell {
   min-height: 100vh;
-  position: relative;
   background: var(--bg-base);
 }
 
 .albedo-stage {
   display: grid;
   place-items: center;
-  isolation: isolate;
-}
-
-.albedo-stage::before {
-  content: '';
-  position: absolute;
-  inset: -8%;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse 70% 45% at 48% 18%, rgb(90 78 140 / 11%), transparent 58%),
-    radial-gradient(ellipse at center, transparent 42%, rgb(0 0 0 / 48%) 100%);
-  animation: albedo-drift 32s var(--ease) infinite;
-}
-
-.albedo-stage > * {
-  position: relative;
-  z-index: 1;
 }
 
 .albedo-shell {
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(ellipse 80% 36% at 50% -8%, rgb(70 60 110 / 6%), transparent 52%),
-    var(--bg-base);
 }
 
 .albedo-brand {
   margin: 0;
-  font-size: 0.95rem;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.05rem;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.04em;
   color: var(--text-primary);
 }
 
 .albedo-brand::after {
   content: '';
   display: block;
-  width: 0.55em;
+  width: 0.42em;
   height: 1px;
-  margin-top: 3px;
-  background: var(--accent);
-  opacity: 0.75;
+  margin-top: 4px;
+  background: var(--brand);
 }
 
 .albedo-header {
@@ -118,27 +92,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgb(18 18 22 / 78%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: none;
-}
-
-.albedo-header::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgb(124 92 191 / 35%) 18%,
-    var(--border) 50%,
-    transparent 100%
-  );
-  pointer-events: none;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
 }
 
 .albedo-header-actions {
@@ -149,21 +104,17 @@ body {
 
 .albedo-workspace {
   flex: 1;
-  position: relative;
   display: grid;
   place-items: center;
-  background-image:
-    linear-gradient(rgb(255 255 255 / 2.2%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 2.2%) 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 
 .albedo-workspace-ready {
   margin: 0;
-  font-size: 0.78rem;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.9rem;
   font-style: italic;
   font-weight: 400;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
 }
 
@@ -172,12 +123,9 @@ body {
 .albedo-auth-card {
   width: min(340px, calc(100vw - 2rem));
   padding: 1.5rem;
-  background: rgb(18 18 22 / 78%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
 }
 
 .albedo-auth-form {
@@ -427,7 +375,7 @@ body {
 
 .albedo-dp-cal-day--active {
   background: var(--accent);
-  color: #fff;
+  color: var(--bg-base);
 }
 
 .albedo-auto-prompt-hint {
@@ -449,7 +397,8 @@ body {
   font-size: 0.75rem;
   color: var(--text-secondary);
   white-space: pre-wrap;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-style: italic;
 }
 
 .albedo-member-actions {
@@ -616,12 +565,9 @@ body {
 .albedo-confirm-dialog {
   width: min(340px, calc(100vw - 2rem));
   padding: 1.1rem;
-  background: rgb(18 18 22 / 88%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -630,8 +576,9 @@ body {
 
 .albedo-confirm-title {
   margin: 0;
-  font-weight: 600;
-  font-size: 0.88rem;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 500;
+  font-size: 1rem;
 }
 
 .albedo-confirm-text {
@@ -645,18 +592,6 @@ body {
   justify-content: flex-end;
   gap: 0.4rem;
   margin-top: 0.3rem;
-}
-
-@keyframes albedo-drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-    opacity: 1;
-  }
-  50% {
-    transform: translate3d(1.6%, 1.2%, 0);
-    opacity: 0.82;
-  }
 }
 
 @keyframes albedo-fade-in {
@@ -727,10 +662,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .albedo-stage::before {
-    animation: none;
-  }
-
   .albedo-modal-dialog,
   .albedo-modal-backdrop,
   .albedo-confirm-dialog,

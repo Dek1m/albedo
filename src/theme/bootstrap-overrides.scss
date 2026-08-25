@@ -1,4 +1,4 @@
-// Bootstrap — серый хром. Фокус как inset-луч, не ореол.
+// Чернильная бумага. Фокус — ртуть, без ореола.
 
 body {
   background-color: var(--bg-base);
@@ -12,19 +12,16 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 0.82rem;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
+  box-shadow: none;
   transition:
     border-color var(--dur) var(--ease),
-    box-shadow var(--dur) var(--ease),
     background-color var(--dur) var(--ease);
 
   &:focus {
     background-color: var(--bg-surface);
     color: var(--text-primary);
     border-color: var(--accent);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 8%),
-      inset 0 0 0 1px var(--accent);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
   }
 
   &::placeholder {
@@ -33,8 +30,8 @@ body {
 }
 
 textarea.form-control {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-size: 0.78rem;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-size: 0.8rem;
 }
 
 .form-check-input {
@@ -73,6 +70,8 @@ textarea.form-control {
       color: var(--text-primary);
       background-color: var(--bg-surface);
       border-color: var(--border) var(--border) var(--bg-surface);
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-weight: 500;
     }
   }
 }
@@ -101,13 +100,11 @@ textarea.form-control {
 }
 
 .modal-content {
-  background: rgb(18 18 22 / 82%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-elevated);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 .modal-header {
@@ -116,9 +113,10 @@ textarea.form-control {
 }
 
 .modal-title {
-  font-size: 0.85rem;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.95rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .modal-body {
@@ -137,17 +135,18 @@ textarea.form-control {
 }
 
 .btn-albedo-primary {
-  color: #fff;
+  color: var(--bg-base);
   border: 1px solid var(--accent);
-  background: var(--accent-bg);
+  background: var(--accent);
+  font-weight: 500;
   transition:
     background var(--dur) var(--ease),
     border-color var(--dur) var(--ease);
 
   &:hover,
   &:focus-visible {
-    color: #fff;
-    background: rgb(124 92 191 / 22%);
+    color: var(--bg-base);
+    background: var(--accent-hover);
     border-color: var(--accent-hover);
   }
 }
