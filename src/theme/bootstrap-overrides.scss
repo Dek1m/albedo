@@ -30,7 +30,7 @@ body {
 }
 
 textarea.form-control {
-  font-family: 'Source Sans 3', system-ui, sans-serif;
+  font-family: Outfit, system-ui, sans-serif;
   font-size: 0.8rem;
 }
 
@@ -70,7 +70,7 @@ textarea.form-control {
       color: var(--text-primary);
       background-color: var(--bg-surface);
       border-color: var(--border) var(--border) var(--bg-surface);
-      font-family: 'Source Serif 4', Georgia, serif;
+      font-family: Outfit, system-ui, sans-serif;
       font-weight: 500;
     }
   }
@@ -113,7 +113,7 @@ textarea.form-control {
 }
 
 .modal-title {
-  font-family: 'Source Serif 4', Georgia, serif;
+  font-family: Outfit, system-ui, sans-serif;
   font-size: 0.95rem;
   font-weight: 500;
   letter-spacing: 0.02em;
