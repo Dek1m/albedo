@@ -26,6 +26,8 @@ const CODE_MESSAGES: Record<string, string> = {
   PAYLOAD_NOT_SERIALIZABLE: 'Некорректный запрос',
   METHOD_NOT_FOUND: 'Метод не найден',
   WORKER_NOT_READY: 'Сервис временно недоступен',
+  ALREADY_NESTED: 'Папка уже внутри добавленной в workspace',
+  ALREADY_LINKED: 'Уже в workspace',
 };
 
 export function humanMessage(error: unknown): string {

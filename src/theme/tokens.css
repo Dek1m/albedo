@@ -1071,39 +1071,37 @@ body {
 .albedo-home-toolbar {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.5rem;
+  gap: 0.15rem;
+  padding: 0.3rem 0.4rem;
   border-bottom: 1px solid var(--border);
   background: #161412;
 }
 
-.albedo-home-crumb {
+.albedo-home-address {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-secondary);
+  height: 1.6rem;
+  border: 1px solid var(--border);
+  background: #0e0d0c;
+  color: var(--text-primary);
   font-size: 0.78rem;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  padding: 0;
+  padding: 0 0.4rem;
+  border-radius: var(--radius);
+  outline: none;
 }
 
-.albedo-home-tools {
-  display: flex;
-  gap: 0.1rem;
+.albedo-home-address:focus {
+  border-color: var(--border-focus);
 }
 
-.albedo-home-tools .albedo-icon-btn {
+.albedo-home-toolbar .albedo-icon-btn {
   color: var(--text-secondary);
-  padding: 0.2rem 0.3rem;
+  padding: 0.15rem 0.28rem;
   border-radius: var(--radius);
 }
 
-.albedo-home-tools .albedo-icon-btn:hover {
+.albedo-home-toolbar .albedo-icon-btn:hover,
+.albedo-home-toolbar .albedo-icon-btn.is-on {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
@@ -1138,6 +1136,11 @@ body {
 
 .albedo-home-row.is-focus {
   background: rgb(255 122 26 / 12%);
+}
+
+.albedo-home-row.is-linked {
+  box-shadow: inset 2px 0 0 var(--brand);
+  color: #f6f2ea;
 }
 
 .albedo-home-row.is-draft {
@@ -1199,6 +1202,38 @@ body {
 
 .albedo-home-ghost:hover {
   color: var(--danger);
+}
+
+.albedo-home-size {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.albedo-home-attached {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem 0.45rem;
+  border-top: 1px solid var(--border);
+  max-height: 7rem;
+  overflow: auto;
+}
+
+.albedo-home-attached li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  animation: albedo-fade-in 160ms var(--ease);
+}
+
+.albedo-home-attached li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .albedo-home-draft {

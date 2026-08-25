@@ -17,16 +17,53 @@ interface Draft {
   parentRel: string;
 }
 
+function parseAddress(raw: string): string {
+  let value = raw.trim();
+  if (value === '~' || value === '~/') {
+    return '';
+  }
+  if (value.startsWith('~/')) {
+    value = value.slice(2);
+  }
+  value = value.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (value.includes('..')) {
+    throw new Error('invalid path');
+  }
+  return value;
+}
+
+function nestedInside(rel: string, linked: Set<string>): string | null {
+  for (const parent of linked) {
+    if (rel !== parent && rel.startsWith(`${parent}/`)) {
+      return parent;
+    }
+  }
+  return null;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTreeProps): ReactElement {
   const [root, setRoot] = useState<HomeEntry[]>([]);
   const [tick, setTick] = useState(0);
   const [focusRel, setFocusRel] = useState('');
   const [focusKind, setFocusKind] = useState<'folder' | 'file'>('folder');
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [address, setAddress] = useState('~/');
+  const [hidden, setHidden] = useState(false);
+  const [showSize, setShowSize] = useState(false);
 
   const reload = useCallback(async (): Promise<void> => {
-    setRoot(await workspaceApi.listHome('', workspaceId));
-  }, [workspaceId]);
+    setRoot(await workspaceApi.listHome('', workspaceId, { hidden, size: showSize }));
+  }, [workspaceId, hidden, showSize]);
 
   useEffect(() => {
     void workspaceApi
@@ -34,6 +71,10 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
       .then(() => reload())
       .catch((err: unknown) => toast(humanMessage(err)));
   }, [reload, tick]);
+
+  useEffect(() => {
+    setAddress(focusRel ? `~/${focusRel}` : '~/');
+  }, [focusRel]);
 
   const parentOfFocus = (): string => {
     if (!focusRel) {
@@ -44,6 +85,14 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     }
     const cut = focusRel.lastIndexOf('/');
     return cut === -1 ? '' : focusRel.slice(0, cut);
+  };
+
+  const applyAddress = (): string => {
+    const rel = parseAddress(address);
+    setFocusRel(rel);
+    setFocusKind('folder');
+    setAddress(rel ? `~/${rel}` : '~/');
+    return rel;
   };
 
   const startCreate = (kind: 'folder' | 'file'): void => {
@@ -64,6 +113,46 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     }
   };
 
+  const addCurrent = async (): Promise<void> => {
+    let rel: string;
+    try {
+      rel = applyAddress();
+    } catch {
+      toast('Некорректный путь');
+      return;
+    }
+    if (!rel) {
+      toast('Выбери папку или файл');
+      return;
+    }
+    const inside = nestedInside(rel, selected);
+    if (inside) {
+      toast(`Папка уже внутри «${inside}»`);
+      return;
+    }
+    if (selected.has(rel)) {
+      toast('Уже в workspace');
+      return;
+    }
+    try {
+      await workspaceApi.createHome(rel, '', focusKind);
+      onToggle(rel);
+      setTick((value) => value + 1);
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const refresh = async (): Promise<void> => {
+    try {
+      await workspaceApi.refreshHome(workspaceId);
+      setTick((value) => value + 1);
+      onTrashed?.();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
   const trash = async (relPath: string): Promise<void> => {
     if (!window.confirm(`Удалить «${relPath}» на сервере?`)) {
       return;
@@ -77,30 +166,56 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     }
   };
 
+  const onAddrKey = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      try {
+        applyAddress();
+      } catch {
+        toast('Некорректный путь');
+      }
+    }
+  };
+
   return (
     <div className="albedo-home-pane">
       <div className="albedo-home-toolbar">
+        <input
+          className="albedo-home-address"
+          value={address}
+          spellCheck={false}
+          onChange={(event) => setAddress(event.target.value)}
+          onKeyDown={onAddrKey}
+          aria-label="Path"
+        />
+        <button type="button" className="albedo-icon-btn" title="Add to workspace" onClick={() => void addCurrent()}>
+          <i className="bi bi-plus-lg" />
+        </button>
+        <button type="button" className="albedo-icon-btn" title="Refresh" onClick={() => void refresh()}>
+          <i className="bi bi-arrow-clockwise" />
+        </button>
+        <button type="button" className="albedo-icon-btn" title="New folder" onClick={() => startCreate('folder')}>
+          <i className="bi bi-folder-plus" />
+        </button>
+        <button type="button" className="albedo-icon-btn" title="New file" onClick={() => startCreate('file')}>
+          <i className="bi bi-file-earmark-plus" />
+        </button>
         <button
           type="button"
-          className="albedo-home-crumb"
-          onClick={() => {
-            setFocusRel('');
-            setFocusKind('folder');
-          }}
+          className={`albedo-icon-btn${hidden ? ' is-on' : ''}`}
+          title="Show hidden"
+          onClick={() => setHidden((value) => !value)}
         >
-          {focusRel ? `~/${focusRel}` : '~/'}
+          <i className={`bi ${hidden ? 'bi-eye' : 'bi-eye-slash'}`} />
         </button>
-        <div className="albedo-home-tools">
-          <button type="button" className="albedo-icon-btn" title="New folder" onClick={() => startCreate('folder')}>
-            <i className="bi bi-folder-plus" />
-          </button>
-          <button type="button" className="albedo-icon-btn" title="New file" onClick={() => startCreate('file')}>
-            <i className="bi bi-file-earmark-plus" />
-          </button>
-          <button type="button" className="albedo-icon-btn" title="Refresh" onClick={() => setTick((value) => value + 1)}>
-            <i className="bi bi-arrow-clockwise" />
-          </button>
-        </div>
+        <button
+          type="button"
+          className={`albedo-icon-btn${showSize ? ' is-on' : ''}`}
+          title="Show size"
+          onClick={() => setShowSize((value) => !value)}
+        >
+          <i className="bi bi-hdd" />
+        </button>
       </div>
       <HomeBranch
         items={root}
@@ -117,7 +232,21 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         onSubmitDraft={(name) => void submitDraft(name)}
         onCancelDraft={() => setDraft(null)}
         tick={tick}
+        hidden={hidden}
+        showSize={showSize}
       />
+      {selected.size ? (
+        <ul className="albedo-home-attached">
+          {[...selected].sort().map((rel) => (
+            <li key={rel}>
+              <span>~/{rel}</span>
+              <button type="button" className="albedo-icon-btn" title="Remove from project" onClick={() => onToggle(rel)}>
+                <i className="bi bi-x" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -134,6 +263,8 @@ interface BranchProps {
   onSubmitDraft: (name: string) => void;
   onCancelDraft: () => void;
   tick: number;
+  hidden: boolean;
+  showSize: boolean;
   parentRel?: string;
 }
 
@@ -149,14 +280,14 @@ function HomeBranch({
   onSubmitDraft,
   onCancelDraft,
   tick,
+  hidden,
+  showSize,
   parentRel = '',
 }: BranchProps): ReactElement {
   const showDraft = draft && draft.parentRel === parentRel;
   return (
     <ul className="albedo-home-tree">
-      {showDraft ? (
-        <DraftRow kind={draft.kind} onSubmit={onSubmitDraft} onCancel={onCancelDraft} />
-      ) : null}
+      {showDraft ? <DraftRow kind={draft.kind} onSubmit={onSubmitDraft} onCancel={onCancelDraft} /> : null}
       {items.map((item) => (
         <HomeNode
           key={item.relPath}
@@ -171,6 +302,8 @@ function HomeBranch({
           onSubmitDraft={onSubmitDraft}
           onCancelDraft={onCancelDraft}
           tick={tick}
+          hidden={hidden}
+          showSize={showSize}
         />
       ))}
     </ul>
@@ -189,6 +322,8 @@ interface NodeProps {
   onSubmitDraft: (name: string) => void;
   onCancelDraft: () => void;
   tick: number;
+  hidden: boolean;
+  showSize: boolean;
 }
 
 function HomeNode({
@@ -203,6 +338,8 @@ function HomeNode({
   onSubmitDraft,
   onCancelDraft,
   tick,
+  hidden,
+  showSize,
 }: NodeProps): ReactElement {
   const wantOpen = Boolean(draft && (draft.parentRel === item.relPath || draft.parentRel.startsWith(`${item.relPath}/`)));
   const [open, setOpen] = useState(wantOpen);
@@ -219,17 +356,10 @@ function HomeNode({
       return;
     }
     void workspaceApi
-      .listHome(item.relPath, workspaceId)
+      .listHome(item.relPath, workspaceId, { hidden, size: showSize })
       .then(setKids)
       .catch((err: unknown) => toast(humanMessage(err)));
-  }, [open, item.kind, item.relPath, workspaceId, tick]);
-
-  const expand = (): void => {
-    if (item.kind !== 'folder') {
-      return;
-    }
-    setOpen((value) => !value);
-  };
+  }, [open, item.kind, item.relPath, workspaceId, tick, hidden, showSize]);
 
   const focused = focusRel === item.relPath;
   const inProject = selected.has(item.relPath) || item.linked;
@@ -246,7 +376,7 @@ function HomeNode({
             className="albedo-home-toggle"
             onClick={(event) => {
               event.stopPropagation();
-              expand();
+              setOpen((value) => !value);
             }}
           >
             <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
@@ -256,17 +386,7 @@ function HomeNode({
         )}
         <i className={`bi ${item.kind === 'folder' ? (open ? 'bi-folder2-open' : 'bi-folder') : 'bi-file-earmark'}`} />
         <span className="albedo-home-name">{item.name}</span>
-        <button
-          type="button"
-          className={`albedo-home-pin${inProject ? ' is-on' : ''}`}
-          title={inProject ? 'In project' : 'Add to project'}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggle(item.relPath);
-          }}
-        >
-          <i className={`bi ${inProject ? 'bi-check2-circle' : 'bi-circle'}`} />
-        </button>
+        {showSize ? <span className="albedo-home-size">{formatSize(item.sizeBytes)}</span> : null}
         <button
           type="button"
           className="albedo-home-ghost"
@@ -292,6 +412,8 @@ function HomeNode({
           onSubmitDraft={onSubmitDraft}
           onCancelDraft={onCancelDraft}
           tick={tick}
+          hidden={hidden}
+          showSize={showSize}
           parentRel={item.relPath}
         />
       ) : null}
@@ -307,7 +429,6 @@ interface DraftProps {
 
 function DraftRow({ kind, onSubmit, onCancel }: DraftProps): ReactElement {
   const [name, setName] = useState('');
-
   const onKey = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === 'Enter') {
       onSubmit(name);
@@ -316,7 +437,6 @@ function DraftRow({ kind, onSubmit, onCancel }: DraftProps): ReactElement {
       onCancel();
     }
   };
-
   return (
     <li>
       <div className="albedo-home-row is-draft">

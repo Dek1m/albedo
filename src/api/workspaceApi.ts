@@ -87,6 +87,7 @@ interface HomeDto {
   kind: 'folder' | 'file';
   rel_path: string;
   linked?: boolean;
+  size_bytes?: number;
 }
 
 export const workspaceApi = {
@@ -95,16 +96,23 @@ export const workspaceApi = {
     return result.home;
   },
 
-  async listHome(relPath: string, workspaceId?: string): Promise<HomeEntry[]> {
+  async listHome(
+    relPath: string,
+    workspaceId?: string,
+    opts?: { hidden?: boolean; size?: boolean },
+  ): Promise<HomeEntry[]> {
     const result = await apiClient.call<{ items: HomeDto[] }>('workspace', 'list_home', {
       rel_path: relPath,
       workspace_id: workspaceId ?? null,
+      include_hidden: Boolean(opts?.hidden),
+      include_size: Boolean(opts?.size),
     });
     return (result.items ?? []).map((item) => ({
       name: item.name,
       kind: item.kind,
       relPath: item.rel_path,
       linked: Boolean(item.linked),
+      sizeBytes: item.size_bytes ?? 0,
     }));
   },
 
@@ -134,7 +142,14 @@ export const workspaceApi = {
       kind: dto.kind,
       relPath: dto.rel_path,
       linked: Boolean(dto.linked),
+      sizeBytes: dto.size_bytes ?? 0,
     };
+  },
+
+  async refreshHome(workspaceId?: string): Promise<void> {
+    await apiClient.call('workspace', 'refresh_home', {
+      workspace_id: workspaceId ?? null,
+    });
   },
 
   async trashHome(relPath: string, workspaceId?: string): Promise<void> {

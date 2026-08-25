@@ -34,6 +34,7 @@ export interface HomeEntry {
   kind: 'folder' | 'file';
   relPath: string;
   linked: boolean;
+  sizeBytes: number;
 }
 
 export interface ChatMessage {

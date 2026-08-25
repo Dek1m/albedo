@@ -199,9 +199,6 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
           onToggle={(rel) => void toggleLive(rel)}
           onTrashed={() => void reload()}
         />
-        <button type="button" className="btn btn-sm btn-albedo-primary mt-2" onClick={() => setPickerOpen(false)}>
-          Done
-        </button>
       </Modal>
     </aside>
   );
