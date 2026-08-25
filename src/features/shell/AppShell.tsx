@@ -24,7 +24,9 @@ export function AppShell(): ReactElement {
           </button>
         </div>
       </header>
-      <main className="albedo-workspace" />
+      <main className="albedo-workspace">
+        <p className="albedo-workspace-ready">ready</p>
+      </main>
       <ToastView />
       <UserSettingsModal />
     </div>
