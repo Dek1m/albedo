@@ -17,7 +17,8 @@
   --accent: #c4c0b8;
   --accent-hover: #d8d4cc;
   --accent-bg: rgb(196 192 184 / 10%);
-  --brand: #6d5a9a;
+  --brand: #ff7a1a;
+  --email-domain: #ff7a1a;
 
   --danger: #c45c4a;
   --success: #6a9a72;
@@ -171,8 +172,7 @@ body {
 }
 
 .albedo-chip:hover .albedo-chip-name,
-.albedo-chip:hover .albedo-chip-email,
-.albedo-chip:hover .albedo-chip-domain {
+.albedo-chip:hover .albedo-chip-email {
   color: #1a1816;
 }
 
@@ -195,7 +195,7 @@ body {
 }
 
 .albedo-chip-domain {
-  color: var(--text-secondary);
+  color: var(--email-domain);
 }
 
 /* ── Avatar ────────────────────────────────── */
