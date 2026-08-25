@@ -33,7 +33,8 @@ export function WorkspaceDiskTree({
   onMoved,
   rev,
 }: WorkspaceDiskTreeProps): ReactElement {
-  const [prompt, setPrompt] = useState<{ mode: 'folder' | 'file' | 'rename'; rel: string } | null>(null);
+  const [prompt, setPrompt] = useState<{ mode: 'folder' | 'file'; rel: string } | null>(null);
+  const [renaming, setRenaming] = useState<{ rel: string; kind: 'folder' | 'file' } | null>(null);
   const [ask, setAsk] = useState<{ rel: string; body: string } | null>(null);
 
   const runCreate = async (name: string): Promise<void> => {
@@ -41,11 +42,28 @@ export function WorkspaceDiskTree({
       return;
     }
     try {
-      if (prompt.mode === 'rename') {
-        await workspaceApi.renameHome(prompt.rel, name, workspaceId);
-      } else {
-        await workspaceApi.createHome(name, prompt.rel, prompt.mode === 'folder' ? 'folder' : 'file');
-      }
+      await workspaceApi.createHome(name, prompt.rel, prompt.mode === 'folder' ? 'folder' : 'file');
+      onMoved();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const runRename = async (src: string, kind: 'folder' | 'file', name: string): Promise<void> => {
+    const next = name.trim();
+    setRenaming(null);
+    if (!next || next === pathTail(src)) {
+      return;
+    }
+    try {
+      const newRel = await workspaceApi.renameHome(src, next, workspaceId);
+      const store = useWorkspaceStore.getState();
+      store.setExpanded(
+        store.expanded.map((path) =>
+          path === src || path.startsWith(`${src}/`) ? newRel + path.slice(src.length) : path,
+        ),
+      );
+      onSelect(newRel, kind);
       onMoved();
     } catch (err) {
       toast(humanMessage(err));
@@ -84,7 +102,14 @@ export function WorkspaceDiskTree({
             rev={rev}
             onNewFolder={(rel) => setPrompt({ mode: 'folder', rel })}
             onNewFile={(rel) => setPrompt({ mode: 'file', rel })}
-            onRename={(rel) => setPrompt({ mode: 'rename', rel })}
+            onRename={(rel, kind) => setRenaming({ rel, kind })}
+            renamingRel={renaming?.rel ?? null}
+            onCommitRename={(name) => {
+              if (renaming) {
+                void runRename(renaming.rel, renaming.kind, name);
+              }
+            }}
+            onCancelRename={() => setRenaming(null)}
             onAskTrash={async (rel) => {
               try {
                 const stat = await workspaceApi.homeStat(rel);
@@ -120,7 +145,7 @@ export function WorkspaceDiskTree({
       </ul>
       <PromptDialog
         open={Boolean(prompt)}
-        title={prompt?.mode === 'rename' ? 'Rename' : prompt?.mode === 'file' ? 'New file' : 'New folder'}
+        title={prompt?.mode === 'file' ? 'New file' : 'New folder'}
         label="Name"
         onClose={() => setPrompt(null)}
         onSubmit={(name) => void runCreate(name)}
@@ -151,7 +176,10 @@ interface NodeProps {
   rev: number;
   onNewFolder: (rel: string) => void;
   onNewFile: (rel: string) => void;
-  onRename: (rel: string) => void;
+  onRename: (rel: string, kind: 'folder' | 'file') => void;
+  renamingRel: string | null;
+  onCommitRename: (name: string) => void;
+  onCancelRename: () => void;
   onAskTrash: (rel: string) => void;
   onExclude: (rel: string) => void;
   onInclude: (rel: string) => void;
@@ -167,6 +195,9 @@ function DiskNode({
   onNewFolder,
   onNewFile,
   onRename,
+  renamingRel,
+  onCommitRename,
+  onCancelRename,
   onAskTrash,
   onExclude,
   onInclude,
@@ -190,7 +221,7 @@ function DiskNode({
   const onNameClick = (): void => {
     const now = Date.now();
     if (selectedRel === item.relPath && now - lastClick.current > 500 && now - lastClick.current < 1800) {
-      onRename(item.relPath);
+      onRename(item.relPath, item.kind);
       lastClick.current = now;
       return;
     }
@@ -202,7 +233,7 @@ function DiskNode({
     <li>
       <div
         className={`albedo-tree-item${selectedRel === item.relPath ? ' is-selected' : ''}${over ? ' is-drop' : ''}`}
-        draggable
+        draggable={renamingRel !== item.relPath}
         onClick={onNameClick}
         onDragStart={(event) => {
           event.dataTransfer.setData('text/albedo-rel', item.relPath);
@@ -241,7 +272,26 @@ function DiskNode({
           <span className="albedo-tree-chevron" />
         )}
         <FileGlyph name={item.name} kind={item.kind} open={open} />
-        <span className="albedo-tree-name">{item.name}</span>
+        {renamingRel === item.relPath ? (
+          <input
+            className="albedo-tree-rename"
+            defaultValue={item.name}
+            autoFocus
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                (event.target as HTMLInputElement).blur();
+              }
+              if (event.key === 'Escape') {
+                onCancelRename();
+              }
+            }}
+            onBlur={(event) => onCommitRename(event.target.value)}
+          />
+        ) : (
+          <span className="albedo-tree-name">{item.name}</span>
+        )}
         <span className="albedo-row-actions">
           {item.kind === 'folder' ? (
             <>
@@ -335,6 +385,9 @@ function DiskNode({
               onNewFolder={onNewFolder}
               onNewFile={onNewFile}
               onRename={onRename}
+              renamingRel={renamingRel}
+              onCommitRename={onCommitRename}
+              onCancelRename={onCancelRename}
               onAskTrash={onAskTrash}
               onExclude={onExclude}
               onInclude={onInclude}
