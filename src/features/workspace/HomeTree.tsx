@@ -60,6 +60,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   const [address, setAddress] = useState('~/');
   const [hidden, setHidden] = useState(false);
   const [showSize, setShowSize] = useState(false);
+  const [alsoDisk, setAlsoDisk] = useState<Set<string>>(() => new Set());
 
   const reload = useCallback(async (): Promise<void> => {
     setRoot(await workspaceApi.listHome('', workspaceId, { hidden, size: showSize }));
@@ -240,7 +241,37 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
           {[...selected].sort().map((rel) => (
             <li key={rel}>
               <span>~/{rel}</span>
-              <button type="button" className="albedo-icon-btn" title="Remove from project" onClick={() => onToggle(rel)}>
+              <label className="albedo-home-disk" title="Also delete from disk">
+                <input
+                  type="checkbox"
+                  checked={alsoDisk.has(rel)}
+                  onChange={() => {
+                    setAlsoDisk((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(rel)) {
+                        next.delete(rel);
+                      } else {
+                        next.add(rel);
+                      }
+                      return next;
+                    });
+                  }}
+                />
+                disk
+              </label>
+              <button
+                type="button"
+                className="albedo-icon-btn"
+                title="Remove from workspace"
+                onClick={() => {
+                  void (async () => {
+                    if (alsoDisk.has(rel)) {
+                      await trash(rel);
+                    }
+                    onToggle(rel);
+                  })();
+                }}
+              >
                 <i className="bi bi-x" />
               </button>
             </li>

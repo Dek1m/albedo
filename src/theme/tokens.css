@@ -271,6 +271,15 @@ body {
   animation: albedo-modal-in var(--dur) var(--ease);
 }
 
+.albedo-modal-drag {
+  cursor: grab;
+  user-select: none;
+}
+
+.albedo-modal-drag:active {
+  cursor: grabbing;
+}
+
 .albedo-settings-form {
   display: flex;
   flex-direction: column;
@@ -1234,6 +1243,17 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.albedo-home-disk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .albedo-home-draft {

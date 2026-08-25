@@ -67,7 +67,11 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
   const toggleLive = async (rel: string): Promise<void> => {
     try {
       if (picked.has(rel)) {
-        await workspaceApi.unlinkHome(active.id, rel);
+        try {
+          await workspaceApi.unlinkHome(active.id, rel);
+        } catch {
+          /* уже отвязано после trash */
+        }
         setPicked((prev) => {
           const next = new Set(prev);
           next.delete(rel);
@@ -166,7 +170,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
                 Expand all
               </button>
               <button type="button" className="albedo-ws-drop-item" disabled={!selected} onClick={() => void removeSelected()}>
-                Remove from project
+                 Remove from workspace
               </button>
               <button type="button" className="albedo-ws-drop-item" disabled={!selected} onClick={() => void trashSelected()}>
                 Delete…
