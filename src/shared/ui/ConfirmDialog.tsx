@@ -1,0 +1,43 @@
+import type { ReactElement } from 'react';
+import { Modal } from './Modal';
+
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  body: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel = 'OK',
+  danger = false,
+  onConfirm,
+  onClose,
+}: ConfirmDialogProps): ReactElement {
+  return (
+    <Modal open={open} title={title} onClose={onClose}>
+      <p className="albedo-confirm-body">{body}</p>
+      <div className="albedo-confirm-actions">
+        <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${danger ? 'albedo-danger-btn' : 'btn-albedo-primary'}`}
+          onClick={() => {
+            onConfirm();
+            onClose();
+          }}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  );
+}

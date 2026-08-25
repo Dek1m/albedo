@@ -4,6 +4,8 @@ import { workspaceApi } from '../../api/workspaceApi';
 import type { HomeEntry } from '../../domain/workspace';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
+import { FileGlyph } from '../../shared/ui/FileGlyph';
 
 interface HomeTreeProps {
   selected: Set<string>;
@@ -61,6 +63,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   const [hidden, setHidden] = useState(false);
   const [showSize, setShowSize] = useState(false);
   const [alsoDisk, setAlsoDisk] = useState<Set<string>>(() => new Set());
+  const [ask, setAsk] = useState<{ rel: string; body: string } | null>(null);
 
   const reload = useCallback(async (): Promise<void> => {
     setRoot(await workspaceApi.listHome('', workspaceId, { hidden, size: showSize }));
@@ -154,14 +157,27 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     }
   };
 
-  const trash = async (relPath: string): Promise<void> => {
-    if (!window.confirm(`Удалить «${relPath}» на сервере?`)) {
-      return;
-    }
+  const runTrash = async (relPath: string): Promise<void> => {
     try {
       await workspaceApi.trashHome(relPath, workspaceId);
       setTick((value) => value + 1);
       onTrashed?.();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const trash = async (relPath: string): Promise<void> => {
+    try {
+      const stat = await workspaceApi.homeStat(relPath);
+      if (stat.kind === 'folder' && stat.childCount > 0) {
+        setAsk({
+          rel: relPath,
+          body: `В «${relPath}» есть файлы и папки. Удалить всё с диска?`,
+        });
+        return;
+      }
+      setAsk({ rel: relPath, body: `Удалить «${relPath}» с диска?` });
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -235,6 +251,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         tick={tick}
         hidden={hidden}
         showSize={showSize}
+        onMoved={() => setTick((value) => value + 1)}
       />
       {selected.size ? (
         <ul className="albedo-home-attached">
@@ -278,6 +295,19 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
           ))}
         </ul>
       ) : null}
+      <ConfirmDialog
+        open={Boolean(ask)}
+        title="Удалить"
+        body={ask?.body ?? ''}
+        confirmLabel="Delete"
+        danger
+        onClose={() => setAsk(null)}
+        onConfirm={() => {
+          if (ask) {
+            void runTrash(ask.rel);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -296,6 +326,7 @@ interface BranchProps {
   tick: number;
   hidden: boolean;
   showSize: boolean;
+  onMoved: () => void;
   parentRel?: string;
 }
 
@@ -313,6 +344,7 @@ function HomeBranch({
   tick,
   hidden,
   showSize,
+  onMoved,
   parentRel = '',
 }: BranchProps): ReactElement {
   const showDraft = draft && draft.parentRel === parentRel;
@@ -335,6 +367,7 @@ function HomeBranch({
           tick={tick}
           hidden={hidden}
           showSize={showSize}
+          onMoved={onMoved}
         />
       ))}
     </ul>
@@ -355,6 +388,7 @@ interface NodeProps {
   tick: number;
   hidden: boolean;
   showSize: boolean;
+  onMoved: () => void;
 }
 
 function HomeNode({
@@ -371,6 +405,7 @@ function HomeNode({
   tick,
   hidden,
   showSize,
+  onMoved,
 }: NodeProps): ReactElement {
   const wantOpen = Boolean(draft && (draft.parentRel === item.relPath || draft.parentRel.startsWith(`${item.relPath}/`)));
   const [open, setOpen] = useState(wantOpen);
@@ -399,7 +434,31 @@ function HomeNode({
     <li>
       <div
         className={`albedo-home-row${focused ? ' is-focus' : ''}${inProject ? ' is-linked' : ''}`}
+        draggable
         onClick={() => onFocus(item.relPath, item.kind)}
+        onDragStart={(event) => {
+          event.dataTransfer.setData('text/albedo-rel', item.relPath);
+          event.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragOver={(event) => {
+          if (item.kind !== 'folder') {
+            return;
+          }
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const src = event.dataTransfer.getData('text/albedo-rel');
+          if (!src || src === item.relPath || item.kind !== 'folder') {
+            return;
+          }
+          void workspaceApi
+            .moveHome(src, item.relPath, workspaceId)
+            .then(onMoved)
+            .catch((err: unknown) => toast(humanMessage(err)));
+        }}
       >
         {item.kind === 'folder' ? (
           <button
@@ -415,7 +474,7 @@ function HomeNode({
         ) : (
           <span className="albedo-home-leaf" />
         )}
-        <i className={`bi ${item.kind === 'folder' ? (open ? 'bi-folder2-open' : 'bi-folder') : 'bi-file-earmark'}`} />
+        <FileGlyph name={item.name} kind={item.kind} open={open} />
         <span className="albedo-home-name">{item.name}</span>
         {showSize ? <span className="albedo-home-size">{formatSize(item.sizeBytes)}</span> : null}
         <button
@@ -445,6 +504,7 @@ function HomeNode({
           tick={tick}
           hidden={hidden}
           showSize={showSize}
+          onMoved={onMoved}
           parentRel={item.relPath}
         />
       ) : null}

@@ -28,6 +28,7 @@ const CODE_MESSAGES: Record<string, string> = {
   WORKER_NOT_READY: 'Сервис временно недоступен',
   ALREADY_NESTED: 'Папка уже внутри добавленной в workspace',
   ALREADY_LINKED: 'Уже в workspace',
+  ALREADY_EXISTS: 'Такой файл уже есть',
 };
 
 export function humanMessage(error: unknown): string {

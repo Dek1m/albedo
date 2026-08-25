@@ -2,12 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import { workspaceApi } from '../../api/workspaceApi';
 import { humanMessage } from '../../api/errors';
-import type { NodeId, WsNode } from '../../domain/workspace';
+import type { WsNode } from '../../domain/workspace';
 import { toast } from '../../shared/toast/toastStore';
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { Modal } from '../../shared/ui/Modal';
+import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { HomeTree } from './HomeTree';
+import { WorkspaceDiskTree } from './WorkspaceDiskTree';
 
 interface WorkspaceSidebarProps {
   onOpenSessions: () => void;
@@ -23,7 +26,10 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
   const [menuOpen, setMenuOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(() => new Set());
-  const [selected, setSelected] = useState<NodeId | null>(null);
+  const [selectedRel, setSelectedRel] = useState<string | null>(null);
+  const [ask, setAsk] = useState<{ rel: string; body: string } | null>(null);
+  const [filePrompt, setFilePrompt] = useState(false);
+  const [diskRev, setDiskRev] = useState(0);
   const kebab = useRef<HTMLDivElement>(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   useClickOutside(menuOpen, kebab, closeMenu);
@@ -87,44 +93,51 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
     }
   };
 
-  const addFile = async (): Promise<void> => {
-    const name = window.prompt('File name');
-    if (!name?.trim()) {
-      return;
-    }
+  const createFile = async (name: string): Promise<void> => {
+    const parent = selectedRel ?? '';
     try {
-      await workspaceApi.createFile(active.id, name.trim(), selected);
+      await workspaceApi.createHome(name, parent, 'file');
       await reload();
     } catch (err) {
       toast(humanMessage(err));
     }
   };
 
-  const removeSelected = async (): Promise<void> => {
-    if (!selected) {
+  const removeFromWorkspace = async (): Promise<void> => {
+    if (!selectedRel) {
       return;
     }
+    setMenuOpen(false);
     try {
-      await workspaceApi.deleteNode(active.id, selected);
-      setSelected(null);
-      setMenuOpen(false);
+      await workspaceApi.unlinkHome(active.id, selectedRel);
+      setSelectedRel(null);
       await reload();
     } catch (err) {
       toast(humanMessage(err));
     }
   };
 
-  const trashSelected = async (): Promise<void> => {
-    if (!selected) {
+  const askTrash = async (): Promise<void> => {
+    if (!selectedRel) {
       return;
     }
-    if (!window.confirm('Удалить файлы на сервере?')) {
-      return;
-    }
+    setMenuOpen(false);
     try {
-      await workspaceApi.trashNode(active.id, selected);
-      setSelected(null);
-      setMenuOpen(false);
+      const stat = await workspaceApi.homeStat(selectedRel);
+      const body =
+        stat.kind === 'folder' && stat.childCount > 0
+          ? `В «${selectedRel}» есть файлы и папки. Удалить всё с диска и из workspace?`
+          : `Удалить «${selectedRel}» с диска и из workspace?`;
+      setAsk({ rel: selectedRel, body });
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const runTrash = async (rel: string): Promise<void> => {
+    try {
+      await workspaceApi.trashHome(rel, active.id);
+      setSelectedRel(null);
       await reload();
     } catch (err) {
       toast(humanMessage(err));
@@ -142,7 +155,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
         <button type="button" className="albedo-sidebar-fold" onClick={() => setFoldersOpen(!foldersOpen)}>
           Folders and files
         </button>
-        <button type="button" className="albedo-icon-btn" title="New folder" onClick={() => { setSelected(null); void addFolder(); }}>
+        <button type="button" className="albedo-icon-btn" title="New folder" onClick={() => { setSelectedRel(null); addFolder(); }}>
           <i className="bi bi-folder-plus" />
         </button>
         <div className="albedo-kebab" ref={kebab}>
@@ -151,10 +164,10 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
           </button>
           {menuOpen ? (
             <div className="albedo-ws-drop albedo-kebab-drop">
-              <button type="button" className="albedo-ws-drop-item" onClick={() => void addFolder()}>
+              <button type="button" className="albedo-ws-drop-item" onClick={addFolder}>
                 New folder
               </button>
-              <button type="button" className="albedo-ws-drop-item" onClick={() => void addFile()}>
+              <button type="button" className="albedo-ws-drop-item" onClick={() => { setMenuOpen(false); setFilePrompt(true); }}>
                 New file
               </button>
               <button type="button" className="albedo-ws-drop-item" disabled>
@@ -169,31 +182,28 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
               <button type="button" className="albedo-ws-drop-item" onClick={() => setFoldersOpen(true)}>
                 Expand all
               </button>
-              <button type="button" className="albedo-ws-drop-item" disabled={!selected} onClick={() => void removeSelected()}>
-                 Remove from workspace
+              <button type="button" className="albedo-ws-drop-item" disabled={!selectedRel} onClick={() => void removeFromWorkspace()}>
+                Remove from workspace
               </button>
-              <button type="button" className="albedo-ws-drop-item" disabled={!selected} onClick={() => void trashSelected()}>
-                Delete…
+              <button type="button" className="albedo-ws-drop-item" disabled={!selectedRel} onClick={() => void askTrash()}>
+                Delete from disk
               </button>
             </div>
           ) : null}
         </div>
       </div>
       {foldersOpen ? (
-        <ul className="albedo-tree">
-          {nodes.map((node) => (
-            <li key={node.id}>
-              <button
-                type="button"
-                className={`albedo-tree-item${selected === node.id ? ' is-selected' : ''}`}
-                onClick={() => setSelected(node.id)}
-              >
-                <i className={`bi ${node.kind === 'folder' ? 'bi-folder' : 'bi-file-earmark'}`} />
-                {node.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <WorkspaceDiskTree
+          roots={nodes.map((node) => ({ name: node.name, relPath: node.relPath, kind: node.kind }))}
+          workspaceId={active.id}
+          selectedRel={selectedRel}
+          onSelect={(rel) => setSelectedRel(rel)}
+          onMoved={() => {
+            setDiskRev((value) => value + 1);
+            void reload();
+          }}
+          rev={diskRev}
+        />
       ) : null}
       <div className="albedo-sidebar-resizer" onMouseDown={onDrag} />
       <Modal open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
@@ -204,6 +214,26 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
           onTrashed={() => void reload()}
         />
       </Modal>
+      <ConfirmDialog
+        open={Boolean(ask)}
+        title="Удалить"
+        body={ask?.body ?? ''}
+        confirmLabel="Delete"
+        danger
+        onClose={() => setAsk(null)}
+        onConfirm={() => {
+          if (ask) {
+            void runTrash(ask.rel);
+          }
+        }}
+      />
+      <PromptDialog
+        open={filePrompt}
+        title="New file"
+        label="File name"
+        onClose={() => setFilePrompt(false)}
+        onSubmit={(name) => void createFile(name)}
+      />
     </aside>
   );
 }

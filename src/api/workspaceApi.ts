@@ -152,6 +152,24 @@ export const workspaceApi = {
     });
   },
 
+  async homeStat(relPath: string): Promise<{ kind: 'folder' | 'file'; childCount: number }> {
+    const result = await apiClient.call<{ kind: 'folder' | 'file'; child_count: number }>(
+      'workspace',
+      'home_stat',
+      { rel_path: relPath },
+    );
+    return { kind: result.kind, childCount: result.child_count };
+  },
+
+  async moveHome(src: string, destDir: string, workspaceId?: string): Promise<string> {
+    const result = await apiClient.call<{ rel_path: string }>('workspace', 'move_home_path', {
+      src,
+      dest_dir: destDir,
+      workspace_id: workspaceId ?? null,
+    });
+    return result.rel_path;
+  },
+
   async trashHome(relPath: string, workspaceId?: string): Promise<void> {
     await apiClient.call('workspace', 'trash_home_path', {
       rel_path: relPath,

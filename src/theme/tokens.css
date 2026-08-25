@@ -862,11 +862,50 @@ body {
   background: transparent;
   color: #f3efe7;
   font-size: 0.8rem;
-  text-align: center;
-  justify-content: center;
-  padding: 0.2rem;
+  text-align: left;
+  justify-content: flex-start;
+  padding: 0.2rem 0.35rem;
   cursor: pointer;
   animation: albedo-fade-in 180ms var(--ease);
+}
+
+.albedo-tree-item.is-drop {
+  background: rgb(255 122 26 / 18%);
+}
+
+.albedo-tree-nested {
+  padding-left: 0.75rem;
+}
+
+.albedo-tree-chevron {
+  width: 0.85rem;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.albedo-ftype {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 2px;
+  font-size: 0.42rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.albedo-ftype-folder {
+  color: #dcb67a;
+}
+
+.albedo-confirm-body {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
 }
 
 .albedo-tree-item.is-selected {
