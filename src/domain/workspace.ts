@@ -60,10 +60,21 @@ export function asNodeId(value: string): NodeId {
   return value as NodeId;
 }
 
-export function sessionHue(title: string): string {
+const WORKSPACE_HUES = [
+  '#fee75c',
+  '#57f287',
+  '#5865f2',
+  '#eb459e',
+  '#ed4245',
+  '#00b0f4',
+  '#faa61a',
+  '#9b59b6',
+];
+
+export function workspaceHue(workspaceId: string): string {
   let hash = 0;
-  for (let i = 0; i < title.length; i += 1) {
-    hash = title.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < workspaceId.length; i += 1) {
+    hash = workspaceId.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return `hsl(${Math.abs(hash) % 360} 42% 48%)`;
+  return WORKSPACE_HUES[Math.abs(hash) % WORKSPACE_HUES.length] ?? WORKSPACE_HUES[0];
 }

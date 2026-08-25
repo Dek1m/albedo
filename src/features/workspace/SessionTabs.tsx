@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { workspaceApi } from '../../api/workspaceApi';
 import { humanMessage } from '../../api/errors';
-import { sessionHue } from '../../domain/workspace';
+import { workspaceHue } from '../../domain/workspace';
 import { BusyDots } from '../../shared/ui/BusyDots';
 import { toast } from '../../shared/toast/toastStore';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
@@ -58,7 +58,7 @@ export function SessionTabs(): ReactElement | null {
             {session.agentBusy ? (
               <BusyDots />
             ) : (
-              <span className="albedo-session-ball" style={{ background: sessionHue(session.title) }}>
+              <span className="albedo-session-ball" style={{ background: workspaceHue(active.id) }}>
                 {session.title.slice(0, 1).toUpperCase()}
               </span>
             )}

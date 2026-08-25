@@ -1,9 +1,16 @@
 import { useAuthStore } from '../auth/AuthStore';
 import { useWorkspaceStore } from './WorkspaceStore';
 
+let persistEnabled = false;
+
+export function enableLayoutPersist(): void {
+  persistEnabled = true;
+}
+
 export interface ShellLayout {
   workspaceId: string | null;
   focusedSessionId: string | null;
+  openSessionIds: string[];
   foldersOpen: boolean;
   sidebarWidth: number;
   expandedByWs: Record<string, string[]>;
@@ -23,6 +30,7 @@ export function readLayout(userId: string): ShellLayout | null {
     return {
       workspaceId: parsed.workspaceId ?? null,
       focusedSessionId: parsed.focusedSessionId ?? null,
+      openSessionIds: parsed.openSessionIds ?? [],
       foldersOpen: parsed.foldersOpen !== false,
       sidebarWidth: typeof parsed.sidebarWidth === 'number' ? parsed.sidebarWidth : 240,
       expandedByWs: parsed.expandedByWs ?? {},
@@ -51,6 +59,9 @@ export function applySavedWorkspaceChrome(workspaceId: string, sessions: { id: s
 }
 
 export function persistCurrentLayout(): void {
+  if (!persistEnabled) {
+    return;
+  }
   const userId = useAuthStore.getState().profile?.id;
   if (!userId) {
     return;
@@ -64,6 +75,7 @@ export function persistCurrentLayout(): void {
   writeLayout(userId, {
     workspaceId: state.active?.id ?? null,
     focusedSessionId: state.focusedSessionId,
+    openSessionIds: state.sessions.filter((item) => item.tabOpen).map((item) => item.id),
     foldersOpen: state.foldersOpen,
     sidebarWidth: state.sidebarWidth,
     expandedByWs,

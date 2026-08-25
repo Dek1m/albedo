@@ -11,7 +11,12 @@ import { WorkspaceMenu, loadCatalog } from '../workspace/WorkspaceMenu';
 import { WorkspaceModals } from '../workspace/WorkspaceModals';
 import { WorkspaceSidebar } from '../workspace/WorkspaceSidebar';
 import { useAuthStore } from '../../auth/AuthStore';
-import { applySavedWorkspaceChrome, persistCurrentLayout, readLayout } from '../../workspace/layoutPersist';
+import {
+  applySavedWorkspaceChrome,
+  enableLayoutPersist,
+  persistCurrentLayout,
+  readLayout,
+} from '../../workspace/layoutPersist';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { UserChip } from './UserChip';
 
@@ -32,22 +37,31 @@ export function AppShell(): ReactElement {
         return;
       }
       const layout = readLayout(userId);
-      if (!layout?.workspaceId) {
-        return;
-      }
-      try {
-        const ws = await workspaceApi.get(layout.workspaceId);
-        const sessions = await workspaceApi.listSessions(ws.id);
-        if (cancelled) {
-          return;
+      if (layout?.workspaceId) {
+        try {
+          const ws = await workspaceApi.get(layout.workspaceId);
+          for (const sessionId of layout.openSessionIds) {
+            try {
+              await workspaceApi.openSession(ws.id, sessionId);
+            } catch {
+              /* сессия могла исчезнуть */
+            }
+          }
+          const sessions = await workspaceApi.listSessions(ws.id);
+          if (!cancelled) {
+            const store = useWorkspaceStore.getState();
+            store.openDashboard(ws, sessions);
+            store.setFoldersOpen(layout.foldersOpen);
+            store.setSidebarWidth(layout.sidebarWidth);
+            applySavedWorkspaceChrome(ws.id, sessions);
+          }
+        } catch {
+          /* workspace мог быть удалён */
         }
-        const store = useWorkspaceStore.getState();
-        store.openDashboard(ws, sessions);
-        store.setFoldersOpen(layout.foldersOpen);
-        store.setSidebarWidth(layout.sidebarWidth);
-        applySavedWorkspaceChrome(ws.id, sessions);
-      } catch {
-        /* workspace мог быть удалён */
+      }
+      if (!cancelled) {
+        enableLayoutPersist();
+        persistCurrentLayout();
       }
     })();
     return () => {

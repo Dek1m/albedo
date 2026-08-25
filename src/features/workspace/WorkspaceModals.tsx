@@ -5,7 +5,7 @@ import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { Modal } from '../../shared/ui/Modal';
 import { BusyDots } from '../../shared/ui/BusyDots';
-import { sessionHue } from '../../domain/workspace';
+import { workspaceHue } from '../../domain/workspace';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { HomeTree } from './HomeTree';
 import { applySavedWorkspaceChrome } from '../../workspace/layoutPersist';
@@ -184,7 +184,7 @@ export function WorkspaceModals({
               className={`list-group-item albedo-session-row${session.tabOpen ? ' albedo-session-row--open' : ''}${session.agentBusy ? ' albedo-session-row--busy' : ''}`}
             >
               <span className="albedo-session-mark">
-                {session.agentBusy ? <BusyDots /> : <span className="albedo-session-ball" style={{ background: sessionHue(session.title) }} />}
+                {session.agentBusy ? <BusyDots /> : <span className="albedo-session-ball" style={{ background: active ? workspaceHue(active.id) : '#888' }} />}
               </span>
               <button type="button" className="albedo-ws-list-name" onClick={() => void openSession(session.id)}>
                 {session.title}
