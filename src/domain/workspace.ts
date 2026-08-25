@@ -76,5 +76,6 @@ export function workspaceHue(workspaceId: string): string {
   for (let i = 0; i < workspaceId.length; i += 1) {
     hash = workspaceId.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return WORKSPACE_HUES[Math.abs(hash) % WORKSPACE_HUES.length] ?? WORKSPACE_HUES[0];
+  const color = WORKSPACE_HUES[Math.abs(hash) % WORKSPACE_HUES.length];
+  return color ?? '#fee75c';
 }
