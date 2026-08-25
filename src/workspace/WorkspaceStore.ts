@@ -8,6 +8,7 @@ interface WorkspaceState {
   focusedSessionId: SessionId | null;
   sidebarWidth: number;
   foldersOpen: boolean;
+  expanded: string[];
   setCatalog: (items: Workspace[]) => void;
   openDashboard: (ws: Workspace, sessions: WsSession[]) => void;
   closeDashboard: () => void;
@@ -15,6 +16,8 @@ interface WorkspaceState {
   setFocused: (id: SessionId | null) => void;
   setSidebarWidth: (width: number) => void;
   setFoldersOpen: (open: boolean) => void;
+  setExpanded: (paths: string[]) => void;
+  toggleExpanded: (path: string) => void;
   reset: () => void;
 }
 
@@ -25,6 +28,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   focusedSessionId: null,
   sidebarWidth: 240,
   foldersOpen: true,
+  expanded: [],
   setCatalog: (catalog) => set({ catalog }),
   openDashboard: (active, sessions) =>
     set({
@@ -32,11 +36,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       sessions,
       focusedSessionId: sessions.find((s) => s.tabOpen)?.id ?? null,
     }),
-  closeDashboard: () => set({ active: null, sessions: [], focusedSessionId: null }),
+  closeDashboard: () => set({ active: null, sessions: [], focusedSessionId: null, expanded: [] }),
   setSessions: (sessions) => set({ sessions }),
   setFocused: (focusedSessionId) => set({ focusedSessionId }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
   setFoldersOpen: (foldersOpen) => set({ foldersOpen }),
+  setExpanded: (expanded) => set({ expanded }),
+  toggleExpanded: (path) =>
+    set((state) => ({
+      expanded: state.expanded.includes(path)
+        ? state.expanded.filter((item) => item !== path)
+        : [...state.expanded, path],
+    })),
   reset: () =>
     set({
       catalog: [],
@@ -44,6 +55,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       sessions: [],
       focusedSessionId: null,
       foldersOpen: true,
+      expanded: [],
     }),
 }));
 

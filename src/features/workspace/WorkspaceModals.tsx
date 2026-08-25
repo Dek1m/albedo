@@ -8,6 +8,7 @@ import { BusyDots } from '../../shared/ui/BusyDots';
 import { sessionHue } from '../../domain/workspace';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { HomeTree } from './HomeTree';
+import { applySavedWorkspaceChrome } from '../../workspace/layoutPersist';
 import { loadCatalog } from './WorkspaceMenu';
 
 interface Props {
@@ -44,6 +45,7 @@ export function WorkspaceModals({
       const ws = await workspaceApi.get(id);
       const list = await workspaceApi.listSessions(id);
       openDashboard(ws, list);
+      applySavedWorkspaceChrome(ws.id, list);
       onCloseList();
     } catch (err) {
       toast(humanMessage(err));
@@ -60,6 +62,7 @@ export function WorkspaceModals({
       await loadCatalog();
       const list = await workspaceApi.listSessions(ws.id);
       openDashboard(ws, list);
+      applySavedWorkspaceChrome(ws.id, list);
       setName('');
       setPicked(new Set());
       onCloseCreate();

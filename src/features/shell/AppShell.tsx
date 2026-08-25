@@ -10,6 +10,8 @@ import { workspaceApi } from '../../api/workspaceApi';
 import { WorkspaceMenu, loadCatalog } from '../workspace/WorkspaceMenu';
 import { WorkspaceModals } from '../workspace/WorkspaceModals';
 import { WorkspaceSidebar } from '../workspace/WorkspaceSidebar';
+import { useAuthStore } from '../../auth/AuthStore';
+import { applySavedWorkspaceChrome, persistCurrentLayout, readLayout } from '../../workspace/layoutPersist';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { UserChip } from './UserChip';
 
@@ -21,8 +23,40 @@ export function AppShell(): ReactElement {
   const [sessionsOpen, setSessionsOpen] = useState(false);
 
   useEffect(() => {
-    void workspaceApi.ensureHome().catch(() => undefined);
-    void loadCatalog();
+    let cancelled = false;
+    void (async () => {
+      await workspaceApi.ensureHome().catch(() => undefined);
+      await loadCatalog();
+      const userId = useAuthStore.getState().profile?.id;
+      if (!userId || cancelled) {
+        return;
+      }
+      const layout = readLayout(userId);
+      if (!layout?.workspaceId) {
+        return;
+      }
+      try {
+        const ws = await workspaceApi.get(layout.workspaceId);
+        const sessions = await workspaceApi.listSessions(ws.id);
+        if (cancelled) {
+          return;
+        }
+        const store = useWorkspaceStore.getState();
+        store.openDashboard(ws, sessions);
+        store.setFoldersOpen(layout.foldersOpen);
+        store.setSidebarWidth(layout.sidebarWidth);
+        applySavedWorkspaceChrome(ws.id, sessions);
+      } catch {
+        /* workspace мог быть удалён */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    return useWorkspaceStore.subscribe(() => persistCurrentLayout());
   }, []);
 
   const onLogout = async (): Promise<void> => {

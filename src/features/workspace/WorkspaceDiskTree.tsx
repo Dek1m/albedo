@@ -7,6 +7,7 @@ import { toast } from '../../shared/toast/toastStore';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
+import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { folderToast, pathTail } from './folderToast';
 
 interface Root {
@@ -170,7 +171,8 @@ function DiskNode({
   onExclude,
   onInclude,
 }: NodeProps): ReactElement {
-  const [open, setOpen] = useState(false);
+  const open = useWorkspaceStore((s) => s.expanded.includes(item.relPath));
+  const toggleExpanded = useWorkspaceStore((s) => s.toggleExpanded);
   const [kids, setKids] = useState<HomeEntry[] | null>(null);
   const [over, setOver] = useState(false);
   const lastClick = useRef(0);
@@ -196,12 +198,10 @@ function DiskNode({
     onSelect(item.relPath, item.kind);
   };
 
-  const cover = item.excluded ? 'is-excluded' : item.inherited ? 'is-inherited' : item.linked ? 'is-linked' : '';
-
   return (
     <li>
       <div
-        className={`albedo-tree-item${selectedRel === item.relPath ? ' is-selected' : ''}${over ? ' is-drop' : ''} ${cover}`}
+        className={`albedo-tree-item${selectedRel === item.relPath ? ' is-selected' : ''}${over ? ' is-drop' : ''}`}
         draggable
         onClick={onNameClick}
         onDragStart={(event) => {
@@ -234,7 +234,7 @@ function DiskNode({
             className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'} albedo-tree-chevron`}
             onClick={(event) => {
               event.stopPropagation();
-              setOpen((value) => !value);
+              toggleExpanded(item.relPath);
             }}
           />
         ) : (
