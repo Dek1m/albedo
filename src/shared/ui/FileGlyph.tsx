@@ -37,7 +37,8 @@ export function FileGlyph({ name, kind, open }: FileGlyphProps): ReactElement {
     return <i className={`bi ${open ? 'bi-folder2-open' : 'bi-folder'} albedo-ftype-folder`} />;
   }
   const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : '';
-  const skin = SETI[ext] ?? (name.startsWith('.') ? SETI.env : { bg: '#6e6e6e', fg: '#fff', mark: ext.slice(0, 2).toUpperCase() || 'F' });
+  const fallback = { bg: '#6e6e6e', fg: '#fff', mark: ext.slice(0, 2).toUpperCase() || 'F' };
+  const skin = SETI[ext] ?? fallback;
   return (
     <span className="albedo-ftype" style={{ background: skin.bg, color: skin.fg }} title={ext || name}>
       {skin.mark}
