@@ -87,7 +87,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  min-height: 2.5rem;
+  min-height: calc(2.5rem + 20px);
   padding: 0 1.15rem;
   position: sticky;
   top: 0;
@@ -155,18 +155,25 @@ body {
   gap: 0.5rem;
   padding: 0.15rem 0.4rem 0.15rem 0.55rem;
   margin: 2px 0;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
-  background: var(--bg-surface);
+  background: transparent;
   color: var(--text-primary);
   cursor: pointer;
   transition:
-    border-color var(--dur) var(--ease),
-    background-color var(--dur) var(--ease);
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
 }
 
 .albedo-chip:hover {
-  border-color: var(--border-hover);
+  background: #fff;
+  color: #1a1816;
+}
+
+.albedo-chip:hover .albedo-chip-name,
+.albedo-chip:hover .albedo-chip-email,
+.albedo-chip:hover .albedo-chip-domain {
+  color: #1a1816;
 }
 
 .albedo-chip-text {
