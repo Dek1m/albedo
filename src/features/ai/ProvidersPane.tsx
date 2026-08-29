@@ -161,6 +161,19 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   }, [visible]);
 
   useEffect(() => {
+    if (!shareId) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        setShareId(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [shareId]);
+
+  useEffect(() => {
     if (oauthFlow) {
       return;
     }
@@ -626,33 +639,6 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                   </span>
                 </header>
                 <p className="albedo-ai-provider-desc">{item.description || '—'}</p>
-                {shareId === item.id ? (
-                  <div className="albedo-ai-share">
-                    {shareGroups.map((group) => (
-                      <label key={group.id} className="albedo-ai-share-row">
-                        <input
-                          type="checkbox"
-                          checked={shareSelected.includes(group.id)}
-                          onChange={(event) => {
-                            const on = event.target.checked;
-                            setShareSelected((current) =>
-                              on ? [...current, group.id] : current.filter((id) => id !== group.id),
-                            );
-                          }}
-                        />
-                        <span>{group.name}</span>
-                      </label>
-                    ))}
-                    <div className="albedo-ai-actions">
-                      <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => setShareId(null)}>
-                        Cancel
-                      </button>
-                      <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => void saveShare(item.id)}>
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
                 {open ? (
                   <ul className="albedo-ai-provider-models">
                     {item.models.length === 0 ? (
@@ -1010,6 +996,54 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
           </>
         )}
       </form>
+      {shareId ? (
+        <div className="albedo-confirm-backdrop" onClick={() => setShareId(null)}>
+          <div
+            className="albedo-confirm-dialog albedo-ai-share-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ai-share-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="albedo-confirm-title" id="ai-share-title">
+              Share {items.find((item) => item.id === shareId)?.name ?? 'provider'}
+            </p>
+            <p className="albedo-confirm-text">Choose groups that can use this organization provider.</p>
+            <ul className="albedo-ai-share-list">
+              {shareGroups.map((group) => (
+                <li key={group.id}>
+                  <label className="albedo-ai-share-row">
+                    <input
+                      className="albedo-check"
+                      type="checkbox"
+                      checked={shareSelected.includes(group.id)}
+                      onChange={(event) => {
+                        const on = event.target.checked;
+                        setShareSelected((current) =>
+                          on ? [...current, group.id] : current.filter((id) => id !== group.id),
+                        );
+                      }}
+                    />
+                    <span>{group.name}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <div className="albedo-confirm-actions">
+              <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => setShareId(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-albedo-primary"
+                onClick={() => void saveShare(shareId)}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1028,7 +1062,12 @@ function ReasoningControls({
   return (
     <span className="albedo-ai-reasoning">
       <label className="albedo-ai-reasoning-check">
-        <input type="checkbox" checked={enabled} onChange={(event) => onEnabled(event.target.checked)} />
+        <input
+          className="albedo-check"
+          type="checkbox"
+          checked={enabled}
+          onChange={(event) => onEnabled(event.target.checked)}
+        />
         reasoning
       </label>
       {enabled ? (
