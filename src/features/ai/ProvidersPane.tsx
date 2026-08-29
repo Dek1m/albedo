@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { llmApi, urlError } from '../../api/llmApi';
 import type { LlmProvider, ProviderKind, ReasoningEffort } from '../../api/llmApi';
@@ -22,36 +22,30 @@ interface DraftModel {
 
 const EFFORTS: ReasoningEffort[] = ['none', 'low', 'medium', 'high'];
 
-function mergeProbed(probed: { id: string; name: string; supportsReasoning: boolean }[], saved: LlmProvider['models']): DraftModel[] {
-  const prev = new Map(saved.map((item) => [item.modelId, item]));
-  const rows: DraftModel[] = probed.map((item) => {
-    const known = prev.get(item.id);
-    return {
-      id: item.id,
-      name: item.name,
-      customName: known && known.displayName !== known.modelId ? known.displayName : '',
-      enabled: Boolean(known),
-      supportsReasoning: item.supportsReasoning || Boolean(known?.supportsReasoning),
-      reasoningEnabled: Boolean(known?.reasoningEnabled),
-      reasoningEffort: known?.reasoningEffort ?? 'medium',
-    };
-  });
-  const seen = new Set(rows.map((item) => item.id));
-  for (const known of saved) {
-    if (seen.has(known.modelId)) {
-      continue;
-    }
-    rows.unshift({
-      id: known.modelId,
-      name: known.modelId,
-      customName: known.displayName !== known.modelId ? known.displayName : '',
-      enabled: true,
-      supportsReasoning: known.supportsReasoning,
-      reasoningEnabled: known.reasoningEnabled,
-      reasoningEffort: known.reasoningEffort ?? 'medium',
-    });
-  }
-  return rows;
+function fromSaved(saved: LlmProvider['models']): DraftModel[] {
+  return saved.map((known) => ({
+    id: known.modelId,
+    name: known.modelId,
+    customName: known.displayName !== known.modelId ? known.displayName : '',
+    enabled: known.enabled,
+    supportsReasoning: known.supportsReasoning,
+    reasoningEnabled: known.reasoningEnabled,
+    reasoningEffort: known.reasoningEffort ?? 'medium',
+  }));
+}
+
+function toDraft(
+  probed: { id: string; name: string; supportsReasoning: boolean }[],
+): DraftModel[] {
+  return probed.map((item) => ({
+    id: item.id,
+    name: item.name,
+    customName: '',
+    enabled: false,
+    supportsReasoning: item.supportsReasoning,
+    reasoningEnabled: false,
+    reasoningEffort: 'medium',
+  }));
 }
 
 function matchesQuery(query: string, value: string): boolean {
@@ -78,8 +72,6 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   const [probeUrlError, setProbeUrlError] = useState<string | null>(null);
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
 
   const urlHint = (kind === 'api_key' && baseUrl.trim() ? urlError(baseUrl) : null) ?? probeUrlError;
   const canProbe = kind === 'api_key' && !urlError(baseUrl) && Boolean(apiKey.trim());
@@ -104,6 +96,9 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   }, [visible]);
 
   useEffect(() => {
+    if (editId) {
+      return;
+    }
     if (!canProbe) {
       setDraft(null);
       setProbeUrlError(null);
@@ -115,10 +110,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
       void llmApi
         .probeModels(baseUrl.trim(), apiKey.trim())
         .then((models) => {
-          const saved = editId
-            ? (itemsRef.current.find((item) => item.id === editId)?.models ?? [])
-            : [];
-          setDraft(mergeProbed(models, saved));
+          setDraft(toDraft(models));
         })
         .catch((err: unknown) => {
           setDraft(null);
@@ -165,7 +157,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setDescription(provider.description ?? '');
     setBaseUrl(provider.baseUrl ?? '');
     setApiKey('');
-    setDraft(null);
+    setDraft(fromSaved(provider.models));
     setSearch('');
     setOpenIds((current) => (current.includes(provider.id) ? current : [...current, provider.id]));
   };
