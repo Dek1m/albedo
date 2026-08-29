@@ -154,6 +154,27 @@ export const llmApi = {
     await apiClient.call('llm', 'delete_provider', { provider_id: providerId });
   },
 
+  async updateProvider(input: {
+    providerId: string;
+    name: string;
+    description?: string;
+    baseUrl?: string;
+    apiKey?: string;
+  }): Promise<LlmProvider> {
+    const dto = await apiClient.call<ProviderDto>('llm', 'update_provider', {
+      provider_id: input.providerId,
+      name: input.name,
+      description: input.description ?? null,
+      base_url: input.baseUrl ?? null,
+      api_key: input.apiKey ?? null,
+    });
+    return mapProvider(dto);
+  },
+
+  async deleteModel(modelId: string): Promise<void> {
+    await apiClient.call('llm', 'delete_model', { model_id: modelId });
+  },
+
   async probeModels(baseUrl: string, apiKey: string): Promise<ProbedModel[]> {
     const result = await apiClient.call<{
       items: { id: string; name: string; supports_reasoning?: boolean }[];
@@ -161,7 +182,8 @@ export const llmApi = {
       base_url: baseUrl,
       api_key: apiKey,
     });
-    return (result.items ?? []).map((item) => ({
+    const rows = result.items ?? [];
+    return rows.map((item) => ({
       id: item.id,
       name: item.name,
       supportsReasoning: Boolean(item.supports_reasoning),

@@ -44,10 +44,11 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   const [probing, setProbing] = useState(false);
   const [probeUrlError, setProbeUrlError] = useState<string | null>(null);
   const [openIds, setOpenIds] = useState<string[]>([]);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const urlHint = (kind === 'api_key' && baseUrl.trim() ? urlError(baseUrl) : null) ?? probeUrlError;
-  const canProbe =
-    kind === 'api_key' && Boolean(name.trim()) && !urlError(baseUrl) && Boolean(apiKey.trim());
+  const canProbe = kind === 'api_key' && !urlError(baseUrl) && Boolean(apiKey.trim());
+  const showCatalog = Boolean(draft) || probing;
 
   const load = async (): Promise<void> => {
     setBusy(true);
@@ -117,9 +118,47 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setApiKey('');
     setDraft(null);
     setSearch('');
+    setEditId(null);
+    setProbeUrlError(null);
+  };
+
+  const startEdit = (provider: LlmProvider): void => {
+    setEditId(provider.id);
+    setKind(provider.kind);
+    setName(provider.name);
+    setDescription(provider.description ?? '');
+    setBaseUrl(provider.baseUrl ?? '');
+    setApiKey('');
+    setDraft(null);
+    setSearch('');
+    setOpenIds((current) => (current.includes(provider.id) ? current : [...current, provider.id]));
   };
 
   const saveApi = async (): Promise<void> => {
+    if (!name.trim()) {
+      toast('Имя обязательно');
+      return;
+    }
+    if (editId) {
+      setSaving(true);
+      try {
+        const updated = await llmApi.updateProvider({
+          providerId: editId,
+          name: name.trim(),
+          description: description.trim() || undefined,
+          baseUrl: baseUrl.trim() || undefined,
+          apiKey: apiKey.trim() || undefined,
+        });
+        setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        toast('Провайдер обновлён', 'ok');
+        resetForm();
+      } catch (err) {
+        toast(humanMessage(err));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     if (!draft || !canProbe) {
       return;
     }
@@ -173,6 +212,21 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
       toast(humanMessage(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const removeModel = async (providerId: string, modelId: string): Promise<void> => {
+    try {
+      await llmApi.deleteModel(modelId);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === providerId
+            ? { ...item, models: item.models.filter((model) => model.id !== modelId) }
+            : item,
+        ),
+      );
+    } catch (err) {
+      toast(humanMessage(err));
     }
   };
 
@@ -260,6 +314,9 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                     >
                       <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
                     </button>
+                    <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => startEdit(item)}>
+                      Edit
+                    </button>
                     <button
                       type="button"
                       className="btn btn-sm albedo-danger-btn"
@@ -279,6 +336,13 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                         <li key={model.id}>
                           <Switch on={model.enabled} onChange={(next) => void toggleSaved(item, model.id, next)} />
                           <span>{model.displayName}</span>
+                          <button
+                            type="button"
+                            className="btn btn-sm albedo-danger-btn"
+                            onClick={() => void removeModel(item.id, model.id)}
+                          >
+                            Delete
+                          </button>
                           {model.supportsReasoning ? (
                             <ReasoningControls
                               enabled={model.reasoningEnabled}
@@ -387,7 +451,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               placeholder="sk-..."
             />
             {probing ? <p className="albedo-ai-muted">Запрос моделей…</p> : null}
-            {draft ? (
+            {showCatalog ? (
               <>
                 <div className="albedo-ai-model-search">
                   <i className="bi bi-search" aria-hidden="true" />
@@ -400,6 +464,9 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                   />
                 </div>
                 <ul className="albedo-ai-model-pick">
+                  {shown.length === 0 && !probing ? (
+                    <li className="albedo-ai-muted">Моделей нет</li>
+                  ) : null}
                   {shown.map((item) => (
                     <li key={item.id}>
                       <Switch
@@ -437,8 +504,17 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               </>
             ) : null}
             <div className="albedo-ai-actions">
-              <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={saving || !draft}>
-                Save
+              {editId ? (
+                <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={resetForm}>
+                  Cancel
+                </button>
+              ) : null}
+              <button
+                type="submit"
+                className="btn btn-sm btn-albedo-primary"
+                disabled={saving || (!editId && !draft) || !name.trim()}
+              >
+                {editId ? 'Update' : 'Save'}
               </button>
             </div>
           </>
