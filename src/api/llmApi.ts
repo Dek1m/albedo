@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 
 export type ProviderKind = 'api_key' | 'oauth';
+export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 
 export interface LlmModel {
   id: string;
@@ -9,6 +10,9 @@ export interface LlmModel {
   displayName: string;
   enabled: boolean;
   isAvailable: boolean;
+  supportsReasoning: boolean;
+  reasoningEnabled: boolean;
+  reasoningEffort: ReasoningEffort | null;
 }
 
 export interface LlmProvider {
@@ -24,6 +28,12 @@ export interface LlmProvider {
   models: LlmModel[];
 }
 
+export interface ProbedModel {
+  id: string;
+  name: string;
+  supportsReasoning: boolean;
+}
+
 interface ModelDto {
   id: string;
   provider_id: string;
@@ -31,6 +41,9 @@ interface ModelDto {
   display_name: string;
   enabled: boolean;
   is_available: boolean;
+  supports_reasoning?: boolean;
+  reasoning_enabled?: boolean;
+  reasoning_effort?: string | null;
 }
 
 interface ProviderDto {
@@ -46,6 +59,13 @@ interface ProviderDto {
   models?: ModelDto[];
 }
 
+function mapEffort(value: string | null | undefined): ReasoningEffort | null {
+  if (value === 'none' || value === 'low' || value === 'medium' || value === 'high') {
+    return value;
+  }
+  return null;
+}
+
 function mapModel(item: ModelDto): LlmModel {
   return {
     id: item.id,
@@ -54,6 +74,9 @@ function mapModel(item: ModelDto): LlmModel {
     displayName: item.display_name,
     enabled: Boolean(item.enabled),
     isAvailable: item.is_available !== false,
+    supportsReasoning: Boolean(item.supports_reasoning),
+    reasoningEnabled: Boolean(item.reasoning_enabled),
+    reasoningEffort: mapEffort(item.reasoning_effort),
   };
 }
 
@@ -72,6 +95,25 @@ function mapProvider(item: ProviderDto): LlmProvider {
   };
 }
 
+export function urlError(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) {
+    return 'wrong url';
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return 'wrong url';
+    }
+    if (!parsed.hostname) {
+      return 'wrong url';
+    }
+    return null;
+  } catch {
+    return 'wrong url';
+  }
+}
+
 export const llmApi = {
   async listProviders(): Promise<LlmProvider[]> {
     const result = await apiClient.call<{ items: ProviderDto[] }>('llm', 'list_providers', {});
@@ -86,7 +128,14 @@ export const llmApi = {
     baseUrl?: string;
     defaultModel?: string;
     apiKey?: string;
-    models?: { model_id: string; display_name: string; enabled: boolean }[];
+    models?: {
+      model_id: string;
+      display_name: string;
+      enabled: boolean;
+      supports_reasoning?: boolean;
+      reasoning_enabled?: boolean;
+      reasoning_effort?: string | null;
+    }[];
   }): Promise<LlmProvider> {
     const dto = await apiClient.call<ProviderDto>('llm', 'create_provider', {
       name: input.name,
@@ -101,12 +150,22 @@ export const llmApi = {
     return mapProvider(dto);
   },
 
-  async probeModels(baseUrl: string, apiKey: string): Promise<{ id: string; name: string }[]> {
-    const result = await apiClient.call<{ items: { id: string; name: string }[] }>('llm', 'probe_models', {
+  async deleteProvider(providerId: string): Promise<void> {
+    await apiClient.call('llm', 'delete_provider', { provider_id: providerId });
+  },
+
+  async probeModels(baseUrl: string, apiKey: string): Promise<ProbedModel[]> {
+    const result = await apiClient.call<{
+      items: { id: string; name: string; supports_reasoning?: boolean }[];
+    }>('llm', 'probe_models', {
       base_url: baseUrl,
       api_key: apiKey,
     });
-    return result.items ?? [];
+    return (result.items ?? []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      supportsReasoning: Boolean(item.supports_reasoning),
+    }));
   },
 
   async refreshCatalog(): Promise<{ providerName: string; modelId: string; displayName: string }[]> {
@@ -122,6 +181,14 @@ export const llmApi = {
 
   async setModelEnabled(modelId: string, enabled: boolean): Promise<void> {
     await apiClient.call('llm', 'set_model_enabled', { model_id: modelId, enabled });
+  },
+
+  async setModelReasoning(modelId: string, enabled: boolean, effort: ReasoningEffort): Promise<void> {
+    await apiClient.call('llm', 'set_model_reasoning', {
+      model_id: modelId,
+      reasoning_enabled: enabled,
+      reasoning_effort: effort,
+    });
   },
 
   async startOauth(vendor: string): Promise<{ status: string; vendor: string; mode?: string }> {

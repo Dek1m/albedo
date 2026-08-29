@@ -1037,7 +1037,45 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  align-items: baseline;
+  align-items: center;
+}
+
+.albedo-ai-provider-strip-head strong {
+  flex: 1;
+  min-width: 0;
+}
+
+.albedo-ai-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.albedo-field-error {
+  color: var(--danger);
+  font-size: 0.75rem;
+  margin: 0.15rem 0 0;
+}
+
+.albedo-ai-reasoning {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.albedo-ai-reasoning-check {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.albedo-ai-reasoning-effort {
+  width: auto;
+  min-width: 6.5rem;
 }
 
 .albedo-ai-provider-desc {

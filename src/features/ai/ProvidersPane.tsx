@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { FormEvent, ReactElement } from 'react';
-import { llmApi } from '../../api/llmApi';
-import type { LlmProvider, ProviderKind } from '../../api/llmApi';
+import type { ReactElement } from 'react';
+import { llmApi, urlError } from '../../api/llmApi';
+import type { LlmProvider, ProviderKind, ReasoningEffort } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { SkeletonList } from '../../shared/ui/Skeleton';
@@ -14,7 +14,12 @@ interface DraftModel {
   id: string;
   name: string;
   enabled: boolean;
+  supportsReasoning: boolean;
+  reasoningEnabled: boolean;
+  reasoningEffort: ReasoningEffort;
 }
+
+const EFFORTS: ReasoningEffort[] = ['none', 'low', 'medium', 'high'];
 
 function matchesQuery(query: string, value: string): boolean {
   const q = query.trim().toLowerCase();
@@ -31,11 +36,17 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   const [kind, setKind] = useState<ProviderKind>('api_key');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [baseUrl, setBaseUrl] = useState('https://api.example.com/v1');
+  const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [draft, setDraft] = useState<DraftModel[] | null>(null);
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
+  const [probing, setProbing] = useState(false);
+  const [openIds, setOpenIds] = useState<string[]>([]);
+
+  const urlHint = kind === 'api_key' && baseUrl.trim() ? urlError(baseUrl) : null;
+  const canProbe =
+    kind === 'api_key' && Boolean(name.trim()) && !urlError(baseUrl) && Boolean(apiKey.trim());
 
   const load = async (): Promise<void> => {
     setBusy(true);
@@ -55,6 +66,36 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     void load();
   }, [visible]);
 
+  useEffect(() => {
+    if (!canProbe) {
+      setDraft(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setProbing(true);
+      void llmApi
+        .probeModels(baseUrl.trim(), apiKey.trim())
+        .then((models) => {
+          setDraft(
+            models.map((item) => ({
+              id: item.id,
+              name: item.name,
+              enabled: true,
+              supportsReasoning: item.supportsReasoning,
+              reasoningEnabled: false,
+              reasoningEffort: 'medium',
+            })),
+          );
+        })
+        .catch((err: unknown) => {
+          setDraft(null);
+          toast(humanMessage(err));
+        })
+        .finally(() => setProbing(false));
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [canProbe, name, baseUrl, apiKey]);
+
   const shown = useMemo(
     () => (draft ?? []).filter((item) => matchesQuery(search, item.name) || matchesQuery(search, item.id)),
     [draft, search],
@@ -64,31 +105,14 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setKind('api_key');
     setName('');
     setDescription('');
-    setBaseUrl('https://api.example.com/v1');
+    setBaseUrl('');
     setApiKey('');
     setDraft(null);
     setSearch('');
   };
 
-  const probe = async (event: FormEvent): Promise<void> => {
-    event.preventDefault();
-    if (!name.trim() || !baseUrl.trim() || !apiKey.trim()) {
-      toast('Имя, адрес и ключ обязательны');
-      return;
-    }
-    setSaving(true);
-    try {
-      const models = await llmApi.probeModels(baseUrl.trim(), apiKey.trim());
-      setDraft(models.map((item) => ({ id: item.id, name: item.name, enabled: true })));
-    } catch (err) {
-      toast(humanMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const saveApi = async (): Promise<void> => {
-    if (!draft) {
+    if (!draft || !canProbe) {
       return;
     }
     setSaving(true);
@@ -104,6 +128,9 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
           model_id: item.id,
           display_name: item.name,
           enabled: item.enabled,
+          supports_reasoning: item.supportsReasoning,
+          reasoning_enabled: item.reasoningEnabled,
+          reasoning_effort: item.supportsReasoning ? item.reasoningEffort : null,
         })),
       });
       toast('Провайдер сохранён', 'ok');
@@ -123,20 +150,15 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     }
     setSaving(true);
     try {
-      const oauth = await llmApi.startOauth('grok');
+      const vendor = name.trim().toLowerCase().replace(/\s+/g, '-');
+      await llmApi.startOauth(vendor);
       await llmApi.createProvider({
         name: name.trim(),
         kind: 'oauth',
-        vendor: 'grok',
+        vendor,
         description: description.trim() || undefined,
-        baseUrl: 'https://api.x.ai/v1',
       });
-      toast(
-        oauth.status === 'pending_client'
-          ? 'Grok сохранён. OAuth: auth.x.ai / device code — нужен client_id приложения'
-          : oauth.status,
-        'info',
-      );
+      toast('OAuth сохранён. Нужен client_id приложения для входа.', 'info');
       resetForm();
       await load();
     } catch (err) {
@@ -144,6 +166,21 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     } finally {
       setSaving(false);
     }
+  };
+
+  const remove = async (providerId: string): Promise<void> => {
+    try {
+      await llmApi.deleteProvider(providerId);
+      setItems((current) => current.filter((item) => item.id !== providerId));
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const toggleOpen = (providerId: string): void => {
+    setOpenIds((current) =>
+      current.includes(providerId) ? current.filter((id) => id !== providerId) : [...current, providerId],
+    );
   };
 
   const toggleSaved = async (provider: LlmProvider, modelId: string, enabled: boolean): Promise<void> => {
@@ -164,6 +201,31 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     }
   };
 
+  const patchReasoning = async (
+    provider: LlmProvider,
+    modelId: string,
+    enabled: boolean,
+    effort: ReasoningEffort,
+  ): Promise<void> => {
+    try {
+      await llmApi.setModelReasoning(modelId, enabled, effort);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === provider.id
+            ? {
+                ...item,
+                models: item.models.map((model) =>
+                  model.id === modelId ? { ...model, reasoningEnabled: enabled, reasoningEffort: effort } : model,
+                ),
+              }
+            : item,
+        ),
+      );
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
   if (busy) {
     return <SkeletonList rows={5} />;
   }
@@ -174,36 +236,73 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         {items.length === 0 ? (
           <p className="albedo-ai-muted">Провайдеров пока нет.</p>
         ) : (
-          items.map((item) => (
-            <article key={item.id} className="albedo-ai-provider-strip">
-              <header className="albedo-ai-provider-strip-head">
-                <strong>{item.name}</strong>
-                <span className="albedo-ai-muted">{item.kind === 'oauth' ? 'OAuth · Grok' : 'API'}</span>
-              </header>
-              <p className="albedo-ai-provider-desc">{item.description || '—'}</p>
-              <ul className="albedo-ai-provider-models">
-                {item.models.filter((model) => model.enabled).length === 0 ? (
-                  <li className="albedo-ai-muted">Модели не включены</li>
-                ) : (
-                  item.models
-                    .filter((model) => model.enabled)
-                    .map((model) => (
-                      <li key={model.id}>
-                        <Switch
-                          on={model.enabled}
-                          onChange={(next) => void toggleSaved(item, model.id, next)}
-                        />
-                        <span>{model.displayName}</span>
-                      </li>
-                    ))
-                )}
-              </ul>
-            </article>
-          ))
+          items.map((item) => {
+            const open = openIds.includes(item.id);
+            return (
+              <article key={item.id} className="albedo-ai-provider-strip">
+                <header className="albedo-ai-provider-strip-head">
+                  <strong>{item.name}</strong>
+                  <span className="albedo-ai-muted">{item.kind === 'oauth' ? 'OAuth' : 'API'}</span>
+                  <span className="albedo-ai-strip-actions">
+                    <button
+                      type="button"
+                      className="albedo-icon-btn"
+                      aria-label={open ? 'Свернуть' : 'Развернуть'}
+                      onClick={() => toggleOpen(item.id)}
+                    >
+                      <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm albedo-danger-btn"
+                      onClick={() => void remove(item.id)}
+                    >
+                      Delete
+                    </button>
+                  </span>
+                </header>
+                <p className="albedo-ai-provider-desc">{item.description || '—'}</p>
+                {open ? (
+                  <ul className="albedo-ai-provider-models">
+                    {item.models.length === 0 ? (
+                      <li className="albedo-ai-muted">Модели не добавлены</li>
+                    ) : (
+                      item.models.map((model) => (
+                        <li key={model.id}>
+                          <Switch on={model.enabled} onChange={(next) => void toggleSaved(item, model.id, next)} />
+                          <span>{model.displayName}</span>
+                          {model.supportsReasoning ? (
+                            <ReasoningControls
+                              enabled={model.reasoningEnabled}
+                              effort={model.reasoningEffort ?? 'medium'}
+                              onEnabled={(next) =>
+                                void patchReasoning(item, model.id, next, model.reasoningEffort ?? 'medium')
+                              }
+                              onEffort={(next) => void patchReasoning(item, model.id, model.reasoningEnabled, next)}
+                            />
+                          ) : null}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                ) : null}
+              </article>
+            );
+          })
         )}
       </div>
 
-      <form className="albedo-ai-form albedo-ai-provider-form" onSubmit={(event) => void (kind === 'api_key' ? probe(event) : (event.preventDefault(), saveOauth()))}>
+      <form
+        className="albedo-ai-form albedo-ai-provider-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (kind === 'oauth') {
+            void saveOauth();
+            return;
+          }
+          void saveApi();
+        }}
+      >
         <label className="form-label" htmlFor="ai-prov-type">
           Type
         </label>
@@ -245,12 +344,12 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         {kind === 'oauth' ? (
           <>
             <p className="albedo-ai-muted">
-              Как Grok Build: вход через браузер на auth.x.ai (PKCE) или device code, если браузера нет. SPA не
-              открывает loopback-порт CLI — Connect сохранит провайдера и дождётся client_id приложения.
+              OAuth через воркер: authorization code + PKCE или device code. Без client_id приложения вход не
+              завершится — Connect сохранит провайдера как pending.
             </p>
             <div className="albedo-ai-actions">
               <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={saving || !name.trim()}>
-                Connect Grok
+                Connect
               </button>
             </div>
           </>
@@ -261,11 +360,12 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
             </label>
             <input
               id="ai-prov-url"
-              className="form-control form-control-sm"
+              className={`form-control form-control-sm${urlHint ? ' is-invalid' : ''}`}
               value={baseUrl}
               onChange={(event) => setBaseUrl(event.target.value)}
               placeholder="https://api.example.com/v1/"
             />
+            {urlHint ? <p className="albedo-field-error">{urlHint}</p> : null}
             <label className="form-label" htmlFor="ai-prov-key">
               API Key
             </label>
@@ -278,13 +378,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               onChange={(event) => setApiKey(event.target.value)}
               placeholder="sk-..."
             />
-            {draft === null ? (
-              <div className="albedo-ai-actions">
-                <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={saving}>
-                  Check
-                </button>
-              </div>
-            ) : (
+            {probing ? <p className="albedo-ai-muted">Запрос моделей…</p> : null}
+            {draft ? (
               <>
                 <div className="albedo-ai-model-search">
                   <i className="bi bi-search" aria-hidden="true" />
@@ -308,23 +403,74 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                         }
                       />
                       <span>{item.name}</span>
+                      {item.supportsReasoning ? (
+                        <ReasoningControls
+                          enabled={item.reasoningEnabled}
+                          effort={item.reasoningEffort}
+                          onEnabled={(next) =>
+                            setDraft((current) =>
+                              (current ?? []).map((row) =>
+                                row.id === item.id ? { ...row, reasoningEnabled: next } : row,
+                              ),
+                            )
+                          }
+                          onEffort={(next) =>
+                            setDraft((current) =>
+                              (current ?? []).map((row) =>
+                                row.id === item.id ? { ...row, reasoningEffort: next } : row,
+                              ),
+                            )
+                          }
+                        />
+                      ) : null}
                     </li>
                   ))}
                 </ul>
-                <div className="albedo-ai-actions">
-                  <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => setDraft(null)}>
-                    Back
-                  </button>
-                  <button type="button" className="btn btn-sm btn-albedo-primary" disabled={saving} onClick={() => void saveApi()}>
-                    Save
-                  </button>
-                </div>
               </>
-            )}
+            ) : null}
+            <div className="albedo-ai-actions">
+              <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={saving || !draft}>
+                Save
+              </button>
+            </div>
           </>
         )}
       </form>
     </div>
+  );
+}
+
+function ReasoningControls({
+  enabled,
+  effort,
+  onEnabled,
+  onEffort,
+}: {
+  enabled: boolean;
+  effort: ReasoningEffort;
+  onEnabled: (next: boolean) => void;
+  onEffort: (next: ReasoningEffort) => void;
+}): ReactElement {
+  return (
+    <span className="albedo-ai-reasoning">
+      <label className="albedo-ai-reasoning-check">
+        <input type="checkbox" checked={enabled} onChange={(event) => onEnabled(event.target.checked)} />
+        reasoning
+      </label>
+      {enabled ? (
+        <select
+          className="form-select form-select-sm albedo-ai-reasoning-effort"
+          value={effort}
+          onChange={(event) => onEffort(event.target.value as ReasoningEffort)}
+        >
+          {EFFORTS.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </span>
   );
 }
 
