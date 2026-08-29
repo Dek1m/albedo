@@ -105,7 +105,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         .finally(() => setProbing(false));
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [canProbe, name, baseUrl, apiKey]);
+  }, [canProbe, baseUrl, apiKey]);
 
   const shown = useMemo(
     () =>
@@ -145,7 +145,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
 
   const saveApi = async (): Promise<void> => {
     if (!name.trim()) {
-      toast('Имя обязательно');
+      toast('Name is required');
       return;
     }
     if (editId) {
@@ -159,7 +159,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
           apiKey: apiKey.trim() || undefined,
         });
         setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-        toast('Провайдер обновлён', 'ok');
+        toast('Provider updated', 'ok');
         resetForm();
       } catch (err) {
         toast(humanMessage(err));
@@ -191,7 +191,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
             reasoning_effort: item.supportsReasoning ? item.reasoningEffort : null,
           })),
       });
-      toast('Провайдер сохранён', 'ok');
+      toast('Provider saved', 'ok');
       resetForm();
       await load();
     } catch (err) {
@@ -203,7 +203,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
 
   const saveOauth = async (): Promise<void> => {
     if (!name.trim()) {
-      toast('Имя обязательно');
+      toast('Name is required');
       return;
     }
     setSaving(true);
@@ -216,7 +216,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         vendor,
         description: description.trim() || undefined,
       });
-      toast('OAuth сохранён. Нужен client_id приложения для входа.', 'info');
+      toast('OAuth saved. App client_id is required to finish sign-in.', 'info');
       resetForm();
       await load();
     } catch (err) {
@@ -353,7 +353,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     <div className="albedo-ai-providers-pane">
       <div className="albedo-ai-provider-strips">
         {items.length === 0 ? (
-          <p className="albedo-ai-muted">Провайдеров пока нет.</p>
+          <p className="albedo-ai-muted">No providers yet.</p>
         ) : (
           items.map((item) => {
             const open = openIds.includes(item.id);
@@ -366,7 +366,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                     <button
                       type="button"
                       className="albedo-icon-btn"
-                      aria-label={open ? 'Свернуть' : 'Развернуть'}
+                      aria-label={open ? 'Collapse' : 'Expand'}
                       onClick={() => toggleOpen(item.id)}
                     >
                       <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
@@ -387,7 +387,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                 {open ? (
                   <ul className="albedo-ai-provider-models">
                     {item.models.length === 0 ? (
-                      <li className="albedo-ai-muted">Модели не добавлены</li>
+                      <li className="albedo-ai-muted">No models</li>
                     ) : (
                       <>
                         <li className="albedo-ai-model-master">
@@ -395,7 +395,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                             on={item.models.every((model) => model.enabled)}
                             onChange={(next) => void toggleAllSaved(item, next)}
                           />
-                          <span>все</span>
+                          <span>All</span>
                         </li>
                         {item.models.map((model) => (
                         <li key={model.id}>
@@ -404,7 +404,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                           <input
                             className="form-control form-control-sm albedo-ai-model-alias"
                             defaultValue={model.displayName === model.modelId ? '' : model.displayName}
-                            placeholder="своё имя"
+                            placeholder="custom name"
                             onKeyDown={(event) => {
                               if (event.key === 'Enter') {
                                 event.preventDefault();
@@ -497,8 +497,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         {kind === 'oauth' ? (
           <>
             <p className="albedo-ai-muted">
-              OAuth через воркер: authorization code + PKCE или device code. Без client_id приложения вход не
-              завершится — Connect сохранит провайдера как pending.
+              OAuth via worker: authorization code + PKCE or device code. Without an app client_id, Connect
+              stores the provider as pending.
             </p>
             <div className="albedo-ai-actions">
               <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={saving || !name.trim()}>
@@ -531,7 +531,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               onChange={(event) => setApiKey(event.target.value)}
               placeholder="sk-..."
             />
-            {probing ? <p className="albedo-ai-muted">Запрос моделей…</p> : null}
+            {probing ? <p className="albedo-ai-muted">Fetching models…</p> : null}
             {showCatalog ? (
               <>
                 <div className="albedo-ai-model-search">
@@ -540,18 +540,18 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                     className="form-control form-control-sm"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="поиск модели"
-                    aria-label="поиск модели"
+                    placeholder="search models"
+                    aria-label="search models"
                   />
                 </div>
                 <ul className="albedo-ai-model-pick">
                   {shown.length === 0 && !probing ? (
-                    <li className="albedo-ai-muted">Моделей нет</li>
+                    <li className="albedo-ai-muted">No models</li>
                   ) : null}
                   {shown.length > 0 ? (
                     <li className="albedo-ai-model-master">
                       <Switch on={draftAllOn} onChange={toggleAllDraft} />
-                      <span>все</span>
+                      <span>All</span>
                     </li>
                   ) : null}
                   {shown.map((item) => (
@@ -568,7 +568,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                       <input
                         className="form-control form-control-sm albedo-ai-model-alias"
                         value={item.customName}
-                        placeholder="своё имя"
+                        placeholder="custom name"
                         onKeyDown={(event) => {
                           if (event.key === 'Enter') {
                             event.preventDefault();
