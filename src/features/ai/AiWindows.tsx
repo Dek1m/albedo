@@ -4,6 +4,7 @@ import { llmApi } from '../../api/llmApi';
 import type { LlmProvider } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { Window } from '../../shared/ui/Window';
 import type { AiPane } from './AiMenu';
 
@@ -29,10 +30,10 @@ export function AiWindows({ pane, onClose }: AiWindowsProps): ReactElement {
   return (
     <>
       <Window className="albedo-ai-agents" windowId="albedo-ai-agents" open={pane === 'agents'} title="Agents" onClose={onClose}>
-        <p className="albedo-ai-muted">Список агентов появится здесь.</p>
+        <SkeletonList rows={6} />
       </Window>
       <Window className="albedo-ai-models" windowId="albedo-ai-models" open={pane === 'models'} title="Models" onClose={onClose}>
-        <p className="albedo-ai-muted">Каталог моделей — после настройки провайдера.</p>
+        <SkeletonList rows={6} />
       </Window>
       <Window
         className="albedo-ai-providers"
@@ -98,16 +99,23 @@ function ProviderList({
   tick: number;
 }): ReactElement {
   const [items, setItems] = useState<LlmProvider[]>([]);
+  const [busy, setBusy] = useState(true);
 
   useEffect(() => {
     if (!visible) {
       return;
     }
+    setBusy(true);
     void llmApi
       .listProviders()
       .then(setItems)
-      .catch((err: unknown) => toast(humanMessage(err)));
+      .catch((err: unknown) => toast(humanMessage(err)))
+      .finally(() => setBusy(false));
   }, [visible, tick]);
+
+  if (busy) {
+    return <SkeletonList rows={5} />;
+  }
 
   return (
     <>

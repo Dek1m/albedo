@@ -982,6 +982,60 @@ body {
   margin-top: 0.5rem;
 }
 
+.albedo-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.albedo-skeleton-line {
+  display: block;
+  height: 0.7rem;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-active) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: albedo-skeleton-pulse 1.1s var(--ease) infinite;
+}
+
+.albedo-skeleton-line.is-short {
+  width: 42%;
+}
+
+.albedo-skeleton-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.albedo-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0;
+}
+
+.albedo-skeleton-block {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-active) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: albedo-skeleton-pulse 1.1s var(--ease) infinite;
+  flex-shrink: 0;
+}
+
+@keyframes albedo-skeleton-pulse {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .albedo-ws-list .list-group-item {
   display: flex;
   align-items: center;
@@ -1641,7 +1695,9 @@ body {
   .albedo-window-frame,
   .albedo-window-backdrop,
   .albedo-confirm,
-  .albedo-toast {
+  .albedo-toast,
+  .albedo-skeleton-line,
+  .albedo-skeleton-block {
     animation: none;
   }
 }
