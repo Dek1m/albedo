@@ -46,6 +46,7 @@ const CODE_MESSAGES: Record<string, string> = {
   ALREADY_LINKED: 'Already in workspace',
   ALREADY_EXISTS: 'This file already exists',
   DUPLICATE_NAME: 'A provider with this name already exists',
+  OU_NOT_EMPTY: 'Folder is not empty',
   OAUTH_DENIED: 'Sign-in was denied',
   OAUTH_EXPIRED: 'Sign-in expired. Start again',
   OAUTH_PENDING: 'Finish sign-in first',

@@ -41,6 +41,7 @@ describe('DomainFolderMenu', () => {
     onCreateUser: vi.fn(),
     onCreateGroup: vi.fn(),
     onRename: vi.fn(),
+    onDelete: vi.fn(),
   };
   const menu = new DomainFolderMenu(actions);
 
@@ -59,6 +60,7 @@ describe('DomainFolderMenu', () => {
     const items = menu.items(ou({ name: 'Argenta', kind: 'folder', isSystem: true }));
     expect(byId(items, 'new-folder')?.disabled).toBe(false);
     expect(byId(items, 'rename')?.disabled).toBe(true);
+    expect(byId(items, 'delete')?.disabled).toBe(true);
     expect(byId(items, 'tasks.create-user')?.disabled).toBe(true);
     expect(byId(items, 'tasks.create-group')?.disabled).toBe(true);
   });
@@ -84,5 +86,6 @@ describe('DomainFolderMenu', () => {
     expect(byId(items, 'rename')?.disabled).toBeFalsy();
     expect(byId(items, 'tasks.create-user')?.disabled).toBeFalsy();
     expect(byId(items, 'tasks.create-group')?.disabled).toBeFalsy();
+    expect(byId(items, 'delete')?.disabled).toBeFalsy();
   });
 });

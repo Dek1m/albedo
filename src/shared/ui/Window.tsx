@@ -14,7 +14,25 @@ export interface WindowProps {
   children: ReactNode;
   className?: string;
   size?: WindowSize;
+  icon?: string;
 }
+
+const WINDOW_ICONS: Record<string, string> = {
+  'albedo-admin': 'bi-shield-lock',
+  'albedo-admin-role-create': 'bi-shield-plus',
+  'albedo-admin-role-edit': 'bi-shield',
+  'albedo-admin-role-pick': 'bi-shield',
+  'albedo-confirm': 'bi-question-circle',
+  'albedo-prompt': 'bi-input-cursor-text',
+  'albedo-settings': 'bi-gear',
+  'albedo-ai-agents': 'bi-robot',
+  'albedo-ai-models': 'bi-cpu',
+  'albedo-ai-providers': 'bi-hdd-network',
+  'albedo-folders': 'bi-folder-plus',
+  'albedo-workspaces': 'bi-collection',
+  'albedo-workspace-create': 'bi-plus-square',
+  'albedo-sessions': 'bi-chat-dots',
+};
 
 const CLOSE_MS = 180;
 
@@ -34,6 +52,7 @@ export function Window({
   children,
   className,
   size = 'frame',
+  icon,
 }: WindowProps): ReactElement | null {
   const [mounted, setMounted] = useState(open);
   const [leaving, setLeaving] = useState(false);
@@ -182,7 +201,10 @@ export function Window({
             onPointerUp={onHeaderUp}
             onPointerCancel={onHeaderUp}
           >
-            <h2 className="albedo-window-title">{title}</h2>
+            <h2 className="albedo-window-title">
+              <i className={`bi ${icon ?? WINDOW_ICONS[windowId] ?? 'bi-window'}`} />
+              {title}
+            </h2>
             <button type="button" className="albedo-window-close" aria-label="Закрыть" onClick={onClose} />
           </div>
           <div className="albedo-window-body">{children}</div>

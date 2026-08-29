@@ -27,6 +27,7 @@ export function ConfirmDialog({
       size="ask"
       open={open}
       title={title}
+      icon={danger ? 'bi-exclamation-triangle' : 'bi-question-circle'}
       onClose={onClose}
     >
       <p className="albedo-confirm-body">{body}</p>

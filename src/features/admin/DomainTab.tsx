@@ -6,6 +6,7 @@ import { ApiError, humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ContextMenu } from '../../shared/ui/ContextMenu';
 import type { MenuItem } from '../../shared/ui/ContextMenu';
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { DomainFolderMenu } from './context/DomainFolderMenu';
@@ -62,6 +63,11 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
     label: string;
     confirmLabel: string;
     submit: (value: string) => Promise<void>;
+  } | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    body: string;
+    submit: () => Promise<void>;
   } | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
@@ -136,6 +142,14 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         confirmLabel: 'Save',
         submit: (name) => run(() => adminApi.renameOu(ou.id, name)),
       }),
+    onDelete: (ou) => {
+      const empty = !ou.children.length && !ou.users.length && !ou.groups.length;
+      if (!empty) {
+        toast('Folder is not empty', 'error');
+        return;
+      }
+      void run(() => adminApi.deleteOu(ou.id));
+    },
   });
 
   const userMenu = new DomainUserMenu({
@@ -146,6 +160,12 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         confirmLabel: 'Save',
         submit: (name) => run(() => adminApi.renameUser(user.id, name)),
       }),
+    onDelete: (user) =>
+      setConfirm({
+        title: 'Delete user',
+        body: `Delete user ${user.username}? This cannot be undone.`,
+        submit: () => run(() => adminApi.deleteUser(user.id)),
+      }),
   });
 
   const groupMenu = new DomainGroupMenu({
@@ -155,6 +175,12 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         label: 'Name',
         confirmLabel: 'Save',
         submit: (name) => run(() => adminApi.renameGroup(group.id, name)),
+      }),
+    onDelete: (group) =>
+      setConfirm({
+        title: 'Delete group',
+        body: `Delete group ${group.name}? This cannot be undone.`,
+        submit: () => run(() => adminApi.deleteGroup(group.id)),
       }),
   });
 
@@ -302,6 +328,19 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         onSubmit={(value) => {
           if (prompt) {
             void prompt.submit(value);
+          }
+        }}
+      />
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title={confirm?.title ?? ''}
+        body={confirm?.body ?? ''}
+        confirmLabel="Delete"
+        danger
+        onClose={() => setConfirm(null)}
+        onConfirm={() => {
+          if (confirm) {
+            void confirm.submit();
           }
         }}
       />

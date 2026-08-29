@@ -3,6 +3,7 @@ import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface DomainGroupActions {
   onRename: (group: DomainGroup) => void;
+  onDelete: (group: DomainGroup) => void;
 }
 
 export class DomainGroupMenu {
@@ -15,6 +16,12 @@ export class DomainGroupMenu {
         label: 'Rename',
         disabled: target.isBuiltin,
         action: () => this.actions.onRename(target),
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        disabled: target.isBuiltin,
+        action: () => this.actions.onDelete(target),
       },
     ];
   }

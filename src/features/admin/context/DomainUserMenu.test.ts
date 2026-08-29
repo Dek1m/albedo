@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DomainUserMenu } from './DomainUserMenu';
 
 describe('DomainUserMenu', () => {
-  const menu = new DomainUserMenu({ onRename: vi.fn() });
+  const menu = new DomainUserMenu({ onRename: vi.fn(), onDelete: vi.fn() });
 
   it('offers rename without disabled flag', () => {
     const items = menu.items({
@@ -11,7 +11,7 @@ describe('DomainUserMenu', () => {
       workspaceDb: 'belle_workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       email: '',
     });
-    expect(items[0]?.id).toBe('rename');
+    expect(items.map((item) => item.id)).toEqual(['rename', 'delete']);
     expect(items[0]?.disabled).toBeFalsy();
   });
 });

@@ -3,9 +3,9 @@ import type { ReactElement } from 'react';
 import { useToastStore } from './toastStore';
 
 const ICON: Record<string, string> = {
-  error: '✕',
-  ok: '✓',
-  info: 'i',
+  error: 'bi-x-circle-fill',
+  ok: 'bi-check-circle-fill',
+  info: 'bi-info-circle-fill',
 };
 
 function ToastItem({ toast: t }: { toast: { id: number; text: string; kind: string; removing: boolean; frozen: boolean } }): ReactElement {
@@ -22,7 +22,9 @@ function ToastItem({ toast: t }: { toast: { id: number; text: string; kind: stri
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <span className="albedo-toast-icon">{ICON[t.kind] ?? '!'}</span>
+      <span className="albedo-toast-icon">
+        <i className={`bi ${ICON[t.kind] ?? 'bi-bell-fill'}`} />
+      </span>
       <span className="albedo-toast-text">{t.text}</span>
       <button
         type="button"

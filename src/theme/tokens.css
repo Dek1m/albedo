@@ -327,8 +327,20 @@ body {
 }
 
 .albedo-window-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   margin: 0;
   font-size: 1rem;
+}
+
+.albedo-window-title .bi {
+  color: var(--brand);
+  font-size: 1.05rem;
+}
+
+.albedo-confirm .albedo-window-title .bi-exclamation-triangle {
+  color: var(--danger);
 }
 
 .albedo-window-close {
@@ -668,7 +680,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
+  font-size: 0.9rem;
   font-weight: 700;
   border-radius: 50%;
   margin-top: 1px;

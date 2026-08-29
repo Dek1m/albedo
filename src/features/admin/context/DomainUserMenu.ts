@@ -3,6 +3,7 @@ import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface DomainUserActions {
   onRename: (user: DomainUser) => void;
+  onDelete: (user: DomainUser) => void;
 }
 
 export class DomainUserMenu {
@@ -14,6 +15,11 @@ export class DomainUserMenu {
         id: 'rename',
         label: 'Rename',
         action: () => this.actions.onRename(target),
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        action: () => this.actions.onDelete(target),
       },
     ];
   }

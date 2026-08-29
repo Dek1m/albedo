@@ -392,6 +392,18 @@ export const adminApi = {
     await apiClient.call('admin', 'rename_ou', { ou_id: ouId, name });
   },
 
+  async deleteOu(ouId: string): Promise<void> {
+    await apiClient.call('admin', 'delete_ou', { ou_id: ouId });
+  },
+
+  async deleteUser(userId: string): Promise<void> {
+    await apiClient.call('admin', 'delete_directory_user', { user_id: userId });
+  },
+
+  async deleteGroup(groupId: string): Promise<void> {
+    await apiClient.call('admin', 'delete_directory_group', { group_id: groupId });
+  },
+
   async createUserInOu(input: {
     username: string;
     password: string;

@@ -6,6 +6,7 @@ export interface DomainFolderActions {
   onCreateUser: (ou: DomainOu) => void;
   onCreateGroup: (ou: DomainOu) => void;
   onRename: (ou: DomainOu) => void;
+  onDelete: (ou: DomainOu) => void;
   canCreateUser?: boolean;
   canCreateGroup?: boolean;
 }
@@ -49,6 +50,12 @@ export class DomainFolderMenu {
         label: 'Rename',
         disabled: target.isSystem,
         action: () => this.actions.onRename(target),
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        disabled: target.isSystem,
+        action: () => this.actions.onDelete(target),
       },
     ];
   }
