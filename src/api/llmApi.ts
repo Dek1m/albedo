@@ -98,19 +98,19 @@ function mapProvider(item: ProviderDto): LlmProvider {
 export function urlError(raw: string): string | null {
   const value = raw.trim();
   if (!value) {
-    return 'wrong url';
+    return 'Wrong URL';
   }
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return 'wrong url';
+      return 'Wrong URL';
     }
     if (!parsed.hostname) {
-      return 'wrong url';
+      return 'Wrong URL';
     }
     return null;
   } catch {
-    return 'wrong url';
+    return 'Wrong URL';
   }
 }
 

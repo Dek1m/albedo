@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { llmApi, urlError } from '../../api/llmApi';
 import type { LlmProvider, ProviderKind, ReasoningEffort } from '../../api/llmApi';
-import { humanMessage } from '../../api/errors';
+import { ApiError, humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 
@@ -42,9 +42,10 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [probing, setProbing] = useState(false);
+  const [probeUrlError, setProbeUrlError] = useState<string | null>(null);
   const [openIds, setOpenIds] = useState<string[]>([]);
 
-  const urlHint = kind === 'api_key' && baseUrl.trim() ? urlError(baseUrl) : null;
+  const urlHint = (kind === 'api_key' && baseUrl.trim() ? urlError(baseUrl) : null) ?? probeUrlError;
   const canProbe =
     kind === 'api_key' && Boolean(name.trim()) && !urlError(baseUrl) && Boolean(apiKey.trim());
 
@@ -69,10 +70,12 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   useEffect(() => {
     if (!canProbe) {
       setDraft(null);
+      setProbeUrlError(null);
       return;
     }
     const timer = window.setTimeout(() => {
       setProbing(true);
+      setProbeUrlError(null);
       void llmApi
         .probeModels(baseUrl.trim(), apiKey.trim())
         .then((models) => {
@@ -89,6 +92,11 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         })
         .catch((err: unknown) => {
           setDraft(null);
+          const code = err instanceof ApiError ? err.code : '';
+          if (code === 'WRONG_URL' || code === 'UPSTREAM') {
+            setProbeUrlError('Wrong URL');
+            return;
+          }
           toast(humanMessage(err));
         })
         .finally(() => setProbing(false));

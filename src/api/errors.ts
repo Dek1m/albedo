@@ -31,7 +31,7 @@ const CODE_MESSAGES: Record<string, string> = {
   CONTAINS_LINKED: 'В проекте уже есть вложенная папка — сначала убери её',
   ALREADY_LINKED: 'Уже в workspace',
   ALREADY_EXISTS: 'Такой файл уже есть',
-  WRONG_URL: 'wrong url',
+  WRONG_URL: 'Wrong URL',
 };
 
 export function humanMessage(error: unknown): string {
