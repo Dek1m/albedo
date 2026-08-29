@@ -1550,6 +1550,35 @@ body {
   border-radius: 6px;
 }
 
+.albedo-tree-item .bi-building,
+.albedo-tree-item .bi-gear-wide-connected {
+  color: var(--brand);
+}
+
+.list-group-item .bi {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.list-group-item.active .bi {
+  color: var(--text-primary);
+}
+
+.albedo-admin-cap-table th,
+.albedo-admin-cap-table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.albedo-admin-cap-table th:first-child,
+.albedo-admin-cap-table td:first-child {
+  text-align: left;
+}
+
+.albedo-admin-cap-table tbody tr {
+  cursor: default;
+}
+
 .albedo-admin-role-toolbar {
   display: flex;
   justify-content: flex-end;

@@ -46,7 +46,9 @@ export function RolePickDialog({
               onClick={() => setChosen(role.id)}
               onDoubleClick={() => onAdd(role)}
             >
-              <td>{role.name}</td>
+              <td>
+                <i className={`bi ${role.isBuiltin ? 'bi-shield-fill' : 'bi-shield'}`} /> {role.name}
+              </td>
               <td>{role.description || '—'}</td>
             </tr>
           ))}

@@ -14,12 +14,18 @@ interface DomainTreeProps {
   onGroupMenu: (event: ReactMouseEvent, group: DomainGroup) => void;
 }
 
-function ouIcon(kind: DomainOu['kind']): string {
-  if (kind === 'users_bin') {
+function ouIcon(node: DomainOu): string {
+  if (node.kind === 'users_bin') {
     return 'bi-people';
   }
-  if (kind === 'groups_bin') {
+  if (node.kind === 'groups_bin') {
     return 'bi-collection';
+  }
+  if (node.isSystem && node.parentId === null) {
+    return 'bi-building';
+  }
+  if (node.isSystem || node.isBuiltin) {
+    return 'bi-gear-wide-connected';
   }
   return 'bi-folder';
 }
@@ -59,7 +65,7 @@ function OuNode({ node, ...rest }: OuNodeProps): ReactElement {
             setOpen((value) => !value);
           }}
         />
-        <i className={`bi ${ouIcon(node.kind)}`} />
+        <i className={`bi ${ouIcon(node)}`} />
         <span className="albedo-tree-name">{node.name}</span>
       </div>
       {open ? (

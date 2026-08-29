@@ -15,6 +15,7 @@ interface RoleEditWindowProps {
 
 const GROUPS = [
   { label: 'Providers', shift: 0 },
+  { label: 'Share', shift: 12 },
   { label: 'Users', shift: 4 },
   { label: 'Groups', shift: 8 },
 ] as const;

@@ -70,6 +70,7 @@ export function DirectoryMemberOf({ userId }: DirectoryMemberOfProps): ReactElem
             className={`list-group-item${selected === group.id ? ' active' : ''}`}
             onClick={() => setSelected(group.id)}
           >
+            <i className={`bi ${group.isBuiltin ? 'bi-people-fill' : 'bi-people'}`} />
             <span>{group.name}</span>
             {group.isPrimary ? <span className="albedo-badge">primary</span> : null}
           </li>

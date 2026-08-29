@@ -75,7 +75,12 @@ export function DomainTable({
                   />
                 </td>
                 <td className="albedo-dir-uuid">{row.id}</td>
-                <td>{row.name}</td>
+                <td>
+                  <i
+                    className={`bi ${row.type === 'user' ? 'bi-person' : row.type === 'group' ? 'bi-people-fill' : 'bi-folder'}`}
+                  />{' '}
+                  {row.name}
+                </td>
                 <td>{row.type}</td>
                 <td className="albedo-dir-extra">{row.extra}</td>
               </tr>

@@ -164,6 +164,9 @@ textarea.form-control {
 }
 
 .list-group-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   background-color: var(--bg-surface);
   color: var(--text-primary);
   border-color: var(--border);

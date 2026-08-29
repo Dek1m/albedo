@@ -156,7 +156,8 @@ export function DirectoryGroupPane({
               className={`list-group-item${chosen === role.id ? ' active' : ''}`}
               onClick={() => setChosen(role.id)}
             >
-              {role.name}
+              <i className={`bi ${role.isBuiltin ? 'bi-shield-fill' : 'bi-shield'}`} />
+              <span>{role.name}</span>
             </li>
           ))}
         </ul>

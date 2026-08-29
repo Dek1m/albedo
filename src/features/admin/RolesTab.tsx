@@ -5,7 +5,7 @@ import type { AdminRole } from '../../api/adminApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { SkeletonList } from '../../shared/ui/Skeleton';
-import { RoleCloneDialog } from './RoleCloneDialog';
+import { RoleCreateDialog } from './RoleCreateDialog';
 
 interface RolesTabProps {
   visible: boolean;
@@ -15,7 +15,7 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cloneOpen, setCloneOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const applyRoles = (items: AdminRole[], current: string | null): void => {
     setRoles(items);
@@ -57,8 +57,6 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
     };
   }, [visible]);
 
-  const selected = roles.find((role) => role.id === selectedId) ?? null;
-
   if (loading && !roles.length) {
     return <SkeletonList rows={6} />;
   }
@@ -66,13 +64,8 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
   return (
     <div className="albedo-admin-roles">
       <div className="albedo-admin-role-toolbar">
-        <button
-          type="button"
-          className="btn btn-sm btn-albedo-primary"
-          disabled={!selected}
-          onClick={() => setCloneOpen(true)}
-        >
-          New from selected
+        <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => setCreateOpen(true)}>
+          New role
         </button>
       </div>
       <ul className="list-group albedo-admin-role-list">
@@ -82,16 +75,16 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
             className={`list-group-item${selectedId === role.id ? ' active' : ''}`}
             onClick={() => setSelectedId(role.id)}
           >
+            <i className={`bi ${role.isBuiltin ? 'bi-shield-fill' : 'bi-shield'}`} />
             <span>{role.name}</span>
             {role.isBuiltin ? <span className="albedo-badge">builtin</span> : null}
           </li>
         ))}
       </ul>
       {!roles.length ? <p className="albedo-ai-muted">No roles</p> : null}
-      <RoleCloneDialog
-        open={cloneOpen}
-        source={selected}
-        onClose={() => setCloneOpen(false)}
+      <RoleCreateDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
         onCreated={(roleId) => void load(roleId || null)}
       />
     </div>
