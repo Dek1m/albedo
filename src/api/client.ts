@@ -1,3 +1,4 @@
+import { log } from '../shared/log';
 import { isEnvelope } from './envelope';
 import { ApiError, toApiError } from './errors';
 import type { Envelope } from './envelope';
@@ -57,6 +58,8 @@ export class ApiClient {
     fn: string,
     kwargs: object,
   ): Promise<T> {
+    const started = performance.now();
+    log.info('rpc_started', { module, fn });
     const response = await fetch(`/api/v1/${module}/${fn}`, {
       method: 'POST',
       headers: {
@@ -70,12 +73,24 @@ export class ApiClient {
     });
 
     const envelope = await this.parseEnvelope<T>(response);
+    const durationMs = Math.round(performance.now() - started);
     if (envelope.error) {
-      throw toApiError(envelope.error);
+      const err = toApiError(envelope.error);
+      log.error('rpc_failed', {
+        module,
+        fn,
+        status: response.status,
+        code: err.code,
+        message: err.message,
+        duration_ms: durationMs,
+      });
+      throw err;
     }
     if (envelope.data === null) {
+      log.error('rpc_failed', { module, fn, status: response.status, code: 'empty_data', duration_ms: durationMs });
       throw new ApiError('empty_data', 'RPC returned no data');
     }
+    log.info('rpc_ok', { module, fn, status: response.status, duration_ms: durationMs });
     return envelope.data;
   }
 
