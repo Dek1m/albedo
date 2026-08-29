@@ -1418,6 +1418,91 @@ body {
   z-index: 60;
 }
 
+/* ПКМ: fixed поверх окна, палитра та же что у hover-drop */
+.albedo-ws-drop.albedo-ctx {
+  position: fixed;
+  z-index: 1080;
+}
+
+.albedo-ws-drop-wrap {
+  position: relative;
+}
+
+.albedo-ws-drop-item.has-children {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.albedo-ws-submenu {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 1px;
+}
+
+.albedo-admin-domain,
+.albedo-admin-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.albedo-admin-split {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.3fr);
+  gap: 0.75rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.albedo-admin-tree,
+.albedo-admin-people {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+}
+
+.albedo-admin-tree .albedo-tree {
+  margin: 0;
+}
+
+.albedo-admin-people .table {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.albedo-admin-role-list {
+  max-height: 9rem;
+  overflow: auto;
+}
+
+.albedo-admin-caps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.albedo-admin-cap-group {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.albedo-admin-cap-group legend {
+  float: none;
+  width: auto;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 0 0.25rem;
+}
+
 .albedo-tree {
   list-style: none;
   margin: 0.35rem 0 0;

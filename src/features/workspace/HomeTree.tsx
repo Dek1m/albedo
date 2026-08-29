@@ -5,7 +5,11 @@ import type { HomeEntry } from '../../domain/workspace';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
+import { ContextMenu } from '../../shared/ui/ContextMenu';
+import type { MenuItem } from '../../shared/ui/ContextMenu';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
+import { PromptDialog } from '../../shared/ui/PromptDialog';
+import { WorkspaceFolderMenu } from './context/WorkspaceFolderMenu';
 import { folderToast, newSegments, pathTail } from './folderToast';
 
 interface HomeTreeProps {
@@ -84,6 +88,8 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   const [showSize, setShowSize] = useState(false);
   const [alsoDisk, setAlsoDisk] = useState<Set<string>>(() => new Set());
   const [ask, setAsk] = useState<{ rel: string; body: string; detach: boolean } | null>(null);
+  const [ctx, setCtx] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [renameRel, setRenameRel] = useState<string | null>(null);
 
   const reload = useCallback(async (): Promise<void> => {
     setRoot(await workspaceApi.listHome('', workspaceId, { hidden, size: showSize }));
@@ -119,8 +125,47 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     return rel;
   };
 
-  const startCreate = (kind: 'folder' | 'file'): void => {
-    setDraft({ kind, parentRel: parentOfFocus() });
+  const startCreate = (kind: 'folder' | 'file', parentRel?: string): void => {
+    setDraft({ kind, parentRel: parentRel ?? parentOfFocus() });
+  };
+
+  const runRename = async (name: string): Promise<void> => {
+    const src = renameRel;
+    setRenameRel(null);
+    if (!src || !name.trim() || name.trim() === pathTail(src)) {
+      return;
+    }
+    try {
+      await workspaceApi.renameHome(src, name.trim(), workspaceId);
+      setTick((value) => value + 1);
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const openFolderMenu = (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, rel: string): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    setFocusRel(rel);
+    setFocusKind('folder');
+    const menu = new WorkspaceFolderMenu({
+      onNewFolder: (path) => startCreate('folder', path),
+      onNewFile: (path) => startCreate('file', path),
+      onRename: (path) => setRenameRel(path),
+      onRemoveFromWorkspace: (path) => {
+        if (!selected.has(path)) {
+          return;
+        }
+        onToggle(path);
+        folderToast('removed', [pathTail(path)]);
+      },
+      onDeleteFromDisk: (path) => void trash(path),
+    });
+    setCtx({
+      x: event.clientX,
+      y: event.clientY,
+      items: menu.items({ relPath: rel, canRemoveFromWorkspace: selected.has(rel) }),
+    });
   };
 
   const submitDraft = async (name: string): Promise<void> => {
@@ -285,6 +330,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         hidden={hidden}
         showSize={showSize}
         onMoved={() => setTick((value) => value + 1)}
+        onFolderMenu={openFolderMenu}
       />
       {selected.size ? (
         <ul className="albedo-home-attached">
@@ -339,6 +385,15 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
           ))}
         </ul>
       ) : null}
+      {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
+      <PromptDialog
+        open={Boolean(renameRel)}
+        title="Rename"
+        label="Name"
+        confirmLabel="Save"
+        onClose={() => setRenameRel(null)}
+        onSubmit={(name) => void runRename(name)}
+      />
       <ConfirmDialog
         open={Boolean(ask)}
         title="Удалить"
@@ -378,6 +433,7 @@ interface BranchProps {
   hidden: boolean;
   showSize: boolean;
   onMoved: () => void;
+  onFolderMenu: (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, rel: string) => void;
   parentRel?: string;
 }
 
@@ -396,6 +452,7 @@ function HomeBranch({
   hidden,
   showSize,
   onMoved,
+  onFolderMenu,
   parentRel = '',
 }: BranchProps): ReactElement {
   const showDraft = draft && draft.parentRel === parentRel;
@@ -419,6 +476,7 @@ function HomeBranch({
           hidden={hidden}
           showSize={showSize}
           onMoved={onMoved}
+          onFolderMenu={onFolderMenu}
         />
       ))}
     </ul>
@@ -440,6 +498,7 @@ interface NodeProps {
   hidden: boolean;
   showSize: boolean;
   onMoved: () => void;
+  onFolderMenu: (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, rel: string) => void;
 }
 
 function HomeNode({
@@ -457,6 +516,7 @@ function HomeNode({
   hidden,
   showSize,
   onMoved,
+  onFolderMenu,
 }: NodeProps): ReactElement {
   const wantOpen = Boolean(draft && (draft.parentRel === item.relPath || draft.parentRel.startsWith(`${item.relPath}/`)));
   const [open, setOpen] = useState(wantOpen);
@@ -493,6 +553,12 @@ function HomeNode({
         className={`albedo-home-row${focused ? ' is-focus' : ''}${cover}`}
         draggable
         onClick={() => onFocus(item.relPath, item.kind)}
+        onContextMenu={(event) => {
+          if (item.kind !== 'folder') {
+            return;
+          }
+          onFolderMenu(event, item.relPath);
+        }}
         onDragStart={(event) => {
           event.dataTransfer.setData('text/albedo-rel', item.relPath);
           event.dataTransfer.effectAllowed = 'move';
@@ -562,6 +628,7 @@ function HomeNode({
           hidden={hidden}
           showSize={showSize}
           onMoved={onMoved}
+          onFolderMenu={onFolderMenu}
           parentRel={item.relPath}
         />
       ) : null}

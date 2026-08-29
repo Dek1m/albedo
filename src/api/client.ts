@@ -72,7 +72,23 @@ export class ApiClient {
       body: JSON.stringify(kwargs),
     });
 
-    const envelope = await this.parseEnvelope<T>(response);
+    let envelope: Envelope<T>;
+    try {
+      envelope = await this.parseEnvelope<T>(response);
+    } catch (error) {
+      const durationMs = Math.round(performance.now() - started);
+      const err = error instanceof ApiError
+        ? error
+        : new ApiError('invalid_envelope', `HTTP ${String(response.status)}`, undefined, response.status);
+      log.error('rpc_failed', {
+        module,
+        fn,
+        status: response.status,
+        code: err.code,
+        duration_ms: durationMs,
+      });
+      throw err;
+    }
     const durationMs = Math.round(performance.now() - started);
     if (envelope.error) {
       const err = toApiError(envelope.error);

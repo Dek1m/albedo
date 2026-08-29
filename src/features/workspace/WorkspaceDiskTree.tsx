@@ -5,10 +5,13 @@ import { humanMessage } from '../../api/errors';
 import type { HomeEntry } from '../../domain/workspace';
 import { toast } from '../../shared/toast/toastStore';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
+import { ContextMenu } from '../../shared/ui/ContextMenu';
+import type { MenuItem } from '../../shared/ui/ContextMenu';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { GitBranch } from './GitBranch';
+import { WorkspaceFolderMenu } from './context/WorkspaceFolderMenu';
 import { folderToast, pathTail } from './folderToast';
 import type { GitRepo } from '../../api/workspaceApi';
 
@@ -39,6 +42,7 @@ export function WorkspaceDiskTree({
   const [prompt, setPrompt] = useState<{ mode: 'folder' | 'file'; rel: string } | null>(null);
   const [renaming, setRenaming] = useState<{ rel: string; kind: 'folder' | 'file' } | null>(null);
   const [ask, setAsk] = useState<{ rel: string; body: string } | null>(null);
+  const [ctx, setCtx] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
 
   const runCreate = async (name: string): Promise<void> => {
     if (!prompt) {
@@ -83,6 +87,60 @@ export function WorkspaceDiskTree({
     }
   };
 
+  const exclude = async (rel: string): Promise<void> => {
+    try {
+      await workspaceApi.excludeHome(workspaceId, rel);
+      folderToast('removed', [pathTail(rel)]);
+      onMoved();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const include = async (rel: string): Promise<void> => {
+    try {
+      await workspaceApi.includeHome(workspaceId, rel);
+      folderToast('added', [pathTail(rel)]);
+      onMoved();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const askTrash = async (rel: string): Promise<void> => {
+    try {
+      const stat = await workspaceApi.homeStat(rel);
+      const body =
+        stat.kind === 'folder' && stat.childCount > 0
+          ? `В «${rel}» есть файлы и папки. Удалить всё с диска?`
+          : `Удалить «${rel}» с диска?`;
+      setAsk({ rel, body });
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const openFolderMenu = (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, item: HomeEntry): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelect(item.relPath, 'folder');
+    const menu = new WorkspaceFolderMenu({
+      onNewFolder: (rel) => setPrompt({ mode: 'folder', rel }),
+      onNewFile: (rel) => setPrompt({ mode: 'file', rel }),
+      onRename: (rel) => setRenaming({ rel, kind: 'folder' }),
+      onRemoveFromWorkspace: (rel) => void exclude(rel),
+      onDeleteFromDisk: (rel) => void askTrash(rel),
+    });
+    setCtx({
+      x: event.clientX,
+      y: event.clientY,
+      items: menu.items({
+        relPath: item.relPath,
+        canRemoveFromWorkspace: item.linked || item.inherited,
+      }),
+    });
+  };
+
   return (
     <>
       <ul className="albedo-tree">
@@ -114,39 +172,14 @@ export function WorkspaceDiskTree({
               }
             }}
             onCancelRename={() => setRenaming(null)}
-            onAskTrash={async (rel) => {
-              try {
-                const stat = await workspaceApi.homeStat(rel);
-                const body =
-                  stat.kind === 'folder' && stat.childCount > 0
-                    ? `В «${rel}» есть файлы и папки. Удалить всё с диска?`
-                    : `Удалить «${rel}» с диска?`;
-                setAsk({ rel, body });
-              } catch (err) {
-                toast(humanMessage(err));
-              }
-            }}
-            onExclude={async (rel) => {
-              try {
-                await workspaceApi.excludeHome(workspaceId, rel);
-                folderToast('removed', [pathTail(rel)]);
-                onMoved();
-              } catch (err) {
-                toast(humanMessage(err));
-              }
-            }}
-            onInclude={async (rel) => {
-              try {
-                await workspaceApi.includeHome(workspaceId, rel);
-                folderToast('added', [pathTail(rel)]);
-                onMoved();
-              } catch (err) {
-                toast(humanMessage(err));
-              }
-            }}
+            onAskTrash={(rel) => void askTrash(rel)}
+            onExclude={(rel) => void exclude(rel)}
+            onInclude={(rel) => void include(rel)}
+            onFolderMenu={openFolderMenu}
           />
         ))}
       </ul>
+      {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
       <PromptDialog
         open={Boolean(prompt)}
         title={prompt?.mode === 'file' ? 'New file' : 'New folder'}
@@ -188,6 +221,7 @@ interface NodeProps {
   onAskTrash: (rel: string) => void;
   onExclude: (rel: string) => void;
   onInclude: (rel: string) => void;
+  onFolderMenu: (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, item: HomeEntry) => void;
 }
 
 function DiskNode({
@@ -207,6 +241,7 @@ function DiskNode({
   onAskTrash,
   onExclude,
   onInclude,
+  onFolderMenu,
 }: NodeProps): ReactElement {
   const open = useWorkspaceStore((s) => s.expanded.includes(item.relPath));
   const toggleExpanded = useWorkspaceStore((s) => s.toggleExpanded);
@@ -241,6 +276,12 @@ function DiskNode({
         className={`albedo-tree-item${selectedRel === item.relPath ? ' is-selected' : ''}${over ? ' is-drop' : ''}`}
         draggable={renamingRel !== item.relPath}
         onClick={onNameClick}
+        onContextMenu={(event) => {
+          if (item.kind !== 'folder') {
+            return;
+          }
+          onFolderMenu(event, item);
+        }}
         onDragStart={(event) => {
           event.dataTransfer.setData('text/albedo-rel', item.relPath);
           event.dataTransfer.effectAllowed = 'move';
@@ -398,6 +439,7 @@ function DiskNode({
               onAskTrash={onAskTrash}
               onExclude={onExclude}
               onInclude={onInclude}
+              onFolderMenu={onFolderMenu}
             />
           ))}
         </ul>

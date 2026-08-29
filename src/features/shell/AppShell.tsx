@@ -9,6 +9,8 @@ import { ChatPane } from '../workspace/ChatPane';
 import { SessionTabs } from '../workspace/SessionTabs';
 import { workspaceApi } from '../../api/workspaceApi';
 import { syncLlmCatalogOnAuth } from '../../application/llm/syncCatalog';
+import { AdminMenu } from '../admin/AdminMenu';
+import { AdminWindow } from '../admin/AdminWindow';
 import { AiMenu } from '../ai/AiMenu';
 import type { AiPane } from '../ai/AiMenu';
 import { AiWindows } from '../ai/AiWindows';
@@ -32,6 +34,7 @@ export function AppShell(): ReactElement {
   const [createOpen, setCreateOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [aiPane, setAiPane] = useState<AiPane | null>(null);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +102,7 @@ export function AppShell(): ReactElement {
             onOpenSessions={() => setSessionsOpen(true)}
           />
           <AiMenu onOpen={setAiPane} />
+          <AdminMenu onOpen={() => setAdminOpen(true)} />
         </div>
         <div className="albedo-header-actions">
           <UserChip />
@@ -115,6 +119,7 @@ export function AppShell(): ReactElement {
         </main>
       </div>
       <AiWindows pane={aiPane} onClose={() => setAiPane(null)} />
+      <AdminWindow open={adminOpen} onClose={() => setAdminOpen(false)} />
       <WorkspaceModals
         listOpen={listOpen}
         createOpen={createOpen}
