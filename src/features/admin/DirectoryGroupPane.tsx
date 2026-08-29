@@ -4,41 +4,40 @@ import { adminApi } from '../../api/adminApi';
 import type { AdminRole } from '../../api/adminApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
-import { Window } from '../../shared/ui/Window';
+import { RoleEditWindow } from './RoleEditWindow';
+import { RolePickDialog } from './RolePickDialog';
 
 export type DirectoryGroupMode = { kind: 'create'; ouId: string } | { kind: 'edit'; groupId: string; name: string };
 
-interface DirectoryGroupWindowProps {
-  mode: DirectoryGroupMode | null;
+interface DirectoryGroupPaneProps {
+  mode: DirectoryGroupMode;
   canEdit: boolean;
-  onClose: () => void;
-  onSaved: () => void;
+  canEditRoles: boolean;
+  onSaved: (groupId: string | null, name: string) => void;
 }
 
-export function DirectoryGroupWindow({
+export function DirectoryGroupPane({
   mode,
   canEdit,
-  onClose,
+  canEditRoles,
   onSaved,
-}: DirectoryGroupWindowProps): ReactElement {
+}: DirectoryGroupPaneProps): ReactElement {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [catalog, setCatalog] = useState<AdminRole[]>([]);
   const [assigned, setAssigned] = useState<AdminRole[]>([]);
-  const [pick, setPick] = useState('');
   const [chosen, setChosen] = useState<string | null>(null);
+  const [pickOpen, setPickOpen] = useState(false);
+  const [editRoleId, setEditRoleId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const creating = mode?.kind === 'create';
+  const creating = mode.kind === 'create';
 
   useEffect(() => {
-    setName(mode?.kind === 'edit' ? mode.name : '');
+    setName(mode.kind === 'edit' ? mode.name : '');
     setDescription('');
     setAssigned([]);
-    setPick('');
     setChosen(null);
-    if (!mode) {
-      return;
-    }
+    setPickOpen(false);
     let cancelled = false;
     void adminApi
       .listRoles()
@@ -67,13 +66,9 @@ export function DirectoryGroupWindow({
 
   const available = catalog.filter((role) => !assigned.some((item) => item.id === role.id));
 
-  const addRole = (): void => {
-    const role = catalog.find((item) => item.id === pick);
-    if (!role) {
-      return;
-    }
-    setAssigned((current) => [...current, role]);
-    setPick('');
+  const addRole = (role: AdminRole): void => {
+    setAssigned((current) => (current.some((item) => item.id === role.id) ? current : [...current, role]));
+    setPickOpen(false);
   };
 
   const removeRole = (): void => {
@@ -85,7 +80,7 @@ export function DirectoryGroupWindow({
   };
 
   const save = async (): Promise<void> => {
-    if (!mode || !name.trim() || !canEdit) {
+    if (!name.trim() || !canEdit) {
       return;
     }
     setSaving(true);
@@ -111,8 +106,7 @@ export function DirectoryGroupWindow({
         }
       }
       toast('Saved', 'ok');
-      onSaved();
-      onClose();
+      onSaved(groupId, name.trim());
     } catch (err) {
       toast(humanMessage(err));
     } finally {
@@ -126,13 +120,7 @@ export function DirectoryGroupWindow({
   };
 
   return (
-    <Window
-      className="albedo-settings"
-      windowId="albedo-admin-group"
-      open={Boolean(mode)}
-      title={creating ? 'New group' : 'Group'}
-      onClose={onClose}
-    >
+    <div className="albedo-admin-inspector">
       <form className="albedo-settings-form" onSubmit={submit}>
         <label className="form-label" htmlFor="albedo-dir-group-name">
           Name
@@ -162,7 +150,7 @@ export function DirectoryGroupWindow({
           id="albedo-dir-group-roles"
           className="form-select form-select-sm"
           multiple
-          size={6}
+          size={8}
           disabled={!canEdit || saving}
           value={chosen ? [chosen] : []}
           onChange={(event) => setChosen(event.target.value || null)}
@@ -174,35 +162,41 @@ export function DirectoryGroupWindow({
           ))}
         </select>
         <div className="albedo-member-actions">
-          <select
-            className="form-select form-select-sm"
+          <button
+            type="button"
+            className="btn btn-sm btn-albedo-primary"
             disabled={!canEdit || saving}
-            value={pick}
-            onChange={(event) => setPick(event.target.value)}
+            onClick={() => setPickOpen(true)}
           >
-            <option value="">Add role…</option>
-            {available.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="btn btn-sm btn-albedo-primary" disabled={!canEdit || !pick} onClick={addRole}>
             Add
           </button>
           <button type="button" className="btn btn-sm albedo-ghost-btn" disabled={!canEdit || !chosen} onClick={removeRole}>
-            Remove
+            Delete
           </button>
         </div>
         <div className="albedo-confirm-actions">
-          <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={onClose}>
-            Cancel
-          </button>
           <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={!canEdit || !name.trim() || saving}>
             {creating ? 'Create' : 'Save'}
           </button>
         </div>
       </form>
-    </Window>
+      <RolePickDialog
+        open={pickOpen}
+        roles={available}
+        canEditRoles={canEditRoles}
+        onClose={() => setPickOpen(false)}
+        onAdd={addRole}
+        onEdit={(roleId) => setEditRoleId(roleId)}
+      />
+      <RoleEditWindow
+        roleId={editRoleId}
+        canEdit={canEditRoles}
+        onClose={() => setEditRoleId(null)}
+        onSaved={(role) => {
+          setCatalog((current) => current.map((item) => (item.id === role.id ? role : item)));
+          setAssigned((current) => current.map((item) => (item.id === role.id ? role : item)));
+        }}
+      />
+    </div>
   );
 }

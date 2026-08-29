@@ -11,20 +11,21 @@ import { SkeletonList } from '../../shared/ui/Skeleton';
 import { DomainFolderMenu } from './context/DomainFolderMenu';
 import { DomainGroupMenu } from './context/DomainGroupMenu';
 import { DomainUserMenu } from './context/DomainUserMenu';
-import { DirectoryGroupWindow } from './DirectoryGroupWindow';
-import type { DirectoryGroupMode } from './DirectoryGroupWindow';
-import { DirectoryUserWindow } from './DirectoryUserWindow';
-import type { DirectoryUserMode } from './DirectoryUserWindow';
+import { DirectoryGroupPane } from './DirectoryGroupPane';
+import { DirectoryOuPane } from './DirectoryOuPane';
+import { DirectoryUserPane } from './DirectoryUserPane';
 import { DomainSearch } from './DomainSearch';
 import { DomainTable } from './DomainTable';
 import { DomainTree } from './DomainTree';
 import type { DirectoryRow, DomainFilterField } from './domainRows';
 import { visibleRows } from './domainRows';
+import type { DomainSelection } from './domainSelection';
 
 interface DomainTabProps {
   visible: boolean;
   userAdmin: boolean;
   groupAdmin: boolean;
+  roleAdmin: boolean;
 }
 
 interface Ctx {
@@ -35,10 +36,23 @@ interface Ctx {
 
 const FORBIDDEN = new ApiError('FORBIDDEN', 'You do not have permission', undefined, 403);
 
-export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): ReactElement {
+function findOu(nodes: DomainOu[], id: string): DomainOu | null {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node;
+    }
+    const nested = findOu(node.children, id);
+    if (nested) {
+      return nested;
+    }
+  }
+  return null;
+}
+
+export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainTabProps): ReactElement {
   const [tree, setTree] = useState<DomainOu[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOuId, setSelectedOuId] = useState<string | null>(null);
+  const [selection, setSelection] = useState<DomainSelection | null>(null);
   const [field, setField] = useState<DomainFilterField>('any');
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -49,14 +63,12 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
     confirmLabel: string;
     submit: (value: string) => Promise<void>;
   } | null>(null);
-  const [editor, setEditor] = useState<DirectoryUserMode | null>(null);
-  const [groupEditor, setGroupEditor] = useState<DirectoryGroupMode | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
       const data = await adminApi.domainTree();
       setTree(data);
-      setSelectedOuId((current) => current ?? data[0]?.id ?? null);
+      setSelection((current) => current ?? (data[0] ? { type: 'ou', id: data[0].id } : null));
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -72,7 +84,7 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
       .then((data) => {
         if (!cancelled) {
           setTree(data);
-          setSelectedOuId((current) => current ?? data[0]?.id ?? null);
+          setSelection((current) => current ?? (data[0] ? { type: 'ou', id: data[0].id } : null));
         }
       })
       .catch((err: unknown) => {
@@ -99,14 +111,6 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
     }
   };
 
-  const openUser = (userId: string): void => {
-    if (!userAdmin) {
-      toast(humanMessage(FORBIDDEN));
-      return;
-    }
-    setEditor({ kind: 'edit', userId });
-  };
-
   const folderMenu = new DomainFolderMenu({
     canCreateUser: userAdmin,
     canCreateGroup: groupAdmin,
@@ -117,13 +121,13 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
         confirmLabel: 'Create',
         submit: (name) => run(() => adminApi.createOu(ou.id, name)),
       }),
-    onCreateUser: (ou) => setEditor({ kind: 'create', ouId: ou.id }),
+    onCreateUser: (ou) => setSelection({ type: 'create-user', id: ou.id, ouId: ou.id }),
     onCreateGroup: (ou) => {
       if (!groupAdmin) {
         toast(humanMessage(FORBIDDEN));
         return;
       }
-      setGroupEditor({ kind: 'create', ouId: ou.id });
+      setSelection({ type: 'create-group', id: ou.id, ouId: ou.id });
     },
     onRename: (ou) =>
       setPrompt({
@@ -160,27 +164,24 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
     setCtx({ x: event.clientX, y: event.clientY, items });
   };
 
+  const selectedOuId = selection?.type === 'ou' ? selection.id : selection && 'ouId' in selection ? selection.ouId : null;
   const rows = useMemo(
     () => visibleRows(tree, selectedOuId, field, query),
     [tree, selectedOuId, field, query],
   );
+  const searching = query.trim().length > 0;
 
   const onActivate = (row: DirectoryRow): void => {
+    setQuery('');
     if (row.type === 'ou') {
-      setSelectedOuId(row.id);
+      setSelection({ type: 'ou', id: row.id });
       return;
     }
     if (row.type === 'user') {
-      openUser(row.id);
+      setSelection({ type: 'user', id: row.id });
       return;
     }
-    if (row.type === 'group') {
-      if (!groupAdmin) {
-        toast(humanMessage(FORBIDDEN));
-        return;
-      }
-      setGroupEditor({ kind: 'edit', groupId: row.id, name: row.name });
-    }
+    setSelection({ type: 'group', id: row.id, name: row.name });
   };
 
   const toggle = (key: string): void => {
@@ -209,6 +210,8 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
     });
   };
 
+  const selectedOu = selection?.type === 'ou' ? findOu(tree, selection.id) : null;
+
   if (loading && !tree.length) {
     return <SkeletonList rows={8} />;
   }
@@ -220,22 +223,73 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
         <div className="albedo-admin-tree">
           <DomainTree
             tree={tree}
-            selectedOuId={selectedOuId}
-            onSelectOu={(ou) => setSelectedOuId(ou.id)}
-            onSelectUser={(user: DomainUser) => openUser(user.id)}
+            selection={selection}
+            onSelectOu={(ou) => setSelection({ type: 'ou', id: ou.id })}
+            onSelectUser={(user: DomainUser) => setSelection({ type: 'user', id: user.id })}
+            onSelectGroup={(group: DomainGroup) => setSelection({ type: 'group', id: group.id, name: group.name })}
             onFolderMenu={(event, ou) => openMenu(event, folderMenu.items(ou))}
             onUserMenu={(event, user) => openMenu(event, userMenu.items(user))}
             onGroupMenu={(event, group: DomainGroup) => openMenu(event, groupMenu.items(group))}
           />
         </div>
         <div className="albedo-admin-people">
-          <DomainTable
-            rows={rows}
-            selected={picked}
-            onToggle={toggle}
-            onToggleAll={toggleAll}
-            onActivate={onActivate}
-          />
+          {searching ? (
+            <DomainTable
+              rows={rows}
+              selected={picked}
+              onToggle={toggle}
+              onToggleAll={toggleAll}
+              onActivate={onActivate}
+            />
+          ) : null}
+          {!searching && selection?.type === 'user' ? (
+            <DirectoryUserPane
+              mode={{ kind: 'edit', userId: selection.id }}
+              canEdit={userAdmin}
+              onSaved={() => void load()}
+            />
+          ) : null}
+          {!searching && selection?.type === 'create-user' ? (
+            <DirectoryUserPane
+              mode={{ kind: 'create', ouId: selection.ouId }}
+              canEdit={userAdmin}
+              onSaved={(userId) => {
+                void load();
+                if (userId) {
+                  setSelection({ type: 'user', id: userId });
+                }
+              }}
+            />
+          ) : null}
+          {!searching && selection?.type === 'group' ? (
+            <DirectoryGroupPane
+              mode={{ kind: 'edit', groupId: selection.id, name: selection.name }}
+              canEdit={groupAdmin}
+              canEditRoles={roleAdmin}
+              onSaved={(groupId, name) => {
+                void load();
+                if (groupId) {
+                  setSelection({ type: 'group', id: groupId, name });
+                }
+              }}
+            />
+          ) : null}
+          {!searching && selection?.type === 'create-group' ? (
+            <DirectoryGroupPane
+              mode={{ kind: 'create', ouId: selection.ouId }}
+              canEdit={groupAdmin}
+              canEditRoles={roleAdmin}
+              onSaved={(groupId, name) => {
+                void load();
+                if (groupId) {
+                  setSelection({ type: 'group', id: groupId, name });
+                }
+              }}
+            />
+          ) : null}
+          {!searching && selection?.type === 'ou' && selectedOu ? (
+            <DirectoryOuPane ou={selectedOu} canEdit={userAdmin || groupAdmin} onSaved={() => void load()} />
+          ) : null}
         </div>
       </div>
       {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
@@ -250,13 +304,6 @@ export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): R
             void prompt.submit(value);
           }
         }}
-      />
-      <DirectoryUserWindow mode={editor} onClose={() => setEditor(null)} onSaved={() => void load()} />
-      <DirectoryGroupWindow
-        mode={groupEditor}
-        canEdit={groupAdmin}
-        onClose={() => setGroupEditor(null)}
-        onSaved={() => void load()}
       />
     </div>
   );

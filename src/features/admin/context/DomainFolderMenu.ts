@@ -28,14 +28,14 @@ export class DomainFolderMenu {
         children: [
           {
             id: 'tasks.create-user',
-            label: 'Создать пользователя',
+            label: 'Create user',
             disabled:
               this.actions.canCreateUser === false || (target.isSystem && target.kind !== 'users_bin'),
             action: () => this.actions.onCreateUser(target),
           },
           {
             id: 'tasks.create-group',
-            label: 'Создать группу',
+            label: 'Create group',
             disabled:
               this.actions.canCreateGroup === false ||
               target.kind === 'users_bin' ||

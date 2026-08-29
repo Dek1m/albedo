@@ -1503,6 +1503,14 @@ body {
   margin: 0;
 }
 
+.albedo-admin-inspector {
+  padding: 0.75rem;
+}
+
+.albedo-admin-inspector .albedo-settings-form {
+  max-width: none;
+}
+
 .albedo-dir-check {
   width: 2.1rem;
   text-align: center;

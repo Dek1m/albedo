@@ -4,7 +4,6 @@ import { adminApi } from '../../api/adminApi';
 import type { DirectoryUser } from '../../api/adminApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
-import { Window } from '../../shared/ui/Window';
 import { DirectoryMemberOf } from './DirectoryMemberOf';
 import { DirectoryUserForm, EMPTY_DRAFT } from './DirectoryUserForm';
 import type { DirectoryUserDraft } from './DirectoryUserForm';
@@ -13,10 +12,10 @@ type Pane = 'general' | 'memberOf';
 
 export type DirectoryUserMode = { kind: 'create'; ouId: string } | { kind: 'edit'; userId: string };
 
-interface DirectoryUserWindowProps {
-  mode: DirectoryUserMode | null;
-  onClose: () => void;
-  onSaved: () => void;
+interface DirectoryUserPaneProps {
+  mode: DirectoryUserMode;
+  canEdit: boolean;
+  onSaved: (userId: string | null) => void;
 }
 
 function fromUser(user: DirectoryUser): DirectoryUserDraft {
@@ -33,19 +32,19 @@ function fromUser(user: DirectoryUser): DirectoryUserDraft {
   };
 }
 
-export function DirectoryUserWindow({ mode, onClose, onSaved }: DirectoryUserWindowProps): ReactElement {
+export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneProps): ReactElement {
   const [pane, setPane] = useState<Pane>('general');
   const [draft, setDraft] = useState<DirectoryUserDraft>(EMPTY_DRAFT);
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
-  const creating = mode?.kind === 'create';
-  const userId = mode?.kind === 'edit' ? mode.userId : null;
+  const creating = mode.kind === 'create';
+  const userId = mode.kind === 'edit' ? mode.userId : null;
 
   useEffect(() => {
     setPane('general');
     setDraft(EMPTY_DRAFT);
     setPassword('');
-    if (!mode || mode.kind !== 'edit') {
+    if (mode.kind !== 'edit') {
       return;
     }
     let cancelled = false;
@@ -71,7 +70,7 @@ export function DirectoryUserWindow({ mode, onClose, onSaved }: DirectoryUserWin
   };
 
   const save = async (): Promise<void> => {
-    if (!mode || !draft.username.trim()) {
+    if (!draft.username.trim() || !canEdit) {
       return;
     }
     if (creating && !password) {
@@ -89,12 +88,13 @@ export function DirectoryUserWindow({ mode, onClose, onSaved }: DirectoryUserWin
         if (created) {
           await adminApi.updateDirectoryUser(created, { ...draft, username: draft.username.trim() });
         }
+        toast('Saved', 'ok');
+        onSaved(created);
       } else {
         await adminApi.updateDirectoryUser(mode.userId, { ...draft, username: draft.username.trim() });
+        toast('Saved', 'ok');
+        onSaved(mode.userId);
       }
-      toast('Saved', 'ok');
-      onSaved();
-      onClose();
     } catch (err) {
       toast(humanMessage(err));
     } finally {
@@ -110,13 +110,7 @@ export function DirectoryUserWindow({ mode, onClose, onSaved }: DirectoryUserWin
   const ready = Boolean(draft.username.trim() && (!creating || password));
 
   return (
-    <Window
-      className="albedo-settings"
-      windowId="albedo-admin-user"
-      open={Boolean(mode)}
-      title={creating ? 'New user' : 'User'}
-      onClose={onClose}
-    >
+    <div className="albedo-admin-inspector">
       <ul className="nav nav-tabs mb-2">
         <li className="nav-item">
           <button
@@ -146,13 +140,10 @@ export function DirectoryUserWindow({ mode, onClose, onSaved }: DirectoryUserWin
             showPassword={creating}
             password={password}
             onPassword={setPassword}
-            disabled={saving}
+            disabled={!canEdit || saving}
           />
           <div className="albedo-confirm-actions">
-            <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={!ready || saving}>
+            <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={!canEdit || !ready || saving}>
               {creating ? 'Create' : 'Save'}
             </button>
           </div>
@@ -160,6 +151,6 @@ export function DirectoryUserWindow({ mode, onClose, onSaved }: DirectoryUserWin
       ) : userId ? (
         <DirectoryMemberOf userId={userId} />
       ) : null}
-    </Window>
+    </div>
   );
 }

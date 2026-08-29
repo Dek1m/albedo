@@ -14,6 +14,7 @@ export interface AdminCaps {
   usersUpdate: boolean;
   groupsCreate: boolean;
   groupsUpdate: boolean;
+  rolesUpdate: boolean;
 }
 
 export interface DirectoryUser {
@@ -172,12 +173,13 @@ function pickChip(row: Record<string, unknown>): ChipDisplayMode {
 function mapCaps(raw: unknown): AdminCaps {
   const row = asRecord(raw);
   if (!row) {
-    return { usersUpdate: false, groupsCreate: false, groupsUpdate: false };
+    return { usersUpdate: false, groupsCreate: false, groupsUpdate: false, rolesUpdate: false };
   }
   return {
     usersUpdate: pickBool(row, 'users_update', 'usersUpdate'),
     groupsCreate: pickBool(row, 'groups_create', 'groupsCreate'),
     groupsUpdate: pickBool(row, 'groups_update', 'groupsUpdate'),
+    rolesUpdate: pickBool(row, 'roles_update', 'rolesUpdate'),
   };
 }
 

@@ -19,3 +19,10 @@ export function isGroupAdmin(caps: AdminCaps | null, profile: AdminIdentity | nu
   }
   return Boolean(caps?.groupsCreate || caps?.groupsUpdate);
 }
+
+export function isRoleAdmin(caps: AdminCaps | null, profile: AdminIdentity | null): boolean {
+  if (profile?.isBootstrapAdmin || profile?.isSuperadmin) {
+    return true;
+  }
+  return Boolean(caps?.rolesUpdate);
+}

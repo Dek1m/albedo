@@ -50,6 +50,9 @@ describe('DomainFolderMenu', () => {
       'tasks.create-user',
       'tasks.create-group',
     ]);
+    expect(byId(items, 'tasks.create-user')?.label).toBe('Create user');
+    expect(byId(items, 'tasks.create-group')?.label).toBe('Create group');
+    expect(byId(items, 'new-folder')?.label).toBe('New folder');
   });
 
   it('disables rename and create on Argenta', () => {

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import type { DomainGroup, DomainOu, DomainUser } from '../../api/adminApi';
+import type { DomainSelection } from './domainSelection';
 
 interface DomainTreeProps {
   tree: DomainOu[];
-  selectedOuId: string | null;
+  selection: DomainSelection | null;
   onSelectOu: (ou: DomainOu) => void;
   onSelectUser: (user: DomainUser) => void;
+  onSelectGroup: (group: DomainGroup) => void;
   onFolderMenu: (event: ReactMouseEvent, ou: DomainOu) => void;
   onUserMenu: (event: ReactMouseEvent, user: DomainUser) => void;
   onGroupMenu: (event: ReactMouseEvent, group: DomainGroup) => void;
@@ -20,6 +22,10 @@ function ouIcon(kind: DomainOu['kind']): string {
     return 'bi-collection';
   }
   return 'bi-folder';
+}
+
+function focused(selection: DomainSelection | null, kind: DomainSelection['type'], id: string): boolean {
+  return selection?.type === kind && selection.id === id;
 }
 
 export function DomainTree(props: DomainTreeProps): ReactElement {
@@ -38,11 +44,11 @@ interface OuNodeProps extends DomainTreeProps {
 
 function OuNode({ node, ...rest }: OuNodeProps): ReactElement {
   const [open, setOpen] = useState(true);
-  const focused = rest.selectedOuId === node.id;
+  const selected = focused(rest.selection, 'ou', node.id);
   return (
     <li>
       <div
-        className={`albedo-tree-item${focused ? ' is-focused is-selected active' : ''}`}
+        className={`albedo-tree-item${selected ? ' is-focused is-selected active' : ''}`}
         onClick={() => rest.onSelectOu(node)}
         onContextMenu={(event) => rest.onFolderMenu(event, node)}
       >
@@ -64,7 +70,7 @@ function OuNode({ node, ...rest }: OuNodeProps): ReactElement {
           {node.users.map((user) => (
             <li key={`u-${user.id}`}>
               <div
-                className="albedo-tree-item"
+                className={`albedo-tree-item${focused(rest.selection, 'user', user.id) ? ' is-focused is-selected active' : ''}`}
                 onClick={() => rest.onSelectUser(user)}
                 onContextMenu={(event) => rest.onUserMenu(event, user)}
               >
@@ -76,7 +82,11 @@ function OuNode({ node, ...rest }: OuNodeProps): ReactElement {
           ))}
           {node.groups.map((group) => (
             <li key={`g-${group.id}`}>
-              <div className="albedo-tree-item" onContextMenu={(event) => rest.onGroupMenu(event, group)}>
+              <div
+                className={`albedo-tree-item${focused(rest.selection, 'group', group.id) ? ' is-focused is-selected active' : ''}`}
+                onClick={() => rest.onSelectGroup(group)}
+                onContextMenu={(event) => rest.onGroupMenu(event, group)}
+              >
                 <span className="albedo-tree-chevron" />
                 <i className="bi bi-people-fill" />
                 <span className="albedo-tree-name">{group.name}</span>
