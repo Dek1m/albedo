@@ -10,6 +10,7 @@ interface MarkdownPromptProps {
 
 export function MarkdownPrompt({ value, disabled, onChange }: MarkdownPromptProps): ReactElement {
   const fileRef = useRef<HTMLInputElement>(null);
+  const highlightRef = useRef<HTMLPreElement>(null);
 
   const loadFile = (event: ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
@@ -47,12 +48,24 @@ export function MarkdownPrompt({ value, disabled, onChange }: MarkdownPromptProp
         />
       </div>
       <div className="albedo-md-editor">
-        <pre className="albedo-md-highlight" aria-hidden dangerouslySetInnerHTML={{ __html: highlightMarkdown(value) + '\n' }} />
+        <pre
+          ref={highlightRef}
+          className="albedo-md-highlight"
+          aria-hidden
+          dangerouslySetInnerHTML={{ __html: highlightMarkdown(value) + '\n' }}
+        />
         <textarea
           className="albedo-md-input"
           spellCheck={false}
           disabled={disabled}
           value={value}
+          onScroll={(event) => {
+            const node = highlightRef.current;
+            if (node) {
+              node.scrollTop = event.currentTarget.scrollTop;
+              node.scrollLeft = event.currentTarget.scrollLeft;
+            }
+          }}
           onChange={(event) => onChange(event.target.value)}
         />
       </div>
