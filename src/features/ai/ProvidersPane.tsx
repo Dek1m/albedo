@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { llmApi, urlError } from '../../api/llmApi';
 import type { LlmProvider, ProviderKind, ReasoningEffort } from '../../api/llmApi';
@@ -48,6 +48,41 @@ function toDraft(
   }));
 }
 
+function mergeCatalog(
+  probed: { id: string; name: string; supportsReasoning: boolean }[],
+  saved: LlmProvider['models'],
+): DraftModel[] {
+  const known = new Map(saved.map((item) => [item.modelId, item]));
+  const rows: DraftModel[] = probed.map((item) => {
+    const prev = known.get(item.id);
+    return {
+      id: item.id,
+      name: item.name,
+      customName: prev && prev.displayName !== prev.modelId ? prev.displayName : '',
+      enabled: Boolean(prev),
+      supportsReasoning: item.supportsReasoning || Boolean(prev?.supportsReasoning),
+      reasoningEnabled: prev?.reasoningEnabled ?? false,
+      reasoningEffort: prev?.reasoningEffort ?? 'medium',
+    };
+  });
+  const seen = new Set(probed.map((item) => item.id));
+  for (const prev of saved) {
+    if (seen.has(prev.modelId)) {
+      continue;
+    }
+    rows.unshift({
+      id: prev.modelId,
+      name: prev.modelId,
+      customName: prev.displayName !== prev.modelId ? prev.displayName : '',
+      enabled: true,
+      supportsReasoning: prev.supportsReasoning,
+      reasoningEnabled: prev.reasoningEnabled,
+      reasoningEffort: prev.reasoningEffort ?? 'medium',
+    });
+  }
+  return rows;
+}
+
 function matchesQuery(query: string, value: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) {
@@ -72,6 +107,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   const [probeUrlError, setProbeUrlError] = useState<string | null>(null);
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const urlHint = (kind === 'api_key' && baseUrl.trim() ? urlError(baseUrl) : null) ?? probeUrlError;
   const canProbe = kind === 'api_key' && !urlError(baseUrl) && Boolean(apiKey.trim());
@@ -96,7 +133,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   }, [visible]);
 
   useEffect(() => {
-    if (editId) {
+    if (editId && !canProbe) {
       return;
     }
     if (!canProbe) {
@@ -110,10 +147,17 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
       void llmApi
         .probeModels(baseUrl.trim(), apiKey.trim())
         .then((models) => {
+          if (editId) {
+            const saved = itemsRef.current.find((item) => item.id === editId)?.models ?? [];
+            setDraft(mergeCatalog(models, saved));
+            return;
+          }
           setDraft(toDraft(models));
         })
         .catch((err: unknown) => {
-          setDraft(null);
+          if (!editId) {
+            setDraft(null);
+          }
           const code = err instanceof ApiError ? err.code : '';
           if (code === 'WRONG_URL' || code === 'UPSTREAM') {
             setProbeUrlError('Wrong URL');

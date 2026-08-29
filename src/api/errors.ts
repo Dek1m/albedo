@@ -32,6 +32,7 @@ const CODE_MESSAGES: Record<string, string> = {
   ALREADY_LINKED: 'Уже в workspace',
   ALREADY_EXISTS: 'Такой файл уже есть',
   WRONG_URL: 'Wrong URL',
+  DUPLICATE_NAME: 'A provider with this name already exists',
 };
 
 export function humanMessage(error: unknown): string {
