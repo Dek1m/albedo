@@ -2,15 +2,35 @@ import { apiClient } from './client';
 
 export type ProviderKind = 'api_key' | 'oauth';
 
+export interface LlmModel {
+  id: string;
+  providerId: string;
+  modelId: string;
+  displayName: string;
+  enabled: boolean;
+  isAvailable: boolean;
+}
+
 export interface LlmProvider {
   id: string;
   name: string;
   kind: ProviderKind;
   vendor: string;
+  description: string | null;
   baseUrl: string | null;
   defaultModel: string | null;
   apiKeySet: boolean;
   oauthStatus: string | null;
+  models: LlmModel[];
+}
+
+interface ModelDto {
+  id: string;
+  provider_id: string;
+  model_id: string;
+  display_name: string;
+  enabled: boolean;
+  is_available: boolean;
 }
 
 interface ProviderDto {
@@ -18,10 +38,23 @@ interface ProviderDto {
   name: string;
   kind: ProviderKind;
   vendor: string;
+  description?: string | null;
   base_url?: string | null;
   default_model?: string | null;
   api_key_set?: boolean;
   oauth_status?: string | null;
+  models?: ModelDto[];
+}
+
+function mapModel(item: ModelDto): LlmModel {
+  return {
+    id: item.id,
+    providerId: item.provider_id,
+    modelId: item.model_id,
+    displayName: item.display_name,
+    enabled: Boolean(item.enabled),
+    isAvailable: item.is_available !== false,
+  };
 }
 
 function mapProvider(item: ProviderDto): LlmProvider {
@@ -30,10 +63,12 @@ function mapProvider(item: ProviderDto): LlmProvider {
     name: item.name,
     kind: item.kind,
     vendor: item.vendor,
+    description: item.description ?? null,
     baseUrl: item.base_url ?? null,
     defaultModel: item.default_model ?? null,
     apiKeySet: Boolean(item.api_key_set),
     oauthStatus: item.oauth_status ?? null,
+    models: (item.models ?? []).map(mapModel),
   };
 }
 
@@ -47,22 +82,49 @@ export const llmApi = {
     name: string;
     kind: ProviderKind;
     vendor: string;
+    description?: string;
     baseUrl?: string;
     defaultModel?: string;
     apiKey?: string;
+    models?: { model_id: string; display_name: string; enabled: boolean }[];
   }): Promise<LlmProvider> {
     const dto = await apiClient.call<ProviderDto>('llm', 'create_provider', {
       name: input.name,
       kind: input.kind,
       vendor: input.vendor,
+      description: input.description ?? null,
       base_url: input.baseUrl ?? null,
       default_model: input.defaultModel ?? null,
       api_key: input.apiKey ?? null,
+      models: input.models ?? [],
     });
     return mapProvider(dto);
   },
 
-  async startOauth(vendor: string): Promise<{ status: string; vendor: string }> {
+  async probeModels(baseUrl: string, apiKey: string): Promise<{ id: string; name: string }[]> {
+    const result = await apiClient.call<{ items: { id: string; name: string }[] }>('llm', 'probe_models', {
+      base_url: baseUrl,
+      api_key: apiKey,
+    });
+    return result.items ?? [];
+  },
+
+  async refreshCatalog(): Promise<{ providerName: string; modelId: string; displayName: string }[]> {
+    const result = await apiClient.call<{
+      vanished: { provider_name?: string; model_id?: string; display_name?: string }[];
+    }>('llm', 'refresh_catalog', {});
+    return (result.vanished ?? []).map((item) => ({
+      providerName: item.provider_name ?? '',
+      modelId: item.model_id ?? '',
+      displayName: item.display_name ?? item.model_id ?? '',
+    }));
+  },
+
+  async setModelEnabled(modelId: string, enabled: boolean): Promise<void> {
+    await apiClient.call('llm', 'set_model_enabled', { model_id: modelId, enabled });
+  },
+
+  async startOauth(vendor: string): Promise<{ status: string; vendor: string; mode?: string }> {
     return apiClient.call('llm', 'start_oauth', { vendor });
   },
 };

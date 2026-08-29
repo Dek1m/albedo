@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { authApi } from '../../api/authApi';
 import { workspaceApi } from '../../api/workspaceApi';
+import { syncLlmCatalogOnAuth } from '../../application/llm/syncCatalog';
 import { useAuthStore } from '../../auth/AuthStore';
 import { ToastView } from '../../shared/toast/ToastView';
 import { LoginForm } from './LoginForm';
@@ -43,6 +44,7 @@ export function LoginPage(): ReactElement {
     const profile = await authApi.getMe();
     markAuthenticated(profile);
     await workspaceApi.ensureHome().catch(() => undefined);
+    await syncLlmCatalogOnAuth();
     navigate('/', { replace: true });
   };
 

@@ -8,6 +8,7 @@ import { UserSettingsModal } from '../settings/UserSettingsModal';
 import { ChatPane } from '../workspace/ChatPane';
 import { SessionTabs } from '../workspace/SessionTabs';
 import { workspaceApi } from '../../api/workspaceApi';
+import { syncLlmCatalogOnAuth } from '../../application/llm/syncCatalog';
 import { AiMenu } from '../ai/AiMenu';
 import type { AiPane } from '../ai/AiMenu';
 import { AiWindows } from '../ai/AiWindows';
@@ -36,6 +37,7 @@ export function AppShell(): ReactElement {
     let cancelled = false;
     void (async () => {
       await workspaceApi.ensureHome().catch(() => undefined);
+      await syncLlmCatalogOnAuth();
       await loadWindowLayouts();
       await loadCatalog();
       const userId = useAuthStore.getState().profile?.id;

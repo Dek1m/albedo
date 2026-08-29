@@ -982,6 +982,107 @@ body {
   margin-top: 0.5rem;
 }
 
+.albedo-ai-providers-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.albedo-ai-provider-strips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 40%;
+  overflow: auto;
+}
+
+.albedo-ai-provider-strip {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.7rem;
+  background: var(--bg-elevated);
+}
+
+.albedo-ai-provider-strip-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.albedo-ai-provider-desc {
+  margin: 0.2rem 0 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.albedo-ai-provider-models,
+.albedo-ai-model-pick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.albedo-ai-provider-models li,
+.albedo-ai-model-pick li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.albedo-ai-model-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.albedo-ai-model-search .bi-search {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.albedo-ai-model-pick {
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.albedo-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.35rem;
+  height: 1.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  padding: 0;
+  cursor: pointer;
+}
+
+.albedo-switch.is-on {
+  background: color-mix(in srgb, var(--brand) 28%, var(--bg-hover));
+}
+
+.albedo-switch-knob {
+  position: absolute;
+  top: 0.12rem;
+  left: 0.12rem;
+  width: 0.96rem;
+  height: 0.96rem;
+  border-radius: 50%;
+  background: #c8c8c8;
+  transition: left 160ms var(--ease), background 160ms var(--ease);
+}
+
+.albedo-switch.is-on .albedo-switch-knob {
+  left: 1.22rem;
+  background: var(--brand);
+}
+
 .albedo-skeleton {
   display: flex;
   flex-direction: column;
