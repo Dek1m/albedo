@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { isUserAdmin } from './userAdmin';
 
-const capsOn = { usersUpdate: true };
-const capsOff = { usersUpdate: false };
+const capsOn = { usersUpdate: true, groupsCreate: false, groupsUpdate: false };
+const capsOff = { usersUpdate: false, groupsCreate: false, groupsUpdate: false };
 const admin = { isBootstrapAdmin: true, isSuperadmin: false };
 const superadmin = { isBootstrapAdmin: false, isSuperadmin: true };
 const regular = { isBootstrapAdmin: false, isSuperadmin: false };

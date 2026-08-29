@@ -11,6 +11,8 @@ import { SkeletonList } from '../../shared/ui/Skeleton';
 import { DomainFolderMenu } from './context/DomainFolderMenu';
 import { DomainGroupMenu } from './context/DomainGroupMenu';
 import { DomainUserMenu } from './context/DomainUserMenu';
+import { DirectoryGroupWindow } from './DirectoryGroupWindow';
+import type { DirectoryGroupMode } from './DirectoryGroupWindow';
 import { DirectoryUserWindow } from './DirectoryUserWindow';
 import type { DirectoryUserMode } from './DirectoryUserWindow';
 import { DomainSearch } from './DomainSearch';
@@ -22,6 +24,7 @@ import { visibleRows } from './domainRows';
 interface DomainTabProps {
   visible: boolean;
   userAdmin: boolean;
+  groupAdmin: boolean;
 }
 
 interface Ctx {
@@ -32,7 +35,7 @@ interface Ctx {
 
 const FORBIDDEN = new ApiError('FORBIDDEN', 'You do not have permission', undefined, 403);
 
-export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement {
+export function DomainTab({ visible, userAdmin, groupAdmin }: DomainTabProps): ReactElement {
   const [tree, setTree] = useState<DomainOu[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOuId, setSelectedOuId] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement 
     submit: (value: string) => Promise<void>;
   } | null>(null);
   const [editor, setEditor] = useState<DirectoryUserMode | null>(null);
+  const [groupEditor, setGroupEditor] = useState<DirectoryGroupMode | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -104,6 +108,8 @@ export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement 
   };
 
   const folderMenu = new DomainFolderMenu({
+    canCreateUser: userAdmin,
+    canCreateGroup: groupAdmin,
     onNewFolder: (ou) =>
       setPrompt({
         title: 'New folder',
@@ -112,13 +118,13 @@ export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement 
         submit: (name) => run(() => adminApi.createOu(ou.id, name)),
       }),
     onCreateUser: (ou) => setEditor({ kind: 'create', ouId: ou.id }),
-    onCreateGroup: (ou) =>
-      setPrompt({
-        title: 'Создать группу',
-        label: 'Name',
-        confirmLabel: 'Create',
-        submit: (name) => run(() => adminApi.createGroupInOu(name, ou.id)),
-      }),
+    onCreateGroup: (ou) => {
+      if (!groupAdmin) {
+        toast(humanMessage(FORBIDDEN));
+        return;
+      }
+      setGroupEditor({ kind: 'create', ouId: ou.id });
+    },
     onRename: (ou) =>
       setPrompt({
         title: 'Rename',
@@ -166,6 +172,14 @@ export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement 
     }
     if (row.type === 'user') {
       openUser(row.id);
+      return;
+    }
+    if (row.type === 'group') {
+      if (!groupAdmin) {
+        toast(humanMessage(FORBIDDEN));
+        return;
+      }
+      setGroupEditor({ kind: 'edit', groupId: row.id, name: row.name });
     }
   };
 
@@ -221,7 +235,6 @@ export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement 
             onToggle={toggle}
             onToggleAll={toggleAll}
             onActivate={onActivate}
-            readOnly={!userAdmin}
           />
         </div>
       </div>
@@ -239,6 +252,12 @@ export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement 
         }}
       />
       <DirectoryUserWindow mode={editor} onClose={() => setEditor(null)} onSaved={() => void load()} />
+      <DirectoryGroupWindow
+        mode={groupEditor}
+        canEdit={groupAdmin}
+        onClose={() => setGroupEditor(null)}
+        onSaved={() => void load()}
+      />
     </div>
   );
 }

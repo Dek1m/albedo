@@ -12,3 +12,10 @@ export function isUserAdmin(caps: AdminCaps | null, profile: AdminIdentity | nul
   }
   return Boolean(caps?.usersUpdate);
 }
+
+export function isGroupAdmin(caps: AdminCaps | null, profile: AdminIdentity | null): boolean {
+  if (profile?.isBootstrapAdmin || profile?.isSuperadmin) {
+    return true;
+  }
+  return Boolean(caps?.groupsCreate || caps?.groupsUpdate);
+}

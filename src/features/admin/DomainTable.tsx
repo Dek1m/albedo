@@ -7,7 +7,6 @@ interface DomainTableProps {
   onToggle: (key: string) => void;
   onToggleAll: (keys: string[], on: boolean) => void;
   onActivate: (row: DirectoryRow) => void;
-  readOnly: boolean;
 }
 
 export function DomainTable({
@@ -16,25 +15,30 @@ export function DomainTable({
   onToggle,
   onToggleAll,
   onActivate,
-  readOnly,
 }: DomainTableProps): ReactElement {
   const keys = rows.map((row) => row.key);
   const allOn = keys.length > 0 && keys.every((key) => selected.has(key));
+  const someOn = keys.some((key) => selected.has(key));
 
   const toggleAll = (event: ChangeEvent<HTMLInputElement>): void => {
     onToggleAll(keys, event.target.checked);
   };
 
   return (
-    <table className="table table-sm">
+    <table className="table table-sm table-hover">
       <thead>
         <tr>
-          <th>
+          <th className="albedo-dir-check">
             <input
               className="form-check-input"
               type="checkbox"
               checked={allOn}
-              disabled={readOnly || keys.length === 0}
+              ref={(node) => {
+                if (node) {
+                  node.indeterminate = someOn && !allOn;
+                }
+              }}
+              disabled={keys.length === 0}
               onChange={toggleAll}
               aria-label="select all visible"
             />
@@ -46,31 +50,38 @@ export function DomainTable({
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => {
-          const on = selected.has(row.key);
-          return (
-            <tr
-              key={row.key}
-              className={on ? 'is-selected' : undefined}
-              onClick={() => onActivate(row)}
-            >
-              <td onClick={(event) => event.stopPropagation()}>
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  checked={on}
-                  disabled={readOnly}
-                  onChange={() => onToggle(row.key)}
-                  aria-label={`select ${row.name}`}
-                />
-              </td>
-              <td>{row.id}</td>
-              <td>{row.name}</td>
-              <td>{row.type}</td>
-              <td>{row.extra}</td>
-            </tr>
-          );
-        })}
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={5} className="text-secondary text-center">
+              Empty
+            </td>
+          </tr>
+        ) : (
+          rows.map((row) => {
+            const on = selected.has(row.key);
+            return (
+              <tr
+                key={row.key}
+                className={on ? 'table-active is-selected' : undefined}
+                onClick={() => onActivate(row)}
+              >
+                <td className="albedo-dir-check" onClick={(event) => event.stopPropagation()}>
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => onToggle(row.key)}
+                    aria-label={`select ${row.name}`}
+                  />
+                </td>
+                <td className="albedo-dir-uuid">{row.id}</td>
+                <td>{row.name}</td>
+                <td>{row.type}</td>
+                <td className="albedo-dir-extra">{row.extra}</td>
+              </tr>
+            );
+          })
+        )}
       </tbody>
     </table>
   );

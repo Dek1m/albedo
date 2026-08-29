@@ -79,3 +79,18 @@ export function isValidPhone(raw: string, country: Country): boolean {
 export function phonePayload(raw: string): string {
   return raw.replace(DIGIT_STRIP, '');
 }
+
+export function countryFromPhone(raw: string): Country {
+  const d = digitsOnly(raw);
+  if (d.startsWith('1') && d.length >= 10) {
+    return COUNTRIES.find((item) => item.code === 'US') ?? COUNTRIES[0]!;
+  }
+  if (d.startsWith('49')) {
+    return COUNTRIES.find((item) => item.code === 'DE') ?? COUNTRIES[0]!;
+  }
+  if (d.startsWith('44')) {
+    return COUNTRIES.find((item) => item.code === 'GB') ?? COUNTRIES[0]!;
+  }
+  return COUNTRIES[0]!;
+}
+}

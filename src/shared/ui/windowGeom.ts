@@ -15,6 +15,10 @@ export interface WindowRatio {
 const MARGIN = 0.2;
 const MIN_W = 360;
 const MIN_H = 280;
+const ASK_W = 380;
+const ASK_H = 200;
+const ASK_MIN_W = 280;
+const ASK_MIN_H = 140;
 
 export function viewport(): { vw: number; vh: number } {
   return { vw: window.innerWidth, vh: window.innerHeight };
@@ -28,6 +32,18 @@ export function defaultBox(): WindowBox {
     w: vw * (1 - 2 * MARGIN),
     h: vh * (1 - 2 * MARGIN),
   });
+}
+
+export function askBox(): WindowBox {
+  const { vw, vh } = viewport();
+  const w = Math.min(ASK_W, Math.max(ASK_MIN_W, vw - 48));
+  const h = Math.min(ASK_H, Math.max(ASK_MIN_H, vh - 48));
+  return {
+    w,
+    h,
+    x: Math.max(0, (vw - w) / 2),
+    y: Math.max(0, (vh - h) / 2),
+  };
 }
 
 export function clampBox(box: WindowBox): WindowBox {

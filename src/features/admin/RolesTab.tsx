@@ -113,7 +113,7 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
     }
     let cancelled = false;
     void adminApi
-      .listGroupRoles(selectedId)
+      .listRoleGroups(selectedId)
       .then((ids) => {
         if (!cancelled) {
           setAssigned(new Set(ids));
@@ -168,7 +168,7 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
       }
     } catch (err) {
       toast(humanMessage(err));
-      const ids = await adminApi.listGroupRoles(selected.id).catch(() => [...assigned]);
+      const ids = await adminApi.listRoleGroups(selected.id).catch(() => [...assigned]);
       setAssigned(new Set(ids));
     }
   };

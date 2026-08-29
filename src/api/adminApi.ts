@@ -12,6 +12,8 @@ export interface DomainUser {
 
 export interface AdminCaps {
   usersUpdate: boolean;
+  groupsCreate: boolean;
+  groupsUpdate: boolean;
 }
 
 export interface DirectoryUser {
@@ -169,7 +171,14 @@ function pickChip(row: Record<string, unknown>): ChipDisplayMode {
 
 function mapCaps(raw: unknown): AdminCaps {
   const row = asRecord(raw);
-  return { usersUpdate: row ? pickBool(row, 'users_update', 'usersUpdate') : false };
+  if (!row) {
+    return { usersUpdate: false, groupsCreate: false, groupsUpdate: false };
+  }
+  return {
+    usersUpdate: pickBool(row, 'users_update', 'usersUpdate'),
+    groupsCreate: pickBool(row, 'groups_create', 'groupsCreate'),
+    groupsUpdate: pickBool(row, 'groups_update', 'groupsUpdate'),
+  };
 }
 
 function mapDirectoryUser(raw: unknown): DirectoryUser | null {
@@ -422,12 +431,13 @@ export const adminApi = {
     return list.map(mapUserGroup).filter((group): group is UserGroup => group !== null);
   },
 
-  async createGroupInOu(name: string, ouId?: string, description?: string): Promise<void> {
-    await apiClient.call('admin', 'create_group_in_ou', {
+  async createGroupInOu(name: string, ouId?: string, description?: string): Promise<string | null> {
+    const raw = await apiClient.call<unknown>('admin', 'create_group_in_ou', {
       name,
       description: description ?? null,
       ou_id: ouId ?? null,
     });
+    return createdId(raw);
   },
 
   async renameUser(userId: string, username: string): Promise<void> {
@@ -455,13 +465,18 @@ export const adminApi = {
     });
   },
 
-  async cloneRole(source: string, name: string): Promise<void> {
-    await apiClient.call('admin', 'clone_role', { source, name });
+  async cloneRole(sourceId: string, name: string): Promise<void> {
+    await apiClient.call('admin', 'clone_role', { source_id: sourceId, name });
   },
 
-  async listGroupRoles(roleId: string): Promise<string[]> {
-    const raw = await apiClient.call<unknown>('admin', 'list_group_roles', { role_id: roleId });
+  async listRoleGroups(roleId: string): Promise<string[]> {
+    const raw = await apiClient.call<unknown>('admin', 'list_role_groups', { role_id: roleId });
     return mapIdList(raw, 'items', 'groups', 'group_ids', 'groupIds');
+  },
+
+  async listGroupRoles(groupId: string): Promise<string[]> {
+    const raw = await apiClient.call<unknown>('admin', 'list_group_roles', { group_id: groupId });
+    return mapIdList(raw, 'items', 'roles', 'role_ids', 'roleIds');
   },
 
   async assignGroupRole(groupId: string, roleId: string): Promise<void> {

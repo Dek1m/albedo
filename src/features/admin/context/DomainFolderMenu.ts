@@ -6,6 +6,8 @@ export interface DomainFolderActions {
   onCreateUser: (ou: DomainOu) => void;
   onCreateGroup: (ou: DomainOu) => void;
   onRename: (ou: DomainOu) => void;
+  canCreateUser?: boolean;
+  canCreateGroup?: boolean;
 }
 
 export class DomainFolderMenu {
@@ -27,13 +29,17 @@ export class DomainFolderMenu {
           {
             id: 'tasks.create-user',
             label: 'Создать пользователя',
-            disabled: target.isSystem && target.kind !== 'users_bin',
+            disabled:
+              this.actions.canCreateUser === false || (target.isSystem && target.kind !== 'users_bin'),
             action: () => this.actions.onCreateUser(target),
           },
           {
             id: 'tasks.create-group',
             label: 'Создать группу',
-            disabled: target.kind === 'users_bin' || (target.isSystem && target.kind !== 'groups_bin'),
+            disabled:
+              this.actions.canCreateGroup === false ||
+              target.kind === 'users_bin' ||
+              (target.isSystem && target.kind !== 'groups_bin'),
             action: () => this.actions.onCreateGroup(target),
           },
         ],

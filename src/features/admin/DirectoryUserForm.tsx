@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import type { ChipDisplayMode } from '../../domain/chipDisplayMode';
 import { DatePicker } from '../../shared/ui/DatePicker';
-import { COUNTRIES, formatPhone, phonePayload, type Country } from '../../shared/ui/phone';
+import { COUNTRIES, countryFromPhone, formatPhone, phonePayload, type Country } from '../../shared/ui/phone';
 import { selectDisplayMode } from '../settings/displayMutex';
 
 export interface DirectoryUserDraft {
@@ -34,10 +34,16 @@ export function DirectoryUserForm({
   onPassword,
   disabled,
 }: DirectoryUserFormProps): ReactElement {
-  const [country, setCountry] = useState<Country>(COUNTRIES[0] as Country);
-  const [phoneDisplay, setPhoneDisplay] = useState(
-    values.phone ? formatPhone(values.phone, COUNTRIES[0] as Country) : '',
+  const [country, setCountry] = useState<Country>(() => countryFromPhone(values.phone));
+  const [phoneDisplay, setPhoneDisplay] = useState(() =>
+    values.phone ? formatPhone(values.phone, countryFromPhone(values.phone)) : '',
   );
+
+  useEffect(() => {
+    const next = countryFromPhone(values.phone);
+    setCountry(next);
+    setPhoneDisplay(values.phone ? formatPhone(values.phone, next) : '');
+  }, [values.phone]);
   const hasNick = values.nickname.trim().length > 0;
   const hasFull = values.firstName.trim().length > 0 && values.lastName.trim().length > 0;
 

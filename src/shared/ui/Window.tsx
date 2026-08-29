@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react';
-import { clampBox, defaultBox, fromRatio, toRatio } from './windowGeom';
+import { askBox, clampBox, defaultBox, fromRatio, toRatio } from './windowGeom';
 import type { WindowBox } from './windowGeom';
 import { peekWindow, rememberWindow } from './windowLayout';
+
+export type WindowSize = 'frame' | 'ask';
 
 export interface WindowProps {
   open: boolean;
@@ -11,11 +13,15 @@ export interface WindowProps {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  size?: WindowSize;
 }
 
 const CLOSE_MS = 180;
 
-function initialBox(windowId: string): WindowBox {
+function initialBox(windowId: string, size: WindowSize): WindowBox {
+  if (size === 'ask') {
+    return askBox();
+  }
   const saved = peekWindow(windowId);
   return saved ? fromRatio(saved) : defaultBox();
 }
@@ -27,10 +33,11 @@ export function Window({
   onClose,
   children,
   className,
+  size = 'frame',
 }: WindowProps): ReactElement | null {
   const [mounted, setMounted] = useState(open);
   const [leaving, setLeaving] = useState(false);
-  const [box, setBox] = useState<WindowBox>(() => initialBox(windowId));
+  const [box, setBox] = useState<WindowBox>(() => initialBox(windowId, size));
   const [dragging, setDragging] = useState(false);
   const [resizing, setResizing] = useState(false);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
@@ -40,7 +47,7 @@ export function Window({
 
   useEffect(() => {
     if (open) {
-      setBox(initialBox(windowId));
+      setBox(initialBox(windowId, size));
       setMounted(true);
       setLeaving(false);
       return;
@@ -48,14 +55,16 @@ export function Window({
     if (!mounted) {
       return;
     }
-    rememberWindow(windowId, toRatio(boxRef.current));
+    if (size !== 'ask') {
+      rememberWindow(windowId, toRatio(boxRef.current));
+    }
     setLeaving(true);
     const timer = window.setTimeout(() => {
       setMounted(false);
       setLeaving(false);
     }, CLOSE_MS);
     return () => window.clearTimeout(timer);
-  }, [open, mounted, windowId]);
+  }, [open, mounted, windowId, size]);
 
   useEffect(() => {
     const onResize = (): void => {
@@ -155,6 +164,7 @@ export function Window({
     leaving ? 'is-leaving' : 'is-open',
     dragging ? 'is-dragging' : '',
     resizing ? 'is-resizing' : '',
+    size === 'ask' ? 'is-ask' : '',
     className ?? '',
   ]
     .filter(Boolean)
@@ -176,13 +186,15 @@ export function Window({
             <button type="button" className="albedo-window-close" aria-label="Закрыть" onClick={onClose} />
           </div>
           <div className="albedo-window-body">{children}</div>
-          <div
-            className="albedo-window-resize"
-            onPointerDown={onResizeDown}
-            onPointerMove={onResizeMove}
-            onPointerUp={onResizeUp}
-            onPointerCancel={onResizeUp}
-          />
+          {size === 'ask' ? null : (
+            <div
+              className="albedo-window-resize"
+              onPointerDown={onResizeDown}
+              onPointerMove={onResizeMove}
+              onPointerUp={onResizeUp}
+              onPointerCancel={onResizeUp}
+            />
+          )}
         </div>
       </div>
     </div>

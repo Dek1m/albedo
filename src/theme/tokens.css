@@ -28,6 +28,15 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 3%) inset, 0 16px 48px rgb(0 0 0 / 45%);
   --dur: 180ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Bootstrap 5.3 читает эти переменные в .table */
+  --bs-body-bg: var(--bg-base);
+  --bs-body-color: var(--text-primary);
+  --bs-border-color: var(--border);
+  --bs-emphasis-color: var(--text-primary);
+  --bs-secondary-bg: var(--bg-elevated);
+  --bs-tertiary-bg: var(--bg-surface);
+  --bs-tertiary-color: var(--text-secondary);
 }
 
 html {
@@ -1494,27 +1503,37 @@ body {
   margin: 0;
 }
 
-.albedo-admin-people .table {
-  margin: 0;
-  color: var(--text-primary);
+.albedo-dir-check {
+  width: 2.1rem;
+  text-align: center;
 }
 
-.albedo-admin-people .table th,
-.albedo-admin-people .table td {
-  border-color: var(--border);
+.albedo-dir-check .form-check-input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  display: inline-block;
   vertical-align: middle;
 }
 
-.albedo-admin-people .table tbody tr {
-  cursor: pointer;
+.albedo-dir-uuid,
+.albedo-dir-extra {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.albedo-admin-people .table tbody tr:hover {
-  background: var(--bg-hover);
+.albedo-window.is-ask .albedo-window-body {
+  padding: 0.75rem 0.85rem 0.9rem;
+  overflow: hidden;
 }
 
-.albedo-admin-people .table tbody tr.is-selected {
-  background: var(--bg-active);
+.albedo-window.is-ask .albedo-window-title {
+  font-size: 0.92rem;
 }
 
 .albedo-tree-item.is-focused,
