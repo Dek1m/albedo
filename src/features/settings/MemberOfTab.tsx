@@ -75,32 +75,34 @@ export function MemberOfTab(): ReactElement | null {
         ))}
       </ul>
 
-      <div className="albedo-member-actions">
-        <select
-          className="form-control form-control-sm"
-          value={addId}
-          onChange={(event) => setAddId(event.target.value)}
-        >
-          <option value="">Добавить группу…</option>
-          {available.map((group) => (
-            <option key={group.id} value={group.id}>
-              {group.name}
-            </option>
-          ))}
-        </select>
-        <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => void onAdd()} disabled={!addId}>
-          Add
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm albedo-ghost-btn"
-          onClick={() => void onRemove()}
-          disabled={!allowRemove}
-          title={blocked ?? undefined}
-        >
-          Remove
-        </button>
-      </div>
+      {profile.isBootstrapAdmin || profile.isSuperadmin ? (
+        <div className="albedo-member-actions">
+          <select
+            className="form-control form-control-sm"
+            value={addId}
+            onChange={(event) => setAddId(event.target.value)}
+          >
+            <option value="">Add group…</option>
+            {available.filter((group) => group.name !== 'Everyone').map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => void onAdd()} disabled={!addId}>
+            Add
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm albedo-ghost-btn"
+            onClick={() => void onRemove()}
+            disabled={!allowRemove}
+            title={blocked ?? undefined}
+          >
+            Remove
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

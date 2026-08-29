@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
+import { authApi } from '../../api/authApi';
 import { llmApi, urlError } from '../../api/llmApi';
+import type { Group } from '../../domain/group';
 import type { LlmProvider, ProviderKind, ReasoningEffort } from '../../api/llmApi';
 import { ApiError, humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
@@ -111,6 +113,9 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     { id: 'xai', name: 'xAI' },
   ]);
   const [oauthVendor, setOauthVendor] = useState('xai');
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [shareGroups, setShareGroups] = useState<Group[]>([]);
+  const [shareSelected, setShareSelected] = useState<string[]>([]);
   const [oauthFlow, setOauthFlow] = useState<{
     providerId: string;
     userCode: string;
@@ -260,6 +265,39 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setEditId(null);
     setProbeUrlError(null);
     setOauthFlow(null);
+  };
+
+  const openShare = async (provider: LlmProvider): Promise<void> => {
+    setShareId(provider.id);
+    try {
+      const [groups, current] = await Promise.all([authApi.listGroups(), llmApi.listProviderShares(provider.id)]);
+      setShareGroups(groups);
+      setShareSelected(current.filter(Boolean));
+    } catch (err) {
+      toast(humanMessage(err));
+      setShareId(null);
+    }
+  };
+
+  const saveShare = async (providerId: string): Promise<void> => {
+    try {
+      const current = new Set(await llmApi.listProviderShares(providerId));
+      const next = new Set(shareSelected);
+      for (const groupId of next) {
+        if (!current.has(groupId)) {
+          await llmApi.shareProvider(providerId, groupId);
+        }
+      }
+      for (const groupId of current) {
+        if (groupId && !next.has(groupId)) {
+          await llmApi.unshareProvider(providerId, groupId);
+        }
+      }
+      toast('Sharing updated', 'ok');
+      setShareId(null);
+    } catch (err) {
+      toast(humanMessage(err));
+    }
   };
 
   const startEdit = (provider: LlmProvider): void => {
@@ -539,7 +577,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                 <header className="albedo-ai-provider-strip-head">
                   <strong>{item.name}</strong>
                   <span className="albedo-ai-muted">
-                    {item.kind === 'oauth'
+                    {item.shared ? 'Shared' : item.kind === 'oauth'
                       ? item.oauthStatus && item.oauthStatus !== 'connected'
                         ? `OAuth · ${item.oauthStatus}`
                         : 'OAuth'
@@ -554,19 +592,57 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                     >
                       <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
                     </button>
-                    <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => startEdit(item)}>
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm albedo-danger-btn"
-                      onClick={() => void remove(item.id)}
-                    >
-                      Delete
-                    </button>
+                    {item.owned ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-sm albedo-ghost-btn"
+                          onClick={() => void openShare(item)}
+                        >
+                          Share
+                        </button>
+                        <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => startEdit(item)}>
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm albedo-danger-btn"
+                          onClick={() => void remove(item.id)}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : null}
                   </span>
                 </header>
                 <p className="albedo-ai-provider-desc">{item.description || '—'}</p>
+                {shareId === item.id ? (
+                  <div className="albedo-ai-share">
+                    {shareGroups.map((group) => (
+                      <label key={group.id} className="albedo-ai-share-row">
+                        <input
+                          type="checkbox"
+                          checked={shareSelected.includes(group.id)}
+                          onChange={(event) => {
+                            const on = event.target.checked;
+                            setShareSelected((current) =>
+                              on ? [...current, group.id] : current.filter((id) => id !== group.id),
+                            );
+                          }}
+                        />
+                        <span>{group.name}</span>
+                      </label>
+                    ))}
+                    <div className="albedo-ai-actions">
+                      <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => setShareId(null)}>
+                        Cancel
+                      </button>
+                      <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => void saveShare(item.id)}>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 {open ? (
                   <ul className="albedo-ai-provider-models">
                     {item.models.length === 0 ? (

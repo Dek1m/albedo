@@ -25,6 +25,8 @@ export interface LlmProvider {
   defaultModel: string | null;
   apiKeySet: boolean;
   oauthStatus: string | null;
+  owned: boolean;
+  shared: boolean;
   models: LlmModel[];
 }
 
@@ -56,6 +58,8 @@ interface ProviderDto {
   default_model?: string | null;
   api_key_set?: boolean;
   oauth_status?: string | null;
+  owned?: boolean;
+  shared?: boolean;
   models?: ModelDto[];
 }
 
@@ -91,6 +95,8 @@ function mapProvider(item: ProviderDto): LlmProvider {
     defaultModel: item.default_model ?? null,
     apiKeySet: Boolean(item.api_key_set),
     oauthStatus: item.oauth_status ?? null,
+    owned: item.owned !== false,
+    shared: Boolean(item.shared),
     models: (item.models ?? []).map(mapModel),
   };
 }
@@ -285,6 +291,21 @@ export const llmApi = {
 
   async pollOauth(providerId: string): Promise<{ status: string; interval?: number }> {
     return apiClient.call('llm', 'poll_oauth', { provider_id: providerId });
+  },
+
+  async shareProvider(providerId: string, groupId: string): Promise<void> {
+    await apiClient.call('llm', 'share_provider', { provider_id: providerId, group_id: groupId });
+  },
+
+  async unshareProvider(providerId: string, groupId: string): Promise<void> {
+    await apiClient.call('llm', 'unshare_provider', { provider_id: providerId, group_id: groupId });
+  },
+
+  async listProviderShares(providerId: string): Promise<string[]> {
+    const result = await apiClient.call<{ items: { group_id?: string }[] }>('llm', 'list_provider_shares', {
+      provider_id: providerId,
+    });
+    return (result.items ?? []).map((item) => String(item.group_id ?? ''));
   },
 
   async probeProviderModels(providerId: string): Promise<ProbedModel[]> {
