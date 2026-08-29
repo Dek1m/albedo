@@ -1591,6 +1591,76 @@ body {
   cursor: default;
 }
 
+.albedo-md-toolbar {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.albedo-md-editor {
+  position: relative;
+  min-height: 12rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+}
+
+.albedo-md-highlight,
+.albedo-md-input {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+}
+
+.albedo-md-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--text-primary);
+}
+
+.albedo-md-input {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 12rem;
+  height: 12rem;
+  border: 0;
+  resize: vertical;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text-primary);
+}
+
+.albedo-md-highlight .md-h {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.albedo-md-highlight .md-b {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.albedo-md-highlight .md-i {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.albedo-md-highlight .md-code,
+.albedo-md-highlight .md-fence {
+  color: #7ee0a3;
+}
+
+.albedo-md-highlight .md-list {
+  color: var(--text-secondary);
+}
+
 .albedo-admin-role-toolbar {
   display: flex;
   justify-content: flex-end;

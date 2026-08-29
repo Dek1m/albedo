@@ -37,6 +37,17 @@ export interface ProbedModel {
   supportsReasoning: boolean;
 }
 
+export type AgentKind = 'agent' | 'subagent' | 'cronagent' | 'system' | 'user';
+
+export interface LlmAgent {
+  id: string;
+  name: string;
+  agentType: AgentKind;
+  description: string;
+  systemPrompt: string;
+  model: string;
+}
+
 interface ModelDto {
   id: string;
   provider_id: string;
@@ -313,6 +324,76 @@ export const llmApi = {
       provider_id: providerId,
     });
     return (result.items ?? []).map((item) => String(item.group_id ?? ''));
+  },
+
+  async listAgents(): Promise<LlmAgent[]> {
+    const result = await apiClient.call<{
+      items?: {
+        id?: string;
+        name?: string;
+        agent_type?: string;
+        description?: string | null;
+        system_prompt?: string | null;
+        model?: string | null;
+      }[];
+    }>('llm', 'agents', {});
+    return (result.items ?? []).map((row) => ({
+      id: String(row.id ?? ''),
+      name: String(row.name ?? ''),
+      agentType: (row.agent_type as AgentKind) || 'agent',
+      description: String(row.description ?? ''),
+      systemPrompt: String(row.system_prompt ?? ''),
+      model: String(row.model ?? ''),
+    }));
+  },
+
+  async createAgent(input: {
+    name: string;
+    agentType: AgentKind;
+    systemPrompt: string;
+    model: string;
+  }): Promise<LlmAgent> {
+    const row = await apiClient.call<{
+      id?: string;
+      name?: string;
+      agent_type?: string;
+      description?: string | null;
+      system_prompt?: string | null;
+      model?: string | null;
+    }>('llm', 'create_agent', {
+      name: input.name,
+      agent_type: input.agentType,
+      system_prompt: input.systemPrompt,
+      model: input.model || null,
+    });
+    return {
+      id: String(row.id ?? ''),
+      name: String(row.name ?? input.name),
+      agentType: (row.agent_type as AgentKind) || input.agentType,
+      description: String(row.description ?? ''),
+      systemPrompt: String(row.system_prompt ?? input.systemPrompt),
+      model: String(row.model ?? input.model),
+    };
+  },
+
+  async updateAgent(input: {
+    agentId: string;
+    name: string;
+    agentType: AgentKind;
+    systemPrompt: string;
+    model: string;
+  }): Promise<void> {
+    await apiClient.call('llm', 'update_agent', {
+      agent_id: input.agentId,
+      name: input.name,
+      agent_type: input.agentType,
+      system_prompt: input.systemPrompt,
+      model: input.model || null,
+    });
+  },
+
+  async deleteAgent(agentId: string): Promise<void> {
+    await apiClient.call('llm', 'delete_agent', { agent_id: agentId });
   },
 
   async probeProviderModels(providerId: string): Promise<ProbedModel[]> {

@@ -26,6 +26,7 @@ const WINDOW_ICONS: Record<string, string> = {
   'albedo-prompt': 'bi-input-cursor-text',
   'albedo-settings': 'bi-gear',
   'albedo-ai-agents': 'bi-robot',
+  'albedo-ai-agent-form': 'bi-robot',
   'albedo-ai-models': 'bi-cpu',
   'albedo-ai-providers': 'bi-hdd-network',
   'albedo-folders': 'bi-folder-plus',
