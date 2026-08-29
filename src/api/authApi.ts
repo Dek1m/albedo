@@ -3,6 +3,7 @@ import { asGroupId } from '../domain/group';
 import type { Profile } from '../domain/user';
 import { asUserId } from '../domain/user';
 import { apiClient } from './client';
+import type { WindowRatio } from '../shared/ui/windowGeom';
 import type { GroupDto, GroupListDto, ProfileDto, UpdateMePayload } from './types';
 
 export interface SessionUser {
@@ -69,6 +70,21 @@ export const authApi = {
 
   logout(): Promise<boolean> {
     return apiClient.call<boolean>('auth', 'logout', {}, { skipRefresh: true });
+  },
+
+  async getWindows(): Promise<Record<string, WindowRatio>> {
+    const result = await apiClient.call<{ items: Record<string, WindowRatio> }>('auth', 'get_windows', {});
+    return result.items ?? {};
+  },
+
+  saveWindow(windowId: string, ratio: WindowRatio): Promise<unknown> {
+    return apiClient.call('auth', 'save_window', {
+      window_id: windowId,
+      x: ratio.x,
+      y: ratio.y,
+      w: ratio.w,
+      h: ratio.h,
+    });
   },
 
   async getMe(): Promise<Profile> {

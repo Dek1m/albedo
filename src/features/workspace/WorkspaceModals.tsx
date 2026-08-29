@@ -131,7 +131,7 @@ export function WorkspaceModals({
 
   return (
     <>
-      <Window className="albedo-workspaces" open={listOpen} title="Workspaces" onClose={onCloseList}>
+      <Window className="albedo-workspaces" windowId="albedo-workspaces" open={listOpen} title="Workspaces" onClose={onCloseList}>
         <ul className="list-group albedo-ws-list">
           {catalog.map((ws) => (
             <li key={ws.id} className={`list-group-item${active?.id === ws.id ? ' active' : ''}`}>
@@ -149,7 +149,7 @@ export function WorkspaceModals({
         </button>
       </Window>
 
-      <Window className="albedo-workspace-create" open={createOpen} title="New workspace" onClose={onCloseCreate}>
+      <Window className="albedo-workspace-create" windowId="albedo-workspace-create" open={createOpen} title="New workspace" onClose={onCloseCreate}>
         <label className="form-label" htmlFor="ws-name">
           Name
         </label>
@@ -185,7 +185,7 @@ export function WorkspaceModals({
         </button>
       </Window>
 
-      <Window className="albedo-sessions" open={sessionsOpen} title="Sessions" onClose={onCloseSessions}>
+      <Window className="albedo-sessions" windowId="albedo-sessions" open={sessionsOpen} title="Sessions" onClose={onCloseSessions}>
         <ul className="list-group albedo-ws-list">
           {sessions.map((session) => (
             <li

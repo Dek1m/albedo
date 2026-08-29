@@ -238,7 +238,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
         />
       ) : null}
       <div className="albedo-sidebar-resizer" onMouseDown={onDrag} />
-      <Window className="albedo-folders" open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
+      <Window className="albedo-folders" windowId="albedo-folders" open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
         <HomeTree
           selected={picked}
           workspaceId={active.id}

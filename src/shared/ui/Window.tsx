@@ -1,31 +1,46 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react';
+import { clampBox, defaultBox, fromRatio, toRatio } from './windowGeom';
+import type { WindowBox } from './windowGeom';
+import { peekWindow, rememberWindow } from './windowLayout';
 
 export interface WindowProps {
   open: boolean;
   title: string;
+  windowId: string;
   onClose: () => void;
   children: ReactNode;
   className?: string;
 }
 
-const MIN_W = 360;
-const MIN_H = 280;
 const CLOSE_MS = 180;
 
-export function Window({ open, title, onClose, children, className }: WindowProps): ReactElement | null {
+function initialBox(windowId: string): WindowBox {
+  const saved = peekWindow(windowId);
+  return saved ? fromRatio(saved) : defaultBox();
+}
+
+export function Window({
+  open,
+  title,
+  windowId,
+  onClose,
+  children,
+  className,
+}: WindowProps): ReactElement | null {
   const [mounted, setMounted] = useState(open);
   const [leaving, setLeaving] = useState(false);
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const [box, setBox] = useState<WindowBox>(() => initialBox(windowId));
   const [dragging, setDragging] = useState(false);
   const [resizing, setResizing] = useState(false);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const resize = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
-  const frame = useRef<HTMLDivElement>(null);
+  const boxRef = useRef(box);
+  boxRef.current = box;
 
   useEffect(() => {
     if (open) {
+      setBox(initialBox(windowId));
       setMounted(true);
       setLeaving(false);
       return;
@@ -33,15 +48,22 @@ export function Window({ open, title, onClose, children, className }: WindowProp
     if (!mounted) {
       return;
     }
+    rememberWindow(windowId, toRatio(boxRef.current));
     setLeaving(true);
     const timer = window.setTimeout(() => {
       setMounted(false);
       setLeaving(false);
-      setPos(null);
-      setSize(null);
     }, CLOSE_MS);
     return () => window.clearTimeout(timer);
-  }, [open, mounted]);
+  }, [open, mounted, windowId]);
+
+  useEffect(() => {
+    const onResize = (): void => {
+      setBox((current) => clampBox(current));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     if (!mounted || leaving) {
@@ -56,19 +78,11 @@ export function Window({ open, title, onClose, children, className }: WindowProp
     return () => window.removeEventListener('keydown', onKey);
   }, [mounted, leaving, onClose]);
 
-  const visualBox = (): DOMRect | null => frame.current?.getBoundingClientRect() ?? null;
-
   const onHeaderDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     if ((event.target as HTMLElement).closest('button')) {
       return;
     }
-    const box = visualBox();
-    if (!box) {
-      return;
-    }
-    drag.current = { dx: event.clientX - box.left, dy: event.clientY - box.top };
-    setPos({ x: box.left, y: box.top });
-    setSize({ w: box.width, h: box.height });
+    drag.current = { dx: event.clientX - box.x, dy: event.clientY - box.y };
     setDragging(true);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -77,10 +91,15 @@ export function Window({ open, title, onClose, children, className }: WindowProp
     if (!drag.current) {
       return;
     }
-    setPos({
-      x: event.clientX - drag.current.dx,
-      y: event.clientY - drag.current.dy,
-    });
+    const grab = drag.current;
+    setBox((current) =>
+      clampBox({
+        x: event.clientX - grab.dx,
+        y: event.clientY - grab.dy,
+        w: current.w,
+        h: current.h,
+      }),
+    );
   };
 
   const onHeaderUp = (): void => {
@@ -90,14 +109,7 @@ export function Window({ open, title, onClose, children, className }: WindowProp
 
   const onResizeDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     event.stopPropagation();
-    const box = visualBox();
-    if (!box) {
-      return;
-    }
-    if (!pos) {
-      setPos({ x: box.left, y: box.top });
-    }
-    resize.current = { x: event.clientX, y: event.clientY, w: box.width, h: box.height };
+    resize.current = { x: event.clientX, y: event.clientY, w: box.w, h: box.h };
     setResizing(true);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -106,12 +118,15 @@ export function Window({ open, title, onClose, children, className }: WindowProp
     if (!resize.current) {
       return;
     }
-    const maxW = window.innerWidth - 16;
-    const maxH = window.innerHeight - 16;
-    setSize({
-      w: Math.min(maxW, Math.max(MIN_W, resize.current.w + event.clientX - resize.current.x)),
-      h: Math.min(maxH, Math.max(MIN_H, resize.current.h + event.clientY - resize.current.y)),
-    });
+    const grab = resize.current;
+    setBox((current) =>
+      clampBox({
+        x: current.x,
+        y: current.y,
+        w: grab.w + event.clientX - grab.x,
+        h: grab.h + event.clientY - grab.y,
+      }),
+    );
   };
 
   const onResizeUp = (): void => {
@@ -123,21 +138,17 @@ export function Window({ open, title, onClose, children, className }: WindowProp
     return null;
   }
 
-  const placed = Boolean(pos);
-  const style: CSSProperties = {};
-  if (pos) {
-    style.position = 'fixed';
-    style.margin = 0;
-    style.left = pos.x;
-    style.top = pos.y;
-    style.transform = 'none';
-  }
-  if (size) {
-    style.width = size.w;
-    style.height = size.h;
-    style.maxWidth = 'none';
-    style.minHeight = size.h;
-  }
+  const style: CSSProperties = {
+    position: 'fixed',
+    margin: 0,
+    left: box.x,
+    top: box.y,
+    width: box.w,
+    height: box.h,
+    maxWidth: 'none',
+    minHeight: box.h,
+    transform: 'none',
+  };
 
   const rootClass = [
     'albedo-window',
@@ -152,11 +163,8 @@ export function Window({ open, title, onClose, children, className }: WindowProp
   return (
     <div className={rootClass} role="dialog" aria-modal="true" aria-label={title}>
       <div className="albedo-window-backdrop" onClick={onClose} />
-      <div
-        className={`albedo-window-frame${placed ? '' : ' is-centered'}`}
-        style={Object.keys(style).length ? style : undefined}
-      >
-        <div className="albedo-window-card" ref={frame}>
+      <div className="albedo-window-frame" style={style}>
+        <div className="albedo-window-card">
           <div
             className="albedo-window-head"
             onPointerDown={onHeaderDown}

@@ -28,14 +28,15 @@ export function AiWindows({ pane, onClose }: AiWindowsProps): ReactElement {
 
   return (
     <>
-      <Window className="albedo-ai-agents" open={pane === 'agents'} title="Agents" onClose={onClose}>
+      <Window className="albedo-ai-agents" windowId="albedo-ai-agents" open={pane === 'agents'} title="Agents" onClose={onClose}>
         <p className="albedo-ai-muted">Список агентов появится здесь.</p>
       </Window>
-      <Window className="albedo-ai-models" open={pane === 'models'} title="Models" onClose={onClose}>
+      <Window className="albedo-ai-models" windowId="albedo-ai-models" open={pane === 'models'} title="Models" onClose={onClose}>
         <p className="albedo-ai-muted">Каталог моделей — после настройки провайдера.</p>
       </Window>
       <Window
         className="albedo-ai-providers"
+        windowId="albedo-ai-providers"
         open={pane === 'providers'}
         title="Providers"
         onClose={onClose}
@@ -48,6 +49,7 @@ export function AiWindows({ pane, onClose }: AiWindowsProps): ReactElement {
       </Window>
       <Window
         className="albedo-ai-provider-add"
+        windowId="albedo-ai-provider-add"
         open={addOpen}
         title="Add provider"
         onClose={() => setAddOpen(false)}
@@ -162,7 +164,7 @@ function ApiKeyWindow({
   };
 
   return (
-    <Window className="albedo-ai-provider-key" open={open} title="API key" onClose={onClose}>
+    <Window className="albedo-ai-provider-key" windowId="albedo-ai-provider-key" open={open} title="API key" onClose={onClose}>
       <form className="albedo-ai-form" onSubmit={(event) => void submit(event)}>
         <label className="form-label" htmlFor="ai-prov-name">
           Name
@@ -211,7 +213,7 @@ function GrokOauthWindow({ open, onClose }: { open: boolean; onClose: () => void
   };
 
   return (
-    <Window className="albedo-ai-provider-oauth" open={open} title="Grok OAuth" onClose={onClose}>
+    <Window className="albedo-ai-provider-oauth" windowId="albedo-ai-provider-oauth" open={open} title="Grok OAuth" onClose={onClose}>
       <p className="albedo-ai-muted">Вход через Grok. Поток OAuth ещё пустышка — вызов идёт на воркер.</p>
       <div className="albedo-ai-actions">
         <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={onClose}>

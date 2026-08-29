@@ -276,9 +276,8 @@ body {
 }
 
 .albedo-window-frame {
-  max-width: min(480px, calc(100vw - 1.25rem));
-  min-height: 320px;
-  margin: 0.75rem auto;
+  max-width: none;
+  min-height: 0;
 }
 
 .albedo-window-frame.is-centered {

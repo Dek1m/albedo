@@ -28,7 +28,7 @@ export function PromptDialog({
   }, [open]);
 
   return (
-    <Window className="albedo-prompt" open={open} title={title} onClose={onClose}>
+    <Window className="albedo-prompt" windowId="albedo-prompt" open={open} title={title} onClose={onClose}>
       <label className="form-label" htmlFor="albedo-prompt">
         {label}
       </label>

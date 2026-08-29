@@ -22,7 +22,7 @@ export function UserSettingsModal(): ReactElement | null {
   };
 
   return (
-    <Window className="albedo-settings" open={open} title="Settings" onClose={() => setSettingsOpen(false)}>
+    <Window className="albedo-settings" windowId="albedo-settings" open={open} title="Settings" onClose={() => setSettingsOpen(false)}>
       <ul className="nav nav-tabs mb-2">
         <li className="nav-item">
           <button

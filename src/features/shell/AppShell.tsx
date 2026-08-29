@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import type { ReactElement } from 'react';
 import { logoutSession } from '../../application/session/logoutSession';
 import { ToastView } from '../../shared/toast/ToastView';
+import { loadWindowLayouts } from '../../shared/ui/windowLayout';
 import { UserSettingsModal } from '../settings/UserSettingsModal';
 import { ChatPane } from '../workspace/ChatPane';
 import { SessionTabs } from '../workspace/SessionTabs';
@@ -35,6 +36,7 @@ export function AppShell(): ReactElement {
     let cancelled = false;
     void (async () => {
       await workspaceApi.ensureHome().catch(() => undefined);
+      await loadWindowLayouts();
       await loadCatalog();
       const userId = useAuthStore.getState().profile?.id;
       if (!userId || cancelled) {
