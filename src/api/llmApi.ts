@@ -27,6 +27,7 @@ export interface LlmProvider {
   oauthStatus: string | null;
   owned: boolean;
   shared: boolean;
+  common: boolean;
   models: LlmModel[];
 }
 
@@ -60,6 +61,7 @@ interface ProviderDto {
   oauth_status?: string | null;
   owned?: boolean;
   shared?: boolean;
+  common?: boolean;
   models?: ModelDto[];
 }
 
@@ -97,6 +99,7 @@ function mapProvider(item: ProviderDto): LlmProvider {
     oauthStatus: item.oauth_status ?? null,
     owned: item.owned !== false,
     shared: Boolean(item.shared),
+    common: Boolean(item.common),
     models: (item.models ?? []).map(mapModel),
   };
 }
@@ -134,6 +137,7 @@ export const llmApi = {
     baseUrl?: string;
     defaultModel?: string;
     apiKey?: string;
+    common?: boolean;
     models?: {
       model_id: string;
       display_name: string;
@@ -152,6 +156,7 @@ export const llmApi = {
       default_model: input.defaultModel ?? null,
       api_key: input.apiKey ?? null,
       models: input.models ?? [],
+      common: Boolean(input.common),
     });
     return mapProvider(dto);
   },
@@ -253,6 +258,7 @@ export const llmApi = {
     vendor: string;
     name?: string;
     description?: string;
+    common?: boolean;
   }): Promise<{
     providerId: string;
     vendor: string;
@@ -276,6 +282,7 @@ export const llmApi = {
       vendor: input.vendor,
       name: input.name ?? null,
       description: input.description ?? null,
+      common: Boolean(input.common),
     });
     return {
       providerId: row.provider_id,

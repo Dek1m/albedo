@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { authApi } from '../../api/authApi';
 import { llmApi, urlError } from '../../api/llmApi';
+import { useAuthStore } from '../../auth/AuthStore';
 import type { Group } from '../../domain/group';
 import type { LlmProvider, ProviderKind, ReasoningEffort } from '../../api/llmApi';
 import { ApiError, humanMessage } from '../../api/errors';
@@ -95,7 +96,10 @@ function matchesQuery(query: string, value: string): boolean {
 }
 
 export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
+  const profile = useAuthStore((state) => state.profile);
+  const canCommon = Boolean(profile?.isSuperadmin || profile?.isBootstrapAdmin);
   const [items, setItems] = useState<LlmProvider[]>([]);
+  const [common, setCommon] = useState(false);
   const [busy, setBusy] = useState(true);
   const [kind, setKind] = useState<ProviderKind>('api_key');
   const [name, setName] = useState('');
@@ -265,6 +269,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setEditId(null);
     setProbeUrlError(null);
     setOauthFlow(null);
+    setCommon(false);
   };
 
   const openShare = async (provider: LlmProvider): Promise<void> => {
@@ -302,6 +307,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
 
   const startEdit = (provider: LlmProvider): void => {
     setEditId(provider.id);
+    setCommon(Boolean(provider.common));
     setKind(provider.kind);
     setName(provider.name);
     setDescription(provider.description ?? '');
@@ -363,6 +369,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         description: description.trim() || undefined,
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim(),
+        common,
         models: draft
           .filter((item) => item.enabled)
           .map((item) => ({
@@ -424,6 +431,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         vendor,
         name: label,
         description: description.trim() || undefined,
+        common,
       });
       setName(label);
       setOauthFlow({
@@ -577,7 +585,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                 <header className="albedo-ai-provider-strip-head">
                   <strong>{item.name}</strong>
                   <span className="albedo-ai-muted">
-                    {item.shared ? 'Shared' : item.kind === 'oauth'
+                    {item.shared ? 'Shared' : item.common ? 'Common' : item.kind === 'oauth'
                       ? item.oauthStatus && item.oauthStatus !== 'connected'
                         ? `OAuth · ${item.oauthStatus}`
                         : 'OAuth'
@@ -594,13 +602,15 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                     </button>
                     {item.owned ? (
                       <>
-                        <button
-                          type="button"
-                          className="btn btn-sm albedo-ghost-btn"
-                          onClick={() => void openShare(item)}
-                        >
-                          Share
-                        </button>
+                        {item.common ? (
+                          <button
+                            type="button"
+                            className="btn btn-sm albedo-ghost-btn"
+                            onClick={() => void openShare(item)}
+                          >
+                            Share
+                          </button>
+                        ) : null}
                         <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => startEdit(item)}>
                           Edit
                         </button>
@@ -735,6 +745,23 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
           <option value="api_key">API</option>
           <option value="oauth">OAuth</option>
         </select>
+        {canCommon ? (
+          <>
+            <label className="form-label" htmlFor="ai-prov-scope">
+              Scope
+            </label>
+            <select
+              id="ai-prov-scope"
+              className="form-select form-select-sm"
+              value={common ? 'common' : 'personal'}
+              disabled={Boolean(editId) || Boolean(oauthFlow)}
+              onChange={(event) => setCommon(event.target.value === 'common')}
+            >
+              <option value="personal">Personal</option>
+              <option value="common">Organization</option>
+            </select>
+          </>
+        ) : null}
 
         <label className="form-label" htmlFor="ai-prov-name">
           Name
