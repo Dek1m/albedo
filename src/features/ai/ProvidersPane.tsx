@@ -107,6 +107,17 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   const [probeUrlError, setProbeUrlError] = useState<string | null>(null);
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
+  const [oauthVendors, setOauthVendors] = useState<{ id: string; name: string }[]>([
+    { id: 'xai', name: 'xAI' },
+  ]);
+  const [oauthVendor, setOauthVendor] = useState('xai');
+  const [oauthFlow, setOauthFlow] = useState<{
+    providerId: string;
+    userCode: string;
+    uri: string;
+    complete: string;
+    interval: number;
+  } | null>(null);
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
@@ -130,9 +141,20 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
       return;
     }
     void load();
+    void llmApi
+      .listOauthVendors()
+      .then((rows) => {
+        if (rows.length) {
+          setOauthVendors(rows);
+        }
+      })
+      .catch(() => undefined);
   }, [visible]);
 
   useEffect(() => {
+    if (oauthFlow) {
+      return;
+    }
     if (editId && !canProbe) {
       return;
     }
@@ -168,7 +190,52 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         .finally(() => setProbing(false));
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [canProbe, baseUrl, apiKey, editId]);
+  }, [canProbe, baseUrl, apiKey, editId, oauthFlow]);
+
+  useEffect(() => {
+    if (!oauthFlow || draft) {
+      return;
+    }
+    let stopped = false;
+    const waitMs = Math.max(oauthFlow.interval, 3) * 1000;
+    const tick = async (): Promise<void> => {
+      try {
+        const row = await llmApi.pollOauth(oauthFlow.providerId);
+        if (stopped) {
+          return;
+        }
+        if (row.status === 'connected') {
+          setProbing(true);
+          try {
+            const models = await llmApi.probeProviderModels(oauthFlow.providerId);
+            if (!stopped) {
+              setDraft(toDraft(models));
+            }
+          } finally {
+            if (!stopped) {
+              setProbing(false);
+            }
+          }
+          return;
+        }
+      } catch (err) {
+        if (!stopped) {
+          toast(humanMessage(err));
+          setOauthFlow(null);
+        }
+        return;
+      }
+      window.setTimeout(() => {
+        if (!stopped) {
+          void tick();
+        }
+      }, waitMs);
+    };
+    void tick();
+    return () => {
+      stopped = true;
+    };
+  }, [oauthFlow, draft]);
 
   const shown = useMemo(
     () =>
@@ -192,6 +259,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setSearch('');
     setEditId(null);
     setProbeUrlError(null);
+    setOauthFlow(null);
   };
 
   const startEdit = (provider: LlmProvider): void => {
@@ -279,22 +347,54 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   };
 
   const saveOauth = async (): Promise<void> => {
-    if (!name.trim()) {
-      toast('Name is required');
+    if (oauthFlow && draft) {
+      setSaving(true);
+      try {
+        const updated = await llmApi.updateProvider({
+          providerId: oauthFlow.providerId,
+          name: name.trim() || oauthVendors.find((item) => item.id === oauthVendor)?.name || 'xAI',
+          description: description.trim() || undefined,
+          models: draft
+            .filter((item) => item.enabled)
+            .map((item) => ({
+              model_id: item.id,
+              display_name: item.customName.trim() || item.id,
+              enabled: true,
+              supports_reasoning: item.supportsReasoning,
+              reasoning_enabled: item.reasoningEnabled,
+              reasoning_effort: item.supportsReasoning ? item.reasoningEffort : null,
+            })),
+        });
+        setItems((current) => {
+          const rest = current.filter((item) => item.id !== updated.id);
+          return [updated, ...rest];
+        });
+        toast('Provider saved', 'ok');
+        resetForm();
+      } catch (err) {
+        toast(humanMessage(err));
+      } finally {
+        setSaving(false);
+      }
       return;
     }
+    const vendor = oauthVendor || 'xai';
+    const label = name.trim() || oauthVendors.find((item) => item.id === vendor)?.name || 'xAI';
     setSaving(true);
     try {
-      const vendor = name.trim().toLowerCase().replace(/\s+/g, '-');
-      await llmApi.startOauth(vendor);
-      await llmApi.createProvider({
-        name: name.trim(),
-        kind: 'oauth',
+      const started = await llmApi.startOauth({
         vendor,
+        name: label,
         description: description.trim() || undefined,
       });
-      toast('OAuth saved. App client_id is required to finish sign-in.', 'info');
-      resetForm();
+      setName(label);
+      setOauthFlow({
+        providerId: started.providerId,
+        userCode: started.userCode,
+        uri: started.verificationUri,
+        complete: started.verificationUriComplete,
+        interval: started.interval,
+      });
       await load();
     } catch (err) {
       toast(humanMessage(err));
@@ -438,7 +538,13 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               <article key={item.id} className="albedo-ai-provider-strip">
                 <header className="albedo-ai-provider-strip-head">
                   <strong>{item.name}</strong>
-                  <span className="albedo-ai-muted">{item.kind === 'oauth' ? 'OAuth' : 'API'}</span>
+                  <span className="albedo-ai-muted">
+                    {item.kind === 'oauth'
+                      ? item.oauthStatus && item.oauthStatus !== 'connected'
+                        ? `OAuth · ${item.oauthStatus}`
+                        : 'OAuth'
+                      : 'API'}
+                  </span>
                   <span className="albedo-ai-strip-actions">
                     <button
                       type="button"
@@ -541,8 +647,13 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
           className="form-select form-select-sm"
           value={kind}
           onChange={(event) => {
-            setKind(event.target.value as ProviderKind);
+            const next = event.target.value as ProviderKind;
+            setKind(next);
             setDraft(null);
+            setOauthFlow(null);
+            if (next === 'oauth' && !name.trim()) {
+              setName(oauthVendors.find((item) => item.id === oauthVendor)?.name ?? 'xAI');
+            }
           }}
         >
           <option value="api_key">API</option>
@@ -573,13 +684,103 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
 
         {kind === 'oauth' ? (
           <>
-            <p className="albedo-ai-muted">
-              OAuth via worker: authorization code + PKCE or device code. Without an app client_id, Connect
-              stores the provider as pending.
-            </p>
+            <label className="form-label" htmlFor="ai-oauth-vendor">
+              Provider
+            </label>
+            <select
+              id="ai-oauth-vendor"
+              className="form-select form-select-sm"
+              value={oauthVendor}
+              disabled={Boolean(oauthFlow)}
+              onChange={(event) => {
+                const next = event.target.value;
+                const previous = oauthVendors.find((item) => item.id === oauthVendor)?.name ?? '';
+                setOauthVendor(next);
+                const label = oauthVendors.find((item) => item.id === next)?.name ?? next;
+                if (!name.trim() || name.trim() === previous) {
+                  setName(label);
+                }
+              }}
+            >
+              {oauthVendors.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            {oauthFlow ? (
+              <div className="albedo-ai-oauth-code">
+                <p className="albedo-ai-muted">Open the link and enter this code</p>
+                <p className="albedo-ai-oauth-user-code">{oauthFlow.userCode}</p>
+                <a href={oauthFlow.complete || oauthFlow.uri} target="_blank" rel="noreferrer">
+                  {oauthFlow.uri}
+                </a>
+              </div>
+            ) : (
+              <p className="albedo-ai-muted">Worker starts device-code sign-in. Approve in the browser, then pick models.</p>
+            )}
+            {probing ? <p className="albedo-ai-muted">Fetching models…</p> : null}
+            {kind === 'oauth' && showCatalog ? (
+              <>
+                <div className="albedo-ai-model-search">
+                  <i className="bi bi-search" aria-hidden="true" />
+                  <input
+                    className="form-control form-control-sm"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="search models"
+                    aria-label="search models"
+                  />
+                </div>
+                <ul className="albedo-ai-model-pick">
+                  {shown.length === 0 && !probing ? <li className="albedo-ai-muted">No models</li> : null}
+                  {shown.length > 0 ? (
+                    <li className="albedo-ai-model-master">
+                      <Switch on={draftAllOn} onChange={toggleAllDraft} />
+                      <span>All</span>
+                    </li>
+                  ) : null}
+                  {shown.map((item) => (
+                    <li key={item.id}>
+                      <Switch
+                        on={item.enabled}
+                        onChange={(next) =>
+                          setDraft((current) =>
+                            (current ?? []).map((row) => (row.id === item.id ? { ...row, enabled: next } : row)),
+                          )
+                        }
+                      />
+                      <span className="albedo-ai-model-id">{item.id}</span>
+                      <input
+                        className="form-control form-control-sm albedo-ai-model-alias"
+                        value={item.customName}
+                        placeholder="custom name"
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setDraft((current) =>
+                            (current ?? []).map((row) =>
+                              row.id === item.id ? { ...row, customName: value } : row,
+                            ),
+                          );
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
             <div className="albedo-ai-actions">
-              <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={saving || !name.trim()}>
-                Connect
+              <button
+                type="submit"
+                className="btn btn-sm btn-albedo-primary"
+                disabled={
+                  saving ||
+                  probing ||
+                  (Boolean(oauthFlow) && !draft) ||
+                  Boolean(draft && !draft.some((model) => model.enabled))
+                }
+              >
+                {oauthFlow && draft ? 'Save' : oauthFlow ? 'Waiting…' : 'Connect'}
               </button>
             </div>
           </>

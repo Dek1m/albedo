@@ -174,7 +174,7 @@ export const llmApi = {
       name: input.name,
       description: input.description ?? null,
       base_url: input.baseUrl ?? null,
-      api_key: input.apiKey ?? null,
+      api_key: input.apiKey ?? undefined,
       models: input.models ?? [],
     });
     return mapProvider(dto);
@@ -230,7 +230,71 @@ export const llmApi = {
     });
   },
 
-  async startOauth(vendor: string): Promise<{ status: string; vendor: string; mode?: string }> {
-    return apiClient.call('llm', 'start_oauth', { vendor });
+  async listOauthVendors(): Promise<{ id: string; name: string; mode: string }[]> {
+    const result = await apiClient.call<{ items: { id: string; name: string; mode?: string }[] }>(
+      'llm',
+      'list_oauth_vendors',
+      {},
+    );
+    return (result.items ?? []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      mode: item.mode ?? 'device_code',
+    }));
+  },
+
+  async startOauth(input: {
+    vendor: string;
+    name?: string;
+    description?: string;
+  }): Promise<{
+    providerId: string;
+    vendor: string;
+    status: string;
+    userCode: string;
+    verificationUri: string;
+    verificationUriComplete: string;
+    interval: number;
+    expiresIn: number;
+  }> {
+    const row = await apiClient.call<{
+      provider_id: string;
+      vendor: string;
+      status: string;
+      user_code: string;
+      verification_uri: string;
+      verification_uri_complete: string;
+      interval: number;
+      expires_in: number;
+    }>('llm', 'start_oauth', {
+      vendor: input.vendor,
+      name: input.name ?? null,
+      description: input.description ?? null,
+    });
+    return {
+      providerId: row.provider_id,
+      vendor: row.vendor,
+      status: row.status,
+      userCode: row.user_code,
+      verificationUri: row.verification_uri,
+      verificationUriComplete: row.verification_uri_complete,
+      interval: row.interval,
+      expiresIn: row.expires_in,
+    };
+  },
+
+  async pollOauth(providerId: string): Promise<{ status: string; interval?: number }> {
+    return apiClient.call('llm', 'poll_oauth', { provider_id: providerId });
+  },
+
+  async probeProviderModels(providerId: string): Promise<ProbedModel[]> {
+    const result = await apiClient.call<{
+      items: { id: string; name: string; supports_reasoning?: boolean }[];
+    }>('llm', 'probe_provider_models', { provider_id: providerId });
+    return (result.items ?? []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      supportsReasoning: Boolean(item.supports_reasoning),
+    }));
   },
 };

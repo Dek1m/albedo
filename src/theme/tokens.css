@@ -977,6 +977,20 @@ body {
   margin: 0 0 0.75rem;
 }
 
+.albedo-ai-oauth-code {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.albedo-ai-oauth-user-code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1.35rem;
+  letter-spacing: 0.12em;
+  margin: 0;
+  font-weight: 600;
+}
+
 .albedo-ai-form {
   display: flex;
   flex-direction: column;
