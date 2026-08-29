@@ -1102,6 +1102,27 @@ body {
   font-size: 0.82rem;
 }
 
+.albedo-ai-model-id {
+  flex: 0 1 9rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.albedo-ai-model-alias {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+}
+
+.albedo-ai-model-master {
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.15rem;
+}
+
 .albedo-ai-model-search {
   position: relative;
   display: block;

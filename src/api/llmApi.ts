@@ -205,6 +205,14 @@ export const llmApi = {
     await apiClient.call('llm', 'set_model_enabled', { model_id: modelId, enabled });
   },
 
+  async setModelName(modelId: string, displayName: string): Promise<void> {
+    await apiClient.call('llm', 'set_model_name', { model_id: modelId, display_name: displayName });
+  },
+
+  async setProviderModelsEnabled(providerId: string, enabled: boolean): Promise<void> {
+    await apiClient.call('llm', 'set_provider_models_enabled', { provider_id: providerId, enabled });
+  },
+
   async setModelReasoning(modelId: string, enabled: boolean, effort: ReasoningEffort): Promise<void> {
     await apiClient.call('llm', 'set_model_reasoning', {
       model_id: modelId,

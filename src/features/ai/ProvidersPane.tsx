@@ -13,6 +13,7 @@ interface ProvidersPaneProps {
 interface DraftModel {
   id: string;
   name: string;
+  customName: string;
   enabled: boolean;
   supportsReasoning: boolean;
   reasoningEnabled: boolean;
@@ -84,7 +85,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
             models.map((item) => ({
               id: item.id,
               name: item.name,
-              enabled: true,
+              customName: '',
+              enabled: false,
               supportsReasoning: item.supportsReasoning,
               reasoningEnabled: false,
               reasoningEffort: 'medium',
@@ -106,9 +108,16 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   }, [canProbe, name, baseUrl, apiKey]);
 
   const shown = useMemo(
-    () => (draft ?? []).filter((item) => matchesQuery(search, item.name) || matchesQuery(search, item.id)),
+    () =>
+      (draft ?? []).filter(
+        (item) =>
+          matchesQuery(search, item.name) ||
+          matchesQuery(search, item.id) ||
+          matchesQuery(search, item.customName),
+      ),
     [draft, search],
   );
+  const draftAllOn = Boolean(shown.length) && shown.every((item) => item.enabled);
 
   const resetForm = (): void => {
     setKind('api_key');
@@ -171,14 +180,16 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         description: description.trim() || undefined,
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim(),
-        models: draft.map((item) => ({
-          model_id: item.id,
-          display_name: item.name,
-          enabled: item.enabled,
-          supports_reasoning: item.supportsReasoning,
-          reasoning_enabled: item.reasoningEnabled,
-          reasoning_effort: item.supportsReasoning ? item.reasoningEffort : null,
-        })),
+        models: draft
+          .filter((item) => item.enabled)
+          .map((item) => ({
+            model_id: item.id,
+            display_name: item.customName.trim() || item.id,
+            enabled: true,
+            supports_reasoning: item.supportsReasoning,
+            reasoning_enabled: item.reasoningEnabled,
+            reasoning_effort: item.supportsReasoning ? item.reasoningEffort : null,
+          })),
       });
       toast('Провайдер сохранён', 'ok');
       resetForm();
@@ -243,6 +254,52 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setOpenIds((current) =>
       current.includes(providerId) ? current.filter((id) => id !== providerId) : [...current, providerId],
     );
+  };
+
+  const toggleAllDraft = (enabled: boolean): void => {
+    const ids = new Set(shown.map((item) => item.id));
+    setDraft((current) =>
+      (current ?? []).map((row) => (ids.has(row.id) ? { ...row, enabled } : row)),
+    );
+  };
+
+  const toggleAllSaved = async (provider: LlmProvider, enabled: boolean): Promise<void> => {
+    try {
+      await llmApi.setProviderModelsEnabled(provider.id, enabled);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === provider.id
+            ? { ...item, models: item.models.map((model) => ({ ...model, enabled })) }
+            : item,
+        ),
+      );
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const renameSaved = async (providerId: string, modelId: string, displayName: string): Promise<void> => {
+    const value = displayName.trim();
+    if (!value) {
+      return;
+    }
+    try {
+      await llmApi.setModelName(modelId, value);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === providerId
+            ? {
+                ...item,
+                models: item.models.map((model) =>
+                  model.id === modelId ? { ...model, displayName: value } : model,
+                ),
+              }
+            : item,
+        ),
+      );
+    } catch (err) {
+      toast(humanMessage(err));
+    }
   };
 
   const toggleSaved = async (provider: LlmProvider, modelId: string, enabled: boolean): Promise<void> => {
@@ -332,10 +389,33 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                     {item.models.length === 0 ? (
                       <li className="albedo-ai-muted">Модели не добавлены</li>
                     ) : (
-                      item.models.map((model) => (
+                      <>
+                        <li className="albedo-ai-model-master">
+                          <Switch
+                            on={item.models.every((model) => model.enabled)}
+                            onChange={(next) => void toggleAllSaved(item, next)}
+                          />
+                          <span>все</span>
+                        </li>
+                        {item.models.map((model) => (
                         <li key={model.id}>
                           <Switch on={model.enabled} onChange={(next) => void toggleSaved(item, model.id, next)} />
-                          <span>{model.displayName}</span>
+                          <span className="albedo-ai-model-id">{model.modelId}</span>
+                          <input
+                            className="form-control form-control-sm albedo-ai-model-alias"
+                            defaultValue={model.displayName === model.modelId ? '' : model.displayName}
+                            placeholder="своё имя"
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault();
+                                (event.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            onBlur={(event) => {
+                              const value = event.target.value.trim() || model.modelId;
+                              void renameSaved(item.id, model.id, value);
+                            }}
+                          />
                           <button
                             type="button"
                             className="btn btn-sm albedo-danger-btn"
@@ -354,7 +434,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                             />
                           ) : null}
                         </li>
-                      ))
+                        ))}
+                      </>
                     )}
                   </ul>
                 ) : null}
@@ -467,6 +548,12 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                   {shown.length === 0 && !probing ? (
                     <li className="albedo-ai-muted">Моделей нет</li>
                   ) : null}
+                  {shown.length > 0 ? (
+                    <li className="albedo-ai-model-master">
+                      <Switch on={draftAllOn} onChange={toggleAllDraft} />
+                      <span>все</span>
+                    </li>
+                  ) : null}
                   {shown.map((item) => (
                     <li key={item.id}>
                       <Switch
@@ -477,7 +564,25 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                           )
                         }
                       />
-                      <span>{item.name}</span>
+                      <span className="albedo-ai-model-id">{item.id}</span>
+                      <input
+                        className="form-control form-control-sm albedo-ai-model-alias"
+                        value={item.customName}
+                        placeholder="своё имя"
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                          }
+                        }}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setDraft((current) =>
+                            (current ?? []).map((row) =>
+                              row.id === item.id ? { ...row, customName: value } : row,
+                            ),
+                          );
+                        }}
+                      />
                       {item.supportsReasoning ? (
                         <ReasoningControls
                           enabled={item.reasoningEnabled}
@@ -512,7 +617,11 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               <button
                 type="submit"
                 className="btn btn-sm btn-albedo-primary"
-                disabled={saving || (!editId && !draft) || !name.trim()}
+                disabled={
+                  saving ||
+                  (!editId && (!draft || !draft.some((model) => model.enabled))) ||
+                  !name.trim()
+                }
               >
                 {editId ? 'Update' : 'Save'}
               </button>
