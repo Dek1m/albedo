@@ -146,7 +146,7 @@ export function Window({
     width: box.w,
     height: box.h,
     maxWidth: 'none',
-    minHeight: box.h,
+    minHeight: 0,
     transform: 'none',
   };
 
