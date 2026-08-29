@@ -93,4 +93,3 @@ export function countryFromPhone(raw: string): Country {
   }
   return COUNTRIES[0]!;
 }
-}
