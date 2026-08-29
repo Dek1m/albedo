@@ -13,20 +13,22 @@ export function ChatPane(): ReactElement | null {
   const active = useWorkspaceStore((s) => s.active);
   const focused = useWorkspaceStore((s) => s.focusedSessionId);
   const sessions = useWorkspaceStore((s) => s.sessions);
+  const tabs = useWorkspaceStore((s) => s.tabs);
   const profile = useAuthStore((s) => s.profile);
-  const session = sessions.find((s) => s.id === focused);
+  const session = tabs.find((s) => s.id === focused) ?? sessions.find((s) => s.id === focused);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const userName = profile ? chipLabel(profile) : 'You';
 
   useEffect(() => {
-    if (!active || !focused) {
+    const workspaceId = session?.workspaceId ?? active?.id;
+    if (!workspaceId || !focused) {
       setMessages([]);
       return;
     }
     let cancelled = false;
     workspaceApi
-      .listMessages(active.id, focused)
+      .listMessages(workspaceId, focused)
       .then((items) => {
         if (!cancelled) {
           setMessages(items);
@@ -36,9 +38,9 @@ export function ChatPane(): ReactElement | null {
     return () => {
       cancelled = true;
     };
-  }, [active, focused]);
+  }, [active, focused, session?.workspaceId]);
 
-  if (!active || !session) {
+  if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;
   }
 
@@ -47,7 +49,7 @@ export function ChatPane(): ReactElement | null {
       return;
     }
     try {
-      const msg = await workspaceApi.postMessage(active.id, session.id, 'user', draft.trim());
+      const msg = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', draft.trim());
       setMessages((prev) => [...prev, msg]);
       setDraft('');
     } catch (err) {

@@ -17,6 +17,10 @@ export function Avatar({ label, src, size = 28 }: AvatarProps): ReactElement {
       setBlobUrl(null);
       return;
     }
+    if (src.startsWith('blob:') || src.startsWith('data:')) {
+      setBlobUrl(src);
+      return;
+    }
     let objectUrl: string | null = null;
     let cancelled = false;
     fetch(src, { credentials: 'include' })

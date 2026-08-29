@@ -46,6 +46,7 @@ export interface LlmAgent {
   description: string;
   systemPrompt: string;
   model: string;
+  avatarUrl: string | null;
 }
 
 interface ModelDto {
@@ -335,6 +336,7 @@ export const llmApi = {
         description?: string | null;
         system_prompt?: string | null;
         model?: string | null;
+        avatar_url?: string | null;
       }[];
     }>('llm', 'agents', {});
     return (result.items ?? []).map((row) => ({
@@ -344,6 +346,7 @@ export const llmApi = {
       description: String(row.description ?? ''),
       systemPrompt: String(row.system_prompt ?? ''),
       model: String(row.model ?? ''),
+      avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
     }));
   },
 
@@ -360,6 +363,7 @@ export const llmApi = {
       description?: string | null;
       system_prompt?: string | null;
       model?: string | null;
+      avatar_url?: string | null;
     }>('llm', 'create_agent', {
       name: input.name,
       agent_type: input.agentType,
@@ -373,7 +377,17 @@ export const llmApi = {
       description: String(row.description ?? ''),
       systemPrompt: String(row.system_prompt ?? input.systemPrompt),
       model: String(row.model ?? input.model),
+      avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
     };
+  },
+
+  async setAgentAvatar(agentId: string, imageB64: string, contentType: string): Promise<string> {
+    const row = await apiClient.call<{ avatar_url?: string }>('llm', 'set_agent_avatar', {
+      agent_id: agentId,
+      image_b64: imageB64,
+      content_type: contentType,
+    });
+    return String(row.avatar_url ?? '');
   },
 
   async updateAgent(input: {

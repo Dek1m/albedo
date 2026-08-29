@@ -28,6 +28,7 @@ export interface DirectoryUser {
   phone: string;
   userPrompt: string;
   chipDisplayMode: ChipDisplayMode;
+  avatarUrl: string | null;
 }
 
 export interface DirectoryUserPatch {
@@ -206,6 +207,7 @@ function mapDirectoryUser(raw: unknown): DirectoryUser | null {
     phone: pickStr(src, 'phone'),
     userPrompt: pickStr(src, 'user_prompt', 'userPrompt'),
     chipDisplayMode: pickChip(src),
+    avatarUrl: pickStr(src, 'avatar_url', 'avatarUrl') || null,
   };
 }
 
@@ -422,6 +424,15 @@ export const adminApi = {
   async getDirectoryUser(userId: string): Promise<DirectoryUser | null> {
     const raw = await apiClient.call<unknown>('admin', 'get_directory_user', { user_id: userId });
     return mapDirectoryUser(raw);
+  },
+
+  async setDirectoryAvatar(userId: string, imageB64: string, contentType: string): Promise<string> {
+    const row = await apiClient.call<{ avatar_url?: string }>('admin', 'set_directory_avatar', {
+      user_id: userId,
+      image_b64: imageB64,
+      content_type: contentType,
+    });
+    return String(row.avatar_url ?? '');
   },
 
   async updateDirectoryUser(userId: string, patch: DirectoryUserPatch): Promise<void> {

@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import type { SessionId, Workspace, WorkspaceId, WsSession } from '../domain/workspace';
 
+export function mergeWorkspaceTabs(
+  tabs: WsSession[],
+  workspaceId: string,
+  list: WsSession[],
+): WsSession[] {
+  const others = tabs.filter((item) => item.workspaceId !== workspaceId);
+  return [...others, ...list.filter((item) => item.tabOpen)];
+}
+
 function withAncestors(paths: string[]): string[] {
   const out = new Set<string>();
   for (const path of paths) {
@@ -21,6 +30,7 @@ interface WorkspaceState {
   catalog: Workspace[];
   active: Workspace | null;
   sessions: WsSession[];
+  tabs: WsSession[];
   focusedSessionId: SessionId | null;
   sidebarWidth: number;
   foldersOpen: boolean;
@@ -41,19 +51,29 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   catalog: [],
   active: null,
   sessions: [],
+  tabs: [],
   focusedSessionId: null,
   sidebarWidth: 240,
   foldersOpen: true,
   expanded: [],
   setCatalog: (catalog) => set({ catalog }),
   openDashboard: (active, sessions) =>
-    set({
-      active,
-      sessions,
-      focusedSessionId: sessions.find((s) => s.tabOpen)?.id ?? null,
+    set((state) => {
+      const tabs = mergeWorkspaceTabs(state.tabs, active.id, sessions);
+      const focused =
+        tabs.find((item) => item.id === state.focusedSessionId)?.id ??
+        sessions.find((item) => item.tabOpen)?.id ??
+        tabs[0]?.id ??
+        null;
+      return { active, sessions, tabs, focusedSessionId: focused };
     }),
-  closeDashboard: () => set({ active: null, sessions: [], focusedSessionId: null, expanded: [] }),
-  setSessions: (sessions) => set({ sessions }),
+  closeDashboard: () =>
+    set({ active: null, sessions: [], tabs: [], focusedSessionId: null, expanded: [] }),
+  setSessions: (sessions) =>
+    set((state) => ({
+      sessions,
+      tabs: state.active ? mergeWorkspaceTabs(state.tabs, state.active.id, sessions) : state.tabs,
+    })),
   setFocused: (focusedSessionId) => set({ focusedSessionId }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
   setFoldersOpen: (foldersOpen) => set({ foldersOpen }),
@@ -74,6 +94,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       catalog: [],
       active: null,
       sessions: [],
+      tabs: [],
       focusedSessionId: null,
       foldersOpen: true,
       expanded: [],

@@ -4,6 +4,7 @@ import { llmApi } from '../../api/llmApi';
 import type { LlmAgent, LlmProvider } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
+import { Avatar } from '../../shared/ui/Avatar';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { AgentForm } from './AgentForm';
@@ -104,21 +105,16 @@ export function AgentsPane({ visible }: AgentsPaneProps): ReactElement {
 
   return (
     <div className="albedo-agents">
-      <div className="albedo-admin-role-toolbar">
-        <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => setForm({ kind: 'create' })}>
-          New agent
-        </button>
-      </div>
       <ul className="list-group albedo-ws-list">
         {items.map((agent) => {
           const locked = agent.agentType === 'system';
           return (
             <li key={agent.id} className="list-group-item albedo-session-row">
+              <Avatar label={agent.name} src={agent.avatarUrl} size={28} />
               <i className={`bi ${kindIcon(agent.agentType)}`} />
               <button
                 type="button"
                 className="albedo-ws-list-name"
-                disabled={locked}
                 onClick={() => {
                   if (!locked) {
                     setForm({ kind: 'edit', agent });
@@ -128,16 +124,34 @@ export function AgentsPane({ visible }: AgentsPaneProps): ReactElement {
                 {agent.name}
               </button>
               <span className="albedo-badge">{kindLabel(agent.agentType)}</span>
-              {locked ? null : (
-                <button type="button" className="btn btn-sm albedo-danger-btn" onClick={() => setPendingDelete(agent)}>
+              <span className="albedo-ai-strip-actions">
+                <button
+                  type="button"
+                  className="btn btn-sm albedo-ghost-btn"
+                  disabled={locked}
+                  onClick={() => setForm({ kind: 'edit', agent })}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm albedo-danger-btn"
+                  disabled={locked}
+                  onClick={() => setPendingDelete(agent)}
+                >
                   Delete
                 </button>
-              )}
+              </span>
             </li>
           );
         })}
       </ul>
       {!items.length ? <p className="albedo-ai-muted">No agents</p> : null}
+      <div className="albedo-list-create">
+        <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => setForm({ kind: 'create' })}>
+          New agent
+        </button>
+      </div>
       <AgentForm mode={form} providers={providers} onClose={() => setForm(null)} onSaved={() => void load()} />
       <ConfirmDialog
         open={Boolean(pendingDelete)}

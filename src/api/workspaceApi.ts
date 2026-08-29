@@ -14,6 +14,8 @@ interface SessionDto {
   id: string;
   workspace_id: string;
   title: string;
+  description?: string | null;
+  metadata?: { description?: string } | null;
   tab_open?: boolean;
   agent_busy?: boolean;
 }
@@ -53,6 +55,7 @@ function toSession(dto: SessionDto): WsSession {
     id: asSessionId(dto.id),
     workspaceId: asWorkspaceId(dto.workspace_id),
     title: dto.title,
+    description: dto.description ?? dto.metadata?.description ?? null,
     tabOpen: Boolean(dto.tab_open),
     agentBusy: Boolean(dto.agent_busy),
   };
@@ -290,9 +293,10 @@ export const workspaceApi = {
     return (result.items ?? []).map(toWorkspace);
   },
 
-  async create(name: string, folders: string[]): Promise<Workspace> {
+  async create(name: string, folders: string[], description?: string): Promise<Workspace> {
     const dto = await apiClient.call<WorkspaceDto>('workspace', 'create_workspace', {
       name,
+      description: description?.trim() || null,
       folders: folders.length ? folders : null,
     });
     return toWorkspace(dto);
@@ -346,10 +350,11 @@ export const workspaceApi = {
     return (result.items ?? []).map(toSession);
   },
 
-  async createSession(workspaceId: string, title: string): Promise<WsSession> {
+  async createSession(workspaceId: string, title: string, description?: string): Promise<WsSession> {
     const dto = await apiClient.call<SessionDto>('workspace', 'create_session', {
       workspace_id: workspaceId,
       title,
+      description: description?.trim() || null,
     });
     return toSession(dto);
   },

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { FormEvent, ReactElement } from 'react';
+import type { ChangeEvent, FormEvent, ReactElement } from 'react';
 import type { AgentKind, LlmAgent, LlmProvider } from '../../api/llmApi';
 import { llmApi } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
+import { Avatar } from '../../shared/ui/Avatar';
+import { readImageFile } from '../../shared/ui/readImageFile';
 import { Window } from '../../shared/ui/Window';
 import { MarkdownPrompt } from './MarkdownPrompt';
 
@@ -34,6 +36,8 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
   const [kind, setKind] = useState<Exclude<AgentKind, 'system' | 'user'>>('agent');
   const [model, setModel] = useState('');
   const [prompt, setPrompt] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const editing = mode?.kind === 'edit';
 
@@ -46,12 +50,16 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
       setKind(asKind(mode.agent.agentType));
       setModel(mode.agent.model);
       setPrompt(mode.agent.systemPrompt);
+      setAvatarUrl(mode.agent.avatarUrl);
+      setAvatarFile(null);
       return;
     }
     setName('');
     setKind('agent');
     setModel('');
     setPrompt('');
+    setAvatarUrl(null);
+    setAvatarFile(null);
   }, [mode]);
 
   const submit = async (event: FormEvent): Promise<void> => {
@@ -61,6 +69,7 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
     }
     setSaving(true);
     try {
+      let agentId = mode?.kind === 'edit' ? mode.agent.id : null;
       if (mode?.kind === 'edit') {
         await llmApi.updateAgent({
           agentId: mode.agent.id,
@@ -70,12 +79,17 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
           model,
         });
       } else {
-        await llmApi.createAgent({
+        const created = await llmApi.createAgent({
           name: name.trim(),
           agentType: kind,
           systemPrompt: prompt,
           model,
         });
+        agentId = created.id;
+      }
+      if (agentId && avatarFile) {
+        const packed = await readImageFile(avatarFile);
+        await llmApi.setAgentAvatar(agentId, packed.imageB64, packed.contentType);
       }
       toast('Saved', 'ok');
       onSaved();
@@ -97,6 +111,27 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
       onClose={onClose}
     >
       <form className="albedo-settings-form" onSubmit={(event) => void submit(event)}>
+        <div className="albedo-settings-avatar">
+          <Avatar label={name || 'Agent'} src={avatarUrl} size={56} />
+          <label className="btn btn-albedo-primary btn-sm">
+            Upload
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              disabled={saving}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) {
+                  return;
+                }
+                setAvatarFile(file);
+                setAvatarUrl(URL.createObjectURL(file));
+              }}
+            />
+          </label>
+        </div>
         <label className="form-label" htmlFor="albedo-agent-name">
           Name
         </label>

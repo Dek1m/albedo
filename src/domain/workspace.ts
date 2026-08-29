@@ -14,6 +14,7 @@ export interface WsSession {
   id: SessionId;
   workspaceId: WorkspaceId;
   title: string;
+  description: string | null;
   tabOpen: boolean;
   agentBusy: boolean;
 }

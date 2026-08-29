@@ -1137,6 +1137,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.2rem;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .albedo-field-error {
@@ -1921,6 +1923,12 @@ body {
   display: flex;
   gap: 0.4rem;
   margin-top: 0.65rem;
+}
+
+.albedo-list-create {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 5px;
 }
 
 .albedo-busy-dots {

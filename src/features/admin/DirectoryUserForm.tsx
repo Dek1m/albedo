@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import type { ChipDisplayMode } from '../../domain/chipDisplayMode';
+import { Avatar } from '../../shared/ui/Avatar';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { COUNTRIES, countryFromPhone, formatPhone, phonePayload, type Country } from '../../shared/ui/phone';
 import { selectDisplayMode } from '../settings/displayMutex';
@@ -24,6 +25,8 @@ interface DirectoryUserFormProps {
   password: string;
   onPassword: (value: string) => void;
   disabled: boolean;
+  avatarUrl?: string | null;
+  onAvatar?: (file: File) => void;
 }
 
 export function DirectoryUserForm({
@@ -33,6 +36,8 @@ export function DirectoryUserForm({
   password,
   onPassword,
   disabled,
+  avatarUrl,
+  onAvatar,
 }: DirectoryUserFormProps): ReactElement {
   const [country, setCountry] = useState<Country>(() => countryFromPhone(values.phone));
   const [phoneDisplay, setPhoneDisplay] = useState(() =>
@@ -58,6 +63,31 @@ export function DirectoryUserForm({
 
   return (
     <div className="albedo-settings-form">
+      {onAvatar ? (
+        <div className="albedo-settings-avatar">
+          <Avatar
+            label={`${values.firstName} ${values.lastName}`.trim() || values.nickname || values.username || 'User'}
+            src={avatarUrl}
+            size={56}
+          />
+          <label className="btn btn-albedo-primary btn-sm">
+            Upload
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              disabled={disabled}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file) {
+                  onAvatar(file);
+                }
+              }}
+            />
+          </label>
+        </div>
+      ) : null}
       <label className="form-label" htmlFor="albedo-dir-username">
         Username
       </label>

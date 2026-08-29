@@ -4,6 +4,7 @@ import { adminApi } from '../../api/adminApi';
 import type { DirectoryUser } from '../../api/adminApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
+import { readImageFile } from '../../shared/ui/readImageFile';
 import { DirectoryMemberOf } from './DirectoryMemberOf';
 import { DirectoryUserForm, EMPTY_DRAFT } from './DirectoryUserForm';
 import type { DirectoryUserDraft } from './DirectoryUserForm';
@@ -36,6 +37,7 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
   const [pane, setPane] = useState<Pane>('general');
   const [draft, setDraft] = useState<DirectoryUserDraft>(EMPTY_DRAFT);
   const [password, setPassword] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const creating = mode.kind === 'create';
   const userId = mode.kind === 'edit' ? mode.userId : null;
@@ -45,6 +47,7 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
     setPane('general');
     setDraft(EMPTY_DRAFT);
     setPassword('');
+    setAvatarUrl(null);
     if (!userId) {
       return;
     }
@@ -54,6 +57,7 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
       .then((user) => {
         if (!cancelled && user) {
           setDraft(fromUser(user));
+          setAvatarUrl(user.avatarUrl);
         }
       })
       .catch((err: unknown) => {
@@ -142,6 +146,23 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
             password={password}
             onPassword={setPassword}
             disabled={!canEdit || saving}
+            avatarUrl={avatarUrl}
+            onAvatar={
+              userId
+                ? (file) => {
+                    void (async () => {
+                      try {
+                        const packed = await readImageFile(file);
+                        const url = await adminApi.setDirectoryAvatar(userId, packed.imageB64, packed.contentType);
+                        setAvatarUrl(`${url}&t=${String(Date.now())}`);
+                        toast('Saved', 'ok');
+                      } catch (err) {
+                        toast(humanMessage(err));
+                      }
+                    })();
+                  }
+                : undefined
+            }
           />
           <div className="albedo-confirm-actions">
             <button type="submit" className="btn btn-sm btn-albedo-primary" disabled={!canEdit || !ready || saving}>

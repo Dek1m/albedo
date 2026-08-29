@@ -75,7 +75,7 @@ export function persistCurrentLayout(): void {
   writeLayout(userId, {
     workspaceId: state.active?.id ?? null,
     focusedSessionId: state.focusedSessionId,
-    openSessionIds: state.sessions.filter((item) => item.tabOpen).map((item) => item.id),
+    openSessionIds: state.tabs.filter((item) => item.tabOpen).map((item) => item.id),
     foldersOpen: state.foldersOpen,
     sidebarWidth: state.sidebarWidth,
     expandedByWs,
