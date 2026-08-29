@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Modal } from './Modal';
+import { Window } from './Window';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -21,7 +21,7 @@ export function ConfirmDialog({
   onClose,
 }: ConfirmDialogProps): ReactElement {
   return (
-    <Modal open={open} title={title} onClose={onClose}>
+    <Window className="albedo-confirm" open={open} title={title} onClose={onClose}>
       <p className="albedo-confirm-body">{body}</p>
       <div className="albedo-confirm-actions">
         <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={onClose}>
@@ -38,6 +38,6 @@ export function ConfirmDialog({
           {confirmLabel}
         </button>
       </div>
-    </Modal>
+    </Window>
   );
 }

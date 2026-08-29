@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { Modal } from './Modal';
+import { Window } from './Window';
 
 interface PromptDialogProps {
   open: boolean;
@@ -28,7 +28,7 @@ export function PromptDialog({
   }, [open]);
 
   return (
-    <Modal open={open} title={title} onClose={onClose}>
+    <Window className="albedo-prompt" open={open} title={title} onClose={onClose}>
       <label className="form-label" htmlFor="albedo-prompt">
         {label}
       </label>
@@ -61,6 +61,6 @@ export function PromptDialog({
           {confirmLabel}
         </button>
       </div>
-    </Modal>
+    </Window>
   );
 }

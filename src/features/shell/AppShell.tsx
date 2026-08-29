@@ -7,6 +7,9 @@ import { UserSettingsModal } from '../settings/UserSettingsModal';
 import { ChatPane } from '../workspace/ChatPane';
 import { SessionTabs } from '../workspace/SessionTabs';
 import { workspaceApi } from '../../api/workspaceApi';
+import { AiMenu } from '../ai/AiMenu';
+import type { AiPane } from '../ai/AiMenu';
+import { AiWindows } from '../ai/AiWindows';
 import { WorkspaceMenu, loadCatalog } from '../workspace/WorkspaceMenu';
 import { WorkspaceModals } from '../workspace/WorkspaceModals';
 import { WorkspaceSidebar } from '../workspace/WorkspaceSidebar';
@@ -26,6 +29,7 @@ export function AppShell(): ReactElement {
   const [listOpen, setListOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [aiPane, setAiPane] = useState<AiPane | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +94,7 @@ export function AppShell(): ReactElement {
             }}
             onOpenSessions={() => setSessionsOpen(true)}
           />
+          <AiMenu onOpen={setAiPane} />
         </div>
         <div className="albedo-header-actions">
           <UserChip />
@@ -105,6 +110,7 @@ export function AppShell(): ReactElement {
           {active ? <ChatPane /> : <p className="albedo-workspace-ready">ready</p>}
         </main>
       </div>
+      <AiWindows pane={aiPane} onClose={() => setAiPane(null)} />
       <WorkspaceModals
         listOpen={listOpen}
         createOpen={createOpen}

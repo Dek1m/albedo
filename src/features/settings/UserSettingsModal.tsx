@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { logoutSession } from '../../application/session/logoutSession';
 import { useAuthStore } from '../../auth/AuthStore';
-import { Modal } from '../../shared/ui/Modal';
+import { Window } from '../../shared/ui/Window';
 import { GeneralTab } from './GeneralTab';
 import { MemberOfTab } from './MemberOfTab';
 
@@ -22,7 +22,7 @@ export function UserSettingsModal(): ReactElement | null {
   };
 
   return (
-    <Modal open={open} title="Settings" onClose={() => setSettingsOpen(false)}>
+    <Window className="albedo-settings" open={open} title="Settings" onClose={() => setSettingsOpen(false)}>
       <ul className="nav nav-tabs mb-2">
         <li className="nav-item">
           <button
@@ -49,6 +49,6 @@ export function UserSettingsModal(): ReactElement | null {
           Sign out
         </button>
       </div>
-    </Modal>
+    </Window>
   );
 }

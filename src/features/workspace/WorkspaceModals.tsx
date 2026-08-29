@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { workspaceApi } from '../../api/workspaceApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
-import { Modal } from '../../shared/ui/Modal';
+import { Window } from '../../shared/ui/Window';
 import { BusyDots } from '../../shared/ui/BusyDots';
 import { workspaceHue } from '../../domain/workspace';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
@@ -131,7 +131,7 @@ export function WorkspaceModals({
 
   return (
     <>
-      <Modal open={listOpen} title="Workspaces" onClose={onCloseList}>
+      <Window className="albedo-workspaces" open={listOpen} title="Workspaces" onClose={onCloseList}>
         <ul className="list-group albedo-ws-list">
           {catalog.map((ws) => (
             <li key={ws.id} className={`list-group-item${active?.id === ws.id ? ' active' : ''}`}>
@@ -147,9 +147,9 @@ export function WorkspaceModals({
         <button type="button" className="btn btn-sm btn-albedo-primary mt-2" onClick={onAskCreate}>
           New workspace
         </button>
-      </Modal>
+      </Window>
 
-      <Modal open={createOpen} title="New workspace" onClose={onCloseCreate}>
+      <Window className="albedo-workspace-create" open={createOpen} title="New workspace" onClose={onCloseCreate}>
         <label className="form-label" htmlFor="ws-name">
           Name
         </label>
@@ -183,9 +183,9 @@ export function WorkspaceModals({
         <button type="button" className="btn btn-sm btn-albedo-primary mt-3" onClick={() => void createWs()}>
           Create
         </button>
-      </Modal>
+      </Window>
 
-      <Modal open={sessionsOpen} title="Sessions" onClose={onCloseSessions}>
+      <Window className="albedo-sessions" open={sessionsOpen} title="Sessions" onClose={onCloseSessions}>
         <ul className="list-group albedo-ws-list">
           {sessions.map((session) => (
             <li
@@ -215,7 +215,7 @@ export function WorkspaceModals({
             Add
           </button>
         </div>
-      </Modal>
+      </Window>
     </>
   );
 }

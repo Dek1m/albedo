@@ -252,49 +252,94 @@ body {
   border-color: var(--accent);
 }
 
-/* ── Modal ─────────────────────────────────── */
+/* ── Window ────────────────────────────────── */
 
-.albedo-modal {
+.albedo-window {
+  position: fixed;
+  inset: 0;
   z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
-.albedo-modal-backdrop {
+.albedo-window-backdrop,
+.albedo-window-frame {
+  pointer-events: auto;
+}
+
+.albedo-window-backdrop {
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 55%);
-  animation: albedo-fade-in var(--dur) var(--ease);
 }
 
-.albedo-modal-dialog {
+.albedo-window-frame {
   max-width: min(480px, calc(100vw - 1.25rem));
   min-height: 320px;
   margin: 0.75rem auto;
-  animation: albedo-modal-in var(--dur) var(--ease);
 }
 
-.albedo-modal-drag {
-  cursor: grab;
-  user-select: none;
+.albedo-window-frame.is-centered {
+  position: relative;
+  margin: 0;
 }
 
-.albedo-modal-drag:active {
-  cursor: grabbing;
-}
-
-.albedo-modal-dialog .modal-content {
+.albedo-window-card {
   position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--bg-elevated, #2b2d31);
+  border: 1px solid var(--border, #3f4147);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.albedo-modal-dialog .modal-body {
+.albedo-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px solid var(--border, #3f4147);
+}
+
+.albedo-window.is-dragging .albedo-window-head {
+  cursor: grabbing;
+}
+
+.albedo-window-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.albedo-window-close {
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: 0;
+  background:
+    linear-gradient(45deg, transparent 46%, var(--text-muted) 46%, var(--text-muted) 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, var(--text-muted) 46%, var(--text-muted) 54%, transparent 54%);
+  opacity: 0.7;
+}
+
+.albedo-window-close:hover {
+  opacity: 1;
+}
+
+.albedo-window-body {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  padding: 0.85rem;
 }
 
-.albedo-modal-resize {
+.albedo-window-resize {
   position: absolute;
   right: 2px;
   bottom: 2px;
@@ -304,7 +349,7 @@ body {
   z-index: 2;
 }
 
-.albedo-modal-resize::after {
+.albedo-window-resize::after {
   content: '';
   position: absolute;
   right: 3px;
@@ -313,6 +358,35 @@ body {
   height: 8px;
   border-right: 2px solid var(--text-muted);
   border-bottom: 2px solid var(--text-muted);
+}
+
+.albedo-window.is-open .albedo-window-backdrop {
+  animation: albedo-fade-in var(--dur) var(--ease);
+}
+
+.albedo-window.is-open .albedo-window-frame:not(.is-centered) {
+  animation: albedo-window-in var(--dur) var(--ease);
+}
+
+.albedo-window.is-open .albedo-window-frame.is-centered {
+  animation: albedo-window-in var(--dur) var(--ease);
+}
+
+.albedo-window.is-leaving .albedo-window-backdrop {
+  animation: albedo-fade-out var(--dur) var(--ease) forwards;
+}
+
+.albedo-window.is-leaving .albedo-window-frame:not(.is-centered) {
+  animation: albedo-window-out var(--dur) var(--ease) forwards;
+}
+
+.albedo-window.is-leaving .albedo-window-frame.is-centered {
+  animation: albedo-window-out var(--dur) var(--ease) forwards;
+}
+
+.albedo-window:not(.is-dragging):not(.is-resizing) .albedo-window-frame {
+  transition: left var(--dur) var(--ease), top var(--dur) var(--ease),
+    width var(--dur) var(--ease), height var(--dur) var(--ease);
 }
 
 .albedo-settings-form {
@@ -642,7 +716,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  animation: albedo-modal-in var(--dur) var(--ease);
+  animation: albedo-window-in var(--dur) var(--ease);
 }
 
 .albedo-confirm-title {
@@ -696,7 +770,7 @@ body {
   }
 }
 
-@keyframes albedo-modal-in {
+@keyframes albedo-window-in {
   from {
     opacity: 0;
     transform: scale(0.98);
@@ -704,6 +778,48 @@ body {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes albedo-window-in-centered {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+@keyframes albedo-window-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes albedo-window-out-centered {
+  from {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.98);
+  }
+}
+
+@keyframes albedo-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
@@ -788,6 +904,83 @@ body {
 .albedo-ws-drop-item:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+.albedo-ai-menu {
+  position: relative;
+}
+
+.albedo-ai-menu-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+}
+
+.albedo-ai-menu-btn:hover {
+  color: var(--text-primary);
+}
+
+.albedo-ai-drop {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  min-width: 180px;
+  padding: 0.25rem 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  animation: albedo-rise 160ms var(--ease);
+}
+
+.albedo-ai-drop-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.albedo-ai-drop-item:hover {
+  background: var(--bg-hover);
+}
+
+.albedo-ai-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.albedo-ai-choice-btn {
+  text-align: left;
+}
+
+.albedo-ai-muted {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.albedo-ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.albedo-ai-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
 }
 
 .albedo-ws-list .list-group-item {
@@ -1446,9 +1639,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .albedo-modal-dialog,
-  .albedo-modal-backdrop,
-  .albedo-confirm-dialog,
+  .albedo-window-frame,
+  .albedo-window-backdrop,
+  .albedo-confirm,
   .albedo-toast {
     animation: none;
   }

@@ -7,7 +7,7 @@ import { humanMessage } from '../../api/errors';
 import type { WsNode } from '../../domain/workspace';
 import { toast } from '../../shared/toast/toastStore';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
-import { Modal } from '../../shared/ui/Modal';
+import { Window } from '../../shared/ui/Window';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
@@ -238,14 +238,14 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
         />
       ) : null}
       <div className="albedo-sidebar-resizer" onMouseDown={onDrag} />
-      <Modal open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
+      <Window className="albedo-folders" open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
         <HomeTree
           selected={picked}
           workspaceId={active.id}
           onToggle={(rel) => void toggleLive(rel)}
           onTrashed={() => void reload()}
         />
-      </Modal>
+      </Window>
       <ConfirmDialog
         open={Boolean(ask)}
         title="Удалить"
