@@ -31,9 +31,12 @@ export function DirectoryGroupPane({
   const [editRoleId, setEditRoleId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const creating = mode.kind === 'create';
+  const groupId = mode.kind === 'edit' ? mode.groupId : null;
+  const ouId = mode.kind === 'create' ? mode.ouId : null;
+  const groupName = mode.kind === 'edit' ? mode.name : '';
 
   useEffect(() => {
-    setName(mode.kind === 'edit' ? mode.name : '');
+    setName(groupName);
     setDescription('');
     setAssigned([]);
     setChosen(null);
@@ -46,10 +49,10 @@ export function DirectoryGroupPane({
           return;
         }
         setCatalog(roles);
-        if (mode.kind !== 'edit') {
+        if (!groupId) {
           return;
         }
-        const ids = new Set(await adminApi.listGroupRoles(mode.groupId));
+        const ids = new Set(await adminApi.listGroupRoles(groupId));
         if (!cancelled) {
           setAssigned(roles.filter((role) => ids.has(role.id)));
         }
@@ -62,7 +65,7 @@ export function DirectoryGroupPane({
     return () => {
       cancelled = true;
     };
-  }, [mode]);
+  }, [groupId, ouId, groupName]);
 
   const available = catalog.filter((role) => !assigned.some((item) => item.id === role.id));
 
@@ -146,21 +149,17 @@ export function DirectoryGroupPane({
         <label className="form-label" htmlFor="albedo-dir-group-roles">
           Roles
         </label>
-        <select
-          id="albedo-dir-group-roles"
-          className="form-select form-select-sm"
-          multiple
-          size={8}
-          disabled={!canEdit || saving}
-          value={chosen ? [chosen] : []}
-          onChange={(event) => setChosen(event.target.value || null)}
-        >
+        <ul id="albedo-dir-group-roles" className="list-group albedo-admin-listbox">
           {assigned.map((role) => (
-            <option key={role.id} value={role.id}>
+            <li
+              key={role.id}
+              className={`list-group-item${chosen === role.id ? ' active' : ''}`}
+              onClick={() => setChosen(role.id)}
+            >
               {role.name}
-            </option>
+            </li>
           ))}
-        </select>
+        </ul>
         <div className="albedo-member-actions">
           <button
             type="button"

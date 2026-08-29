@@ -39,17 +39,18 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
   const [saving, setSaving] = useState(false);
   const creating = mode.kind === 'create';
   const userId = mode.kind === 'edit' ? mode.userId : null;
+  const ouId = mode.kind === 'create' ? mode.ouId : null;
 
   useEffect(() => {
     setPane('general');
     setDraft(EMPTY_DRAFT);
     setPassword('');
-    if (mode.kind !== 'edit') {
+    if (!userId) {
       return;
     }
     let cancelled = false;
     void adminApi
-      .getDirectoryUser(mode.userId)
+      .getDirectoryUser(userId)
       .then((user) => {
         if (!cancelled && user) {
           setDraft(fromUser(user));
@@ -63,7 +64,7 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
     return () => {
       cancelled = true;
     };
-  }, [mode]);
+  }, [userId, ouId]);
 
   const patch = (next: Partial<DirectoryUserDraft>): void => {
     setDraft((current) => ({ ...current, ...next }));

@@ -150,6 +150,19 @@ textarea.form-control {
   }
 }
 
+.list-group {
+  --bs-list-group-color: var(--text-primary);
+  --bs-list-group-bg: var(--bg-surface);
+  --bs-list-group-border-color: var(--border);
+  --bs-list-group-action-hover-color: var(--text-primary);
+  --bs-list-group-action-hover-bg: var(--bg-hover);
+  --bs-list-group-action-active-color: var(--text-primary);
+  --bs-list-group-action-active-bg: var(--bg-active);
+  --bs-list-group-active-color: var(--text-primary);
+  --bs-list-group-active-bg: var(--bg-active);
+  --bs-list-group-active-border-color: var(--accent);
+}
+
 .list-group-item {
   background-color: var(--bg-surface);
   color: var(--text-primary);
@@ -167,8 +180,31 @@ textarea.form-control {
   }
 
   &.active {
-    background-color: var(--accent-bg);
+    z-index: 1;
+    background-color: var(--bg-active);
     border-color: var(--accent);
+    color: var(--text-primary);
+  }
+}
+
+select[multiple],
+select[multiple].form-select,
+select[multiple].form-select-sm {
+  background-image: none;
+  padding-right: 0.35rem;
+  color-scheme: dark;
+
+  option {
+    padding: 0.2rem 0.35rem;
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+  }
+
+  option:checked,
+  option:focus,
+  option:hover {
+    background-color: var(--bg-active);
+    background-image: linear-gradient(var(--bg-active), var(--bg-active));
     color: var(--text-primary);
   }
 }

@@ -1572,8 +1572,9 @@ body {
   color: var(--text-secondary);
 }
 
-.albedo-admin-role-list {
-  max-height: 9rem;
+.albedo-admin-role-list,
+.albedo-admin-listbox {
+  max-height: 14rem;
   overflow: auto;
 }
 

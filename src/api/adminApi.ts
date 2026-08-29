@@ -467,8 +467,9 @@ export const adminApi = {
     });
   },
 
-  async cloneRole(sourceId: string, name: string): Promise<void> {
-    await apiClient.call('admin', 'clone_role', { source_id: sourceId, name });
+  async cloneRole(sourceId: string, name: string): Promise<string | null> {
+    const raw = await apiClient.call<unknown>('admin', 'clone_role', { source_id: sourceId, name });
+    return createdId(raw);
   },
 
   async listRoleGroups(roleId: string): Promise<string[]> {
