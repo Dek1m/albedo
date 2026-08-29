@@ -5,7 +5,7 @@ export async function syncLlmCatalogOnAuth(): Promise<void> {
   try {
     const vanished = await llmApi.refreshCatalog();
     for (const item of vanished) {
-      toast(`Модель пропала: ${item.providerName} / ${item.displayName}`);
+      toast(`Model gone: ${item.providerName} / ${item.displayName}`);
     }
   } catch {
     /* нет llm:config или сеть — не блокируем вход */

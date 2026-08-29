@@ -27,7 +27,7 @@ export function MemberOfTab(): ReactElement | null {
   const mineIds = new Set((mine.data ?? []).map((group) => group.id));
   const available = (catalog.data ?? []).filter((group) => !mineIds.has(group.id));
   const selectedGroup: Group | undefined = (mine.data ?? []).find((group) => group.id === selected);
-  const blocked = selectedGroup ? removeBlockedReason(profile, selectedGroup) : 'Выберите группу';
+  const blocked = selectedGroup ? removeBlockedReason(profile, selectedGroup) : 'Select a group';
   const allowRemove = Boolean(selectedGroup && canRemove(profile, selectedGroup));
 
   const refresh = async (): Promise<void> => {

@@ -167,11 +167,11 @@ export function WorkspaceModals({
                 }
                 const overlap = folderOverlap(rel, next);
                 if (overlap === 'nested') {
-                  toast('Эта папка уже внутри добавленной в проект');
+                  toast('This folder is already inside one added to the project');
                   return prev;
                 }
                 if (overlap === 'contains') {
-                  toast('В проекте уже есть вложенная папка — сначала убери её');
+                  toast('The project already has a nested folder — remove it first');
                   return prev;
                 }
                 next.add(rel);

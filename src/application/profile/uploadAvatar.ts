@@ -6,10 +6,10 @@ const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export async function uploadAvatar(file: File): Promise<void> {
   if (!ALLOWED.has(file.type) || file.type === 'image/svg+xml') {
-    throw new Error('Допустимы JPEG, PNG или WebP');
+    throw new Error('JPEG, PNG or WebP only');
   }
   if (file.size > MAX_BYTES) {
-    throw new Error('Аватар должен быть ≤ 256 КиБ');
+    throw new Error('Avatar must be 256 KiB or smaller');
   }
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);

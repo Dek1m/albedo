@@ -26,10 +26,10 @@ export function asGroupId(value: string): GroupId {
 
 export function removeBlockedReason(user: User, group: Group): string | null {
   if (group.isPrimary) {
-    return 'Нельзя снять primary-группу';
+    return 'Cannot remove the primary group';
   }
   if (group.name === 'Administrators' && user.isBootstrapAdmin) {
-    return 'Нельзя снять Administrators с bootstrap-админа';
+    return 'Cannot remove Administrators from the bootstrap admin';
   }
   return null;
 }

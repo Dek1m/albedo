@@ -5,8 +5,8 @@ import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Введите имя пользователя'),
-  password: z.string().min(1, 'Введите пароль'),
+  username: z.string().min(1, 'Enter username'),
+  password: z.string().min(1, 'Enter password'),
 });
 
 export type LoginValues = z.infer<typeof loginSchema>;

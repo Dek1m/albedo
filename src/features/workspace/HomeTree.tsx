@@ -58,9 +58,9 @@ export function folderOverlap(rel: string, linked: Iterable<string>): FolderOver
 }
 
 const OVERLAP_TOAST: Record<FolderOverlap, string> = {
-  linked: 'Уже в workspace',
-  nested: 'Эта папка уже внутри добавленной в проект',
-  contains: 'В проекте уже есть вложенная папка — сначала убери её',
+  linked: 'Already in workspace',
+  nested: 'This folder is already inside one added to the project',
+  contains: 'The project already has a nested folder — remove it first',
 };
 
 function formatSize(bytes: number): string {
@@ -142,11 +142,11 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     try {
       rel = applyAddress();
     } catch {
-      toast('Некорректный путь');
+      toast('Invalid path');
       return;
     }
     if (!rel) {
-      toast('Выбери папку или файл');
+      toast('Select a folder or file');
       return;
     }
     const created = newSegments(rel, selected);
@@ -213,7 +213,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
       try {
         applyAddress();
       } catch {
-        toast('Некорректный путь');
+        toast('Invalid path');
       }
     }
   };

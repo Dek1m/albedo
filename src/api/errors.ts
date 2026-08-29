@@ -19,28 +19,67 @@ export function toApiError(error: EnvelopeError): ApiError {
 }
 
 const CODE_MESSAGES: Record<string, string> = {
-  INVALID_CREDENTIALS: 'Неверный логин или пароль',
-  ACCOUNT_LOCKED: 'Аккаунт временно заблокирован. Попробуйте позже',
-  ACCOUNT_DISABLED: 'Аккаунт отключён',
-  AUTH_ERROR: 'Ошибка авторизации',
-  PAYLOAD_NOT_SERIALIZABLE: 'Некорректный запрос',
-  TIMEOUT: 'Сервис не успел ответить, попробуй ещё раз',
-  METHOD_NOT_FOUND: 'Метод не найден',
-  WORKER_NOT_READY: 'Сервис временно недоступен',
-  ALREADY_NESTED: 'Эта папка уже внутри добавленной в проект',
-  CONTAINS_LINKED: 'В проекте уже есть вложенная папка — сначала убери её',
-  ALREADY_LINKED: 'Уже в workspace',
-  ALREADY_EXISTS: 'Такой файл уже есть',
+  INVALID_CREDENTIALS: 'Wrong username or password',
+  ACCOUNT_LOCKED: 'Account is temporarily locked. Try again later',
+  LOCKED: 'Account is temporarily locked. Try again later',
+  ACCOUNT_DISABLED: 'Account is disabled',
+  DISABLED: 'Account is disabled',
+  REUSE_DETECTED: 'Session was reused. Sign in again',
+  AUTH_ERROR: 'Sign-in failed',
+  PAYLOAD_NOT_SERIALIZABLE: 'Invalid request',
+  TIMEOUT: 'The service did not respond. Try again',
+  METHOD_NOT_FOUND: 'Method not found',
+  WORKER_NOT_READY: 'Service is temporarily unavailable',
+  FORBIDDEN: 'You do not have permission',
+  PERMISSION_DENIED: 'You do not have permission',
+  NOT_FOUND: 'Not found',
+  INVALID_NAME: 'Invalid name',
   WRONG_URL: 'Wrong URL',
+  PATH_ESCAPE: 'Invalid path',
+  FS_ERROR: 'File operation failed',
+  WORKSPACE_ERROR: 'Workspace operation failed',
+  BOOTSTRAP_DONE: 'Setup is already complete',
+  CSRF_HEADER: 'Request blocked. Reload the page',
+  ORIGIN_MISMATCH: 'Request blocked. Reload the page',
+  ALREADY_NESTED: 'This folder is already inside one added to the project',
+  CONTAINS_LINKED: 'The project already has a nested folder — remove it first',
+  ALREADY_LINKED: 'Already in workspace',
+  ALREADY_EXISTS: 'This file already exists',
   DUPLICATE_NAME: 'A provider with this name already exists',
+  TASK_FAILED: 'Something went wrong',
+  LLM_ERROR: 'Something went wrong',
+  UPSTREAM: 'Wrong URL',
 };
+
+function looksTechnical(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    t.includes('task_failed') ||
+    t.includes('internal error') ||
+    t.includes('duplicate key') ||
+    t.includes('violates unique') ||
+    t.includes('traceback') ||
+    t.includes('psycopg') ||
+    t.includes('detail:')
+  );
+}
 
 export function humanMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    return CODE_MESSAGES[error.code] ?? error.message;
+    const mapped = CODE_MESSAGES[error.code];
+    if (mapped) {
+      return mapped;
+    }
+    if (error.message && !looksTechnical(error.message)) {
+      return error.message;
+    }
+    return 'Something went wrong';
   }
   if (error instanceof Error) {
-    return error.message;
+    if (error.message && !looksTechnical(error.message)) {
+      return error.message;
+    }
+    return 'Something went wrong';
   }
-  return 'Неизвестная ошибка';
+  return 'Something went wrong';
 }

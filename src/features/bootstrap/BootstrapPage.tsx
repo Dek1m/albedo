@@ -9,8 +9,8 @@ import { toast } from '../../shared/toast/toastStore';
 import { ToastView } from '../../shared/toast/ToastView';
 
 const bootstrapSchema = z.object({
-  username: z.string().min(1, 'Введите имя пользователя'),
-  password: z.string().min(1, 'Введите пароль'),
+  username: z.string().min(1, 'Enter username'),
+  password: z.string().min(1, 'Enter password'),
   email: z.string().optional(),
 });
 
