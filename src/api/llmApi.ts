@@ -160,6 +160,14 @@ export const llmApi = {
     description?: string;
     baseUrl?: string;
     apiKey?: string;
+    models?: {
+      model_id: string;
+      display_name: string;
+      enabled: boolean;
+      supports_reasoning?: boolean;
+      reasoning_enabled?: boolean;
+      reasoning_effort?: string | null;
+    }[];
   }): Promise<LlmProvider> {
     const dto = await apiClient.call<ProviderDto>('llm', 'update_provider', {
       provider_id: input.providerId,
@@ -167,6 +175,7 @@ export const llmApi = {
       description: input.description ?? null,
       base_url: input.baseUrl ?? null,
       api_key: input.apiKey ?? null,
+      models: input.models ?? [],
     });
     return mapProvider(dto);
   },
