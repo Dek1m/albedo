@@ -9,6 +9,7 @@ describe('DomainUserMenu', () => {
       id: 'u1',
       username: 'alice',
       workspaceDb: 'belle_workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      email: '',
     });
     expect(items[0]?.id).toBe('rename');
     expect(items[0]?.disabled).toBeFalsy();

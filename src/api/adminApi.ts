@@ -1,3 +1,4 @@
+import type { ChipDisplayMode } from '../domain/chipDisplayMode';
 import { apiClient } from './client';
 
 export type OuKind = 'folder' | 'users_bin' | 'groups_bin';
@@ -6,6 +7,43 @@ export interface DomainUser {
   id: string;
   username: string;
   workspaceDb: string;
+  email: string;
+}
+
+export interface AdminCaps {
+  usersUpdate: boolean;
+}
+
+export interface DirectoryUser {
+  id: string;
+  username: string;
+  nickname: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  email: string;
+  phone: string;
+  userPrompt: string;
+  chipDisplayMode: ChipDisplayMode;
+}
+
+export interface DirectoryUserPatch {
+  username: string;
+  nickname: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  email: string;
+  phone: string;
+  userPrompt: string;
+  chipDisplayMode: ChipDisplayMode;
+}
+
+export interface UserGroup {
+  id: string;
+  name: string;
+  isBuiltin: boolean;
+  isPrimary: boolean;
 }
 
 export interface DomainGroup {
@@ -121,7 +159,95 @@ function mapUser(raw: unknown): DomainUser | null {
     id,
     username,
     workspaceDb: pickStr(row, 'workspace_db', 'workspaceDb'),
+    email: pickStr(row, 'email'),
   };
+}
+
+function pickChip(row: Record<string, unknown>): ChipDisplayMode {
+  return pickStr(row, 'chip_display_mode', 'chipDisplayMode') === 'full_name' ? 'full_name' : 'nickname';
+}
+
+function mapCaps(raw: unknown): AdminCaps {
+  const row = asRecord(raw);
+  return { usersUpdate: row ? pickBool(row, 'users_update', 'usersUpdate') : false };
+}
+
+function mapDirectoryUser(raw: unknown): DirectoryUser | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const nested = asRecord(row.user) ?? asRecord(row.profile);
+  const src = nested ?? row;
+  const id = pickStr(src, 'id', 'user_id', 'userId');
+  const username = pickStr(src, 'username', 'name');
+  if (!id || !username) {
+    return null;
+  }
+  return {
+    id,
+    username,
+    nickname: pickStr(src, 'nickname'),
+    firstName: pickStr(src, 'first_name', 'firstName'),
+    lastName: pickStr(src, 'last_name', 'lastName'),
+    dateOfBirth: pickStr(src, 'date_of_birth', 'dateOfBirth'),
+    email: pickStr(src, 'email'),
+    phone: pickStr(src, 'phone'),
+    userPrompt: pickStr(src, 'user_prompt', 'userPrompt'),
+    chipDisplayMode: pickChip(src),
+  };
+}
+
+function mapUserGroup(raw: unknown): UserGroup | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const id = pickStr(row, 'id', 'group_id', 'groupId');
+  const name = pickStr(row, 'name');
+  if (!id || !name) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    isBuiltin: pickBool(row, 'is_builtin', 'isBuiltin'),
+    isPrimary: pickBool(row, 'is_primary', 'isPrimary'),
+  };
+}
+
+function mapIdList(raw: unknown, ...keys: string[]): string[] {
+  const list = Array.isArray(raw) ? raw : pickList(asRecord(raw) ?? {}, ...keys);
+  const ids: string[] = [];
+  for (const item of list) {
+    if (typeof item === 'string' && item) {
+      ids.push(item);
+      continue;
+    }
+    const row = asRecord(item);
+    if (!row) {
+      continue;
+    }
+    if (row.assigned === false) {
+      continue;
+    }
+    const id = pickStr(row, 'id', 'group_id', 'groupId');
+    if (id) {
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+function createdId(raw: unknown): string | null {
+  if (typeof raw === 'string' && raw) {
+    return raw;
+  }
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  return pickStr(row, 'id', 'user_id', 'userId') || null;
 }
 
 function mapGroup(raw: unknown): DomainGroup | null {
@@ -237,6 +363,11 @@ function mapRole(raw: unknown): AdminRole | null {
 }
 
 export const adminApi = {
+  async caps(): Promise<AdminCaps> {
+    const raw = await apiClient.call<unknown>('admin', 'caps', {});
+    return mapCaps(raw);
+  },
+
   async domainTree(): Promise<DomainOu[]> {
     const raw = await apiClient.call<unknown>('admin', 'domain_tree', {});
     return normalizeDomainTree(raw);
@@ -255,13 +386,40 @@ export const adminApi = {
     password: string;
     email?: string;
     ouId?: string;
-  }): Promise<void> {
-    await apiClient.call('admin', 'create_user_in_ou', {
+  }): Promise<string | null> {
+    const raw = await apiClient.call<unknown>('admin', 'create_user_in_ou', {
       username: input.username,
       password: input.password,
       email: input.email ?? null,
       ou_id: input.ouId ?? null,
     });
+    return createdId(raw);
+  },
+
+  async getDirectoryUser(userId: string): Promise<DirectoryUser | null> {
+    const raw = await apiClient.call<unknown>('admin', 'get_directory_user', { user_id: userId });
+    return mapDirectoryUser(raw);
+  },
+
+  async updateDirectoryUser(userId: string, patch: DirectoryUserPatch): Promise<void> {
+    await apiClient.call('admin', 'update_directory_user', {
+      user_id: userId,
+      username: patch.username,
+      nickname: patch.nickname,
+      first_name: patch.firstName,
+      last_name: patch.lastName,
+      date_of_birth: patch.dateOfBirth || null,
+      email: patch.email,
+      phone: patch.phone,
+      user_prompt: patch.userPrompt,
+      chip_display_mode: patch.chipDisplayMode,
+    });
+  },
+
+  async listUserGroups(userId: string): Promise<UserGroup[]> {
+    const raw = await apiClient.call<unknown>('admin', 'list_user_groups', { user_id: userId });
+    const list = Array.isArray(raw) ? raw : pickList(asRecord(raw) ?? {}, 'items', 'groups');
+    return list.map(mapUserGroup).filter((group): group is UserGroup => group !== null);
   },
 
   async createGroupInOu(name: string, ouId?: string, description?: string): Promise<void> {
@@ -295,5 +453,22 @@ export const adminApi = {
       role_id: roleId,
       capability_mask: capabilityMask,
     });
+  },
+
+  async cloneRole(source: string, name: string): Promise<void> {
+    await apiClient.call('admin', 'clone_role', { source, name });
+  },
+
+  async listGroupRoles(roleId: string): Promise<string[]> {
+    const raw = await apiClient.call<unknown>('admin', 'list_group_roles', { role_id: roleId });
+    return mapIdList(raw, 'items', 'groups', 'group_ids', 'groupIds');
+  },
+
+  async assignGroupRole(groupId: string, roleId: string): Promise<void> {
+    await apiClient.call('admin', 'assign_group_role', { group_id: groupId, role_id: roleId });
+  },
+
+  async removeGroupRole(groupId: string, roleId: string): Promise<void> {
+    await apiClient.call('admin', 'remove_group_role', { group_id: groupId, role_id: roleId });
   },
 };

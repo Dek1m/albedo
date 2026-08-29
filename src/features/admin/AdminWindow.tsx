@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
+import { adminApi } from '../../api/adminApi';
+import type { AdminCaps } from '../../api/adminApi';
+import { useAuthStore } from '../../auth/AuthStore';
 import { Window } from '../../shared/ui/Window';
 import { DomainTab } from './DomainTab';
 import { RolesTab } from './RolesTab';
+import { isUserAdmin } from './userAdmin';
 
 type AdminTab = 'domain' | 'roles';
 
@@ -13,11 +17,37 @@ interface AdminWindowProps {
 
 export function AdminWindow({ open, onClose }: AdminWindowProps): ReactElement {
   const [tab, setTab] = useState<AdminTab>('domain');
+  const [caps, setCaps] = useState<AdminCaps | null>(null);
+  const profile = useAuthStore((state) => state.profile);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    let cancelled = false;
+    void adminApi
+      .caps()
+      .then((value) => {
+        if (!cancelled) {
+          setCaps(value);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCaps({ usersUpdate: false });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const close = (): void => {
     setTab('domain');
     onClose();
   };
+
+  const userAdmin = isUserAdmin(caps, profile);
 
   return (
     <Window className="albedo-admin" windowId="albedo-admin" open={open} title="Admin Panel" onClose={close}>
@@ -41,7 +71,7 @@ export function AdminWindow({ open, onClose }: AdminWindowProps): ReactElement {
           </button>
         </li>
       </ul>
-      {tab === 'domain' ? <DomainTab visible={open} /> : <RolesTab visible={open} />}
+      {tab === 'domain' ? <DomainTab visible={open} userAdmin={userAdmin} /> : <RolesTab visible={open} />}
     </Window>
   );
 }

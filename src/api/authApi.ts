@@ -130,11 +130,17 @@ export const authApi = {
     return result.items.map(toGroup);
   },
 
-  addToGroup(groupId: string): Promise<unknown> {
-    return apiClient.call('auth', 'add_user_to_group', { group_id: groupId });
+  addToGroup(groupId: string, userId?: string): Promise<unknown> {
+    return apiClient.call('auth', 'add_user_to_group', {
+      group_id: groupId,
+      ...(userId ? { user_id: userId } : {}),
+    });
   },
 
-  removeFromGroup(groupId: string): Promise<unknown> {
-    return apiClient.call('auth', 'remove_user_from_group', { group_id: groupId });
+  removeFromGroup(groupId: string, userId?: string): Promise<unknown> {
+    return apiClient.call('auth', 'remove_user_from_group', {
+      group_id: groupId,
+      ...(userId ? { user_id: userId } : {}),
+    });
   },
 };

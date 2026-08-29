@@ -1451,6 +1451,28 @@ body {
   flex: 1;
 }
 
+.albedo-admin-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.albedo-admin-search .bi-search {
+  left: 0.55rem;
+}
+
+.albedo-admin-search .form-select {
+  width: 7.5rem;
+  flex-shrink: 0;
+  margin-left: 1.6rem;
+}
+
+.albedo-admin-search .form-control {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0.5rem;
+}
+
 .albedo-admin-split {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.3fr);
@@ -1475,6 +1497,52 @@ body {
 .albedo-admin-people .table {
   margin: 0;
   color: var(--text-primary);
+}
+
+.albedo-admin-people .table th,
+.albedo-admin-people .table td {
+  border-color: var(--border);
+  vertical-align: middle;
+}
+
+.albedo-admin-people .table tbody tr {
+  cursor: pointer;
+}
+
+.albedo-admin-people .table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.albedo-admin-people .table tbody tr.is-selected {
+  background: var(--bg-active);
+}
+
+.albedo-tree-item.is-focused,
+.albedo-tree-item.active {
+  background: var(--bg-hover);
+  border-radius: 6px;
+}
+
+.albedo-admin-role-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.albedo-admin-role-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 9rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.55rem;
+}
+
+.albedo-admin-role-groups-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 
 .albedo-admin-role-list {

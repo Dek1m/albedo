@@ -2,8 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { adminApi } from '../../api/adminApi';
 import type { AdminRole } from '../../api/adminApi';
+import { authApi } from '../../api/authApi';
 import { humanMessage } from '../../api/errors';
+import type { Group } from '../../domain/group';
 import { toast } from '../../shared/toast/toastStore';
+import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 
 interface RolesTabProps {
@@ -36,6 +39,9 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
   const [draftMask, setDraftMask] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [assigned, setAssigned] = useState<Set<string>>(new Set());
+  const [cloneOpen, setCloneOpen] = useState(false);
 
   const applyRoles = (items: AdminRole[], current: string | null): void => {
     setRoles(items);
@@ -78,9 +84,94 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
     };
   }, [visible]);
 
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+    let cancelled = false;
+    void authApi
+      .listGroups()
+      .then((items) => {
+        if (!cancelled) {
+          setGroups(items);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          toast(humanMessage(err));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setAssigned(new Set());
+      return;
+    }
+    let cancelled = false;
+    void adminApi
+      .listGroupRoles(selectedId)
+      .then((ids) => {
+        if (!cancelled) {
+          setAssigned(new Set(ids));
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          toast(humanMessage(err));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
+
   const selected = roles.find((role) => role.id === selectedId) ?? null;
   const locked = selected ? isSystemAdmin(selected) : true;
   const mask = draftMask ?? selected?.capabilityMask ?? 0;
+
+  const clone = async (name: string): Promise<void> => {
+    if (!selected) {
+      return;
+    }
+    try {
+      await adminApi.cloneRole(selected.id, name);
+      toast('Saved', 'ok');
+      await load(null);
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const toggleGroup = async (groupId: string): Promise<void> => {
+    if (!selected) {
+      return;
+    }
+    const next = !assigned.has(groupId);
+    setAssigned((current) => {
+      const copy = new Set(current);
+      if (next) {
+        copy.add(groupId);
+      } else {
+        copy.delete(groupId);
+      }
+      return copy;
+    });
+    try {
+      if (next) {
+        await adminApi.assignGroupRole(groupId, selected.id);
+      } else {
+        await adminApi.removeGroupRole(groupId, selected.id);
+      }
+    } catch (err) {
+      toast(humanMessage(err));
+      const ids = await adminApi.listGroupRoles(selected.id).catch(() => [...assigned]);
+      setAssigned(new Set(ids));
+    }
+  };
 
   const save = async (): Promise<void> => {
     if (!selected || locked) {
@@ -104,6 +195,16 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
 
   return (
     <div className="albedo-admin-roles">
+      <div className="albedo-admin-role-toolbar">
+        <button
+          type="button"
+          className="btn btn-sm btn-albedo-primary"
+          disabled={!selected}
+          onClick={() => setCloneOpen(true)}
+        >
+          New from selected
+        </button>
+      </div>
       <ul className="list-group albedo-admin-role-list">
         {roles.map((role) => (
           <li
@@ -149,6 +250,24 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
           {selected.permissions.length ? (
             <p className="albedo-ai-muted">{selected.permissions.join(', ')}</p>
           ) : null}
+          <div className="albedo-admin-role-groups">
+            <p className="albedo-admin-role-groups-title">Groups</p>
+            {groups.map((group) => {
+              const id = `role-group-${selected.id}-${group.id}`;
+              return (
+                <label key={group.id} className="form-check albedo-settings-check" htmlFor={id}>
+                  <input
+                    id={id}
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={assigned.has(group.id)}
+                    onChange={() => void toggleGroup(group.id)}
+                  />
+                  <span className="form-check-label">{group.name}</span>
+                </label>
+              );
+            })}
+          </div>
           <div className="albedo-confirm-actions">
             <button
               type="button"
@@ -163,6 +282,16 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
       ) : (
         <p className="albedo-ai-muted">No roles</p>
       )}
+      <PromptDialog
+        open={cloneOpen}
+        title="New from selected"
+        label="Name"
+        confirmLabel="Create"
+        onClose={() => setCloneOpen(false)}
+        onSubmit={(name) => {
+          void clone(name);
+        }}
+      />
     </div>
   );
 }

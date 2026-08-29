@@ -1,27 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import { adminApi } from '../../api/adminApi';
 import type { DomainGroup, DomainOu, DomainUser } from '../../api/adminApi';
-import { humanMessage } from '../../api/errors';
+import { ApiError, humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ContextMenu } from '../../shared/ui/ContextMenu';
 import type { MenuItem } from '../../shared/ui/ContextMenu';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { SkeletonList } from '../../shared/ui/Skeleton';
-import { CreateUserDialog } from './CreateUserDialog';
 import { DomainFolderMenu } from './context/DomainFolderMenu';
 import { DomainGroupMenu } from './context/DomainGroupMenu';
 import { DomainUserMenu } from './context/DomainUserMenu';
+import { DirectoryUserWindow } from './DirectoryUserWindow';
+import type { DirectoryUserMode } from './DirectoryUserWindow';
+import { DomainSearch } from './DomainSearch';
+import { DomainTable } from './DomainTable';
+import { DomainTree } from './DomainTree';
+import type { DirectoryRow, DomainFilterField } from './domainRows';
+import { visibleRows } from './domainRows';
 
 interface DomainTabProps {
   visible: boolean;
-}
-
-interface UserRow {
-  id: string;
-  username: string;
-  ouPath: string;
-  workspaceDb: string;
+  userAdmin: boolean;
 }
 
 interface Ctx {
@@ -30,37 +30,15 @@ interface Ctx {
   items: MenuItem[];
 }
 
-function collectUsers(nodes: DomainOu[], prefix: string[] = []): UserRow[] {
-  const rows: UserRow[] = [];
-  for (const node of nodes) {
-    const path = [...prefix, node.name];
-    const ouPath = path.join(' / ');
-    for (const user of node.users) {
-      rows.push({
-        id: user.id,
-        username: user.username,
-        ouPath,
-        workspaceDb: user.workspaceDb,
-      });
-    }
-    rows.push(...collectUsers(node.children, path));
-  }
-  return rows;
-}
+const FORBIDDEN = new ApiError('FORBIDDEN', 'You do not have permission', undefined, 403);
 
-function ouIcon(kind: DomainOu['kind']): string {
-  if (kind === 'users_bin') {
-    return 'bi-people';
-  }
-  if (kind === 'groups_bin') {
-    return 'bi-collection';
-  }
-  return 'bi-folder';
-}
-
-export function DomainTab({ visible }: DomainTabProps): ReactElement {
+export function DomainTab({ visible, userAdmin }: DomainTabProps): ReactElement {
   const [tree, setTree] = useState<DomainOu[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOuId, setSelectedOuId] = useState<string | null>(null);
+  const [field, setField] = useState<DomainFilterField>('any');
+  const [query, setQuery] = useState('');
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ctx, setCtx] = useState<Ctx | null>(null);
   const [prompt, setPrompt] = useState<{
     title: string;
@@ -68,11 +46,13 @@ export function DomainTab({ visible }: DomainTabProps): ReactElement {
     confirmLabel: string;
     submit: (value: string) => Promise<void>;
   } | null>(null);
-  const [createUserOu, setCreateUserOu] = useState<DomainOu | null>(null);
+  const [editor, setEditor] = useState<DirectoryUserMode | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
-      setTree(await adminApi.domainTree());
+      const data = await adminApi.domainTree();
+      setTree(data);
+      setSelectedOuId((current) => current ?? data[0]?.id ?? null);
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -88,6 +68,7 @@ export function DomainTab({ visible }: DomainTabProps): ReactElement {
       .then((data) => {
         if (!cancelled) {
           setTree(data);
+          setSelectedOuId((current) => current ?? data[0]?.id ?? null);
         }
       })
       .catch((err: unknown) => {
@@ -114,6 +95,14 @@ export function DomainTab({ visible }: DomainTabProps): ReactElement {
     }
   };
 
+  const openUser = (userId: string): void => {
+    if (!userAdmin) {
+      toast(humanMessage(FORBIDDEN));
+      return;
+    }
+    setEditor({ kind: 'edit', userId });
+  };
+
   const folderMenu = new DomainFolderMenu({
     onNewFolder: (ou) =>
       setPrompt({
@@ -122,7 +111,7 @@ export function DomainTab({ visible }: DomainTabProps): ReactElement {
         confirmLabel: 'Create',
         submit: (name) => run(() => adminApi.createOu(ou.id, name)),
       }),
-    onCreateUser: (ou) => setCreateUserOu(ou),
+    onCreateUser: (ou) => setEditor({ kind: 'create', ouId: ou.id }),
     onCreateGroup: (ou) =>
       setPrompt({
         title: 'Создать группу',
@@ -165,7 +154,46 @@ export function DomainTab({ visible }: DomainTabProps): ReactElement {
     setCtx({ x: event.clientX, y: event.clientY, items });
   };
 
-  const users = collectUsers(tree);
+  const rows = useMemo(
+    () => visibleRows(tree, selectedOuId, field, query),
+    [tree, selectedOuId, field, query],
+  );
+
+  const onActivate = (row: DirectoryRow): void => {
+    if (row.type === 'ou') {
+      setSelectedOuId(row.id);
+      return;
+    }
+    if (row.type === 'user') {
+      openUser(row.id);
+    }
+  };
+
+  const toggle = (key: string): void => {
+    setPicked((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const toggleAll = (keys: string[], on: boolean): void => {
+    setPicked((current) => {
+      const next = new Set(current);
+      for (const key of keys) {
+        if (on) {
+          next.add(key);
+        } else {
+          next.delete(key);
+        }
+      }
+      return next;
+    });
+  };
 
   if (loading && !tree.length) {
     return <SkeletonList rows={8} />;
@@ -173,39 +201,28 @@ export function DomainTab({ visible }: DomainTabProps): ReactElement {
 
   return (
     <div className="albedo-admin-domain">
+      <DomainSearch field={field} query={query} onField={setField} onQuery={setQuery} />
       <div className="albedo-admin-split">
         <div className="albedo-admin-tree">
-          <ul className="albedo-tree">
-            {tree.map((node) => (
-              <OuNode
-                key={node.id}
-                node={node}
-                onFolder={(event, ou) => openMenu(event, folderMenu.items(ou))}
-                onUser={(event, user) => openMenu(event, userMenu.items(user))}
-                onGroup={(event, group) => openMenu(event, groupMenu.items(group))}
-              />
-            ))}
-          </ul>
+          <DomainTree
+            tree={tree}
+            selectedOuId={selectedOuId}
+            onSelectOu={(ou) => setSelectedOuId(ou.id)}
+            onSelectUser={(user: DomainUser) => openUser(user.id)}
+            onFolderMenu={(event, ou) => openMenu(event, folderMenu.items(ou))}
+            onUserMenu={(event, user) => openMenu(event, userMenu.items(user))}
+            onGroupMenu={(event, group: DomainGroup) => openMenu(event, groupMenu.items(group))}
+          />
         </div>
         <div className="albedo-admin-people">
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>username</th>
-                <th>OU path</th>
-                <th>workspace_db</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.username}</td>
-                  <td>{row.ouPath}</td>
-                  <td>{row.workspaceDb}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DomainTable
+            rows={rows}
+            selected={picked}
+            onToggle={toggle}
+            onToggleAll={toggleAll}
+            onActivate={onActivate}
+            readOnly={!userAdmin}
+          />
         </div>
       </div>
       {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
@@ -221,68 +238,7 @@ export function DomainTab({ visible }: DomainTabProps): ReactElement {
           }
         }}
       />
-      <CreateUserDialog
-        open={Boolean(createUserOu)}
-        onClose={() => setCreateUserOu(null)}
-        onSubmit={({ username, password }) => {
-          const ou = createUserOu;
-          if (!ou) {
-            return;
-          }
-          void run(() => adminApi.createUserInOu({ username, password, ouId: ou.id }));
-        }}
-      />
+      <DirectoryUserWindow mode={editor} onClose={() => setEditor(null)} onSaved={() => void load()} />
     </div>
-  );
-}
-
-interface OuNodeProps {
-  node: DomainOu;
-  onFolder: (event: ReactMouseEvent, ou: DomainOu) => void;
-  onUser: (event: ReactMouseEvent, user: DomainUser) => void;
-  onGroup: (event: ReactMouseEvent, group: DomainGroup) => void;
-}
-
-function OuNode({ node, onFolder, onUser, onGroup }: OuNodeProps): ReactElement {
-  const [open, setOpen] = useState(true);
-  return (
-    <li>
-      <div className="albedo-tree-item" onContextMenu={(event) => onFolder(event, node)}>
-        <i
-          className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'} albedo-tree-chevron`}
-          onClick={(event) => {
-            event.stopPropagation();
-            setOpen((value) => !value);
-          }}
-        />
-        <i className={`bi ${ouIcon(node.kind)}`} />
-        <span className="albedo-tree-name">{node.name}</span>
-      </div>
-      {open ? (
-        <ul className="albedo-tree albedo-tree-nested">
-          {node.children.map((child) => (
-            <OuNode key={child.id} node={child} onFolder={onFolder} onUser={onUser} onGroup={onGroup} />
-          ))}
-          {node.users.map((user) => (
-            <li key={`u-${user.id}`}>
-              <div className="albedo-tree-item" onContextMenu={(event) => onUser(event, user)}>
-                <span className="albedo-tree-chevron" />
-                <i className="bi bi-person" />
-                <span className="albedo-tree-name">{user.username}</span>
-              </div>
-            </li>
-          ))}
-          {node.groups.map((group) => (
-            <li key={`g-${group.id}`}>
-              <div className="albedo-tree-item" onContextMenu={(event) => onGroup(event, group)}>
-                <span className="albedo-tree-chevron" />
-                <i className="bi bi-people-fill" />
-                <span className="albedo-tree-name">{group.name}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </li>
   );
 }
