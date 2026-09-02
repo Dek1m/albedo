@@ -2,10 +2,11 @@
 
 | Поле | Значение |
 |------|----------|
-| **Статус** | accepted (решения утверждены Мастером 02.09.2026; schema review Норы внесено в ревизию 3; security review Литы внесено в ревизию 4 — до шага 5 плана) |
-| **Дата** | 2026-09-02 (ревизия 4 — security review Литы) |
+| **Статус** | accepted (решения утверждены Мастером 02.09.2026; schema review Норы внесено в ревизию 3; security review Литы внесено в ревизию 4 — до шага 5 плана; ревизия 5 — решения Мастера по шарингу: объект шаринга — только прилинкованные корни воркспейсов. Trash-PENDING закрыт. Открытым остаётся единственный вопрос: находка 1, unix_name — решение Мастера не принято, в ревизию не вносится) |
+| **Дата** | 2026-09-02 (ревизия 5 — shareable roots, вердикты Мастера, вечер) |
 | **Ревизия 3** | schema review Норы (02.09.2026): `created_by` → ON DELETE SET NULL (FK-блокер), `nodes_owner_path_idx` вместо одиночного owner, `acl_node_idx` вычеркнут, ленивая регистрация узла — один CTE-стейтмент |
-| **Ревизия 4** | security review Литы (02.09.2026): находки 2 (ACL только на каноническом rel, §5.4), 3 (проверка каждого затрагиваемого пути, §4), 6 (приватностная цена Everyone + confirm, §5.5), 7 (rate-limit/квоты, §10), 11 (Trash-семантика — PENDING, §5.2/§5.4); фронт-требования — ADR-003 §9.3. **PENDING MASTER**: находка 1 (unix_name) и вердикт по находке 11 (Trash-семантика) ожидают решения Мастера |
+| **Ревизия 4** | security review Литы (02.09.2026): находки 2 (ACL только на каноническом rel, §5.4), 3 (проверка каждого затрагиваемого пути, §4), 6 (приватностная цена Everyone + confirm, §5.5), 7 (rate-limit/квоты, §10), 11 (Trash-семантика — PENDING, §5.2/§5.4); фронт-требования — ADR-003 §9.3. **PENDING MASTER**: находка 1 (unix_name) и вердикт по находке 11 (Trash-семантика) ожидают решения Мастера *(пометка историческая: находка 11 закрыта в ревизии 5)* |
+| **Ревизия 5** | решения Мастера (02.09.2026, вечер): **шаринг только линкованных корней** (§5.6) — объект шаринга только пути под прилинкованными корнями воркспейсов владельца, `rel=''` и пути вне линковок → `NOT_SHAREABLE`, грант на `''` не существует как класс; механизм реестра корней — колонка `is_shareable_root` в `fs.nodes` + внутренние методы `register/unregister_shareable_root` через разрешённую стрелку workspace→fs (§3, §5.6); гранты при отлинковке не отзываются (§5.6, решение по умолчанию); **Trash-PENDING (находка 11) закрыт**: грант на `''` упразднён → Trash недоступен получателям автоматически, отсекатель в машине §5.4 не нужен; тесты Катерины — кейсы `NOT_SHAREABLE` (§17) |
 | **Авторы** | Эна (architect) |
 | **Проекты** | mia-fs (новый репо → `mia/modules/fs`), mia-workspace, mia-worker, belle, albedo |
 | **Связанные** | `albedo/plan-admin.md` (фаза 2, инварианты §2, приёмка §7); belle ADR-003 (named pools, user-БД), ADR-004 (apply один раз под lock); albedo ADR-001 (транспорт, cookies); **albedo ADR-003 (notification — уведомления о share_add)**; гранулы: переименование homes→fs, инвариант «FS только через state.fs» |
@@ -28,6 +29,12 @@ FS-домен выносится из workspace в отдельный модул
 6. Повторный `share_add` — идемпотентен: существующие гранты игнорируются (`skipped[]`), новые добавляются (`added[]`); уведомления — только по `added[]` (ADR-003).
 7. `resolve_entities` — три статуса: `resolved | unresolved | ambiguous` с candidates-списком.
 8. Кириллица в именах — подтверждена.
+
+**Вердикты Мастера, ревизия 5 (02.09.2026, вечер):**
+
+9. **Шаринг только линкованных корней.** Объект шаринга — ТОЛЬКО пути под прилинкованными корнями воркспейсов владельца (включая сам корень линковки; вложенные папки прилинкованного корня — можно). Шаринг `rel=''` (весь home) и любых путей вне линковок — запрещён, доменная ошибка **`NOT_SHAREABLE`**. Грант на `''` не существует как класс.
+10. Реестр корней — **колонка `is_shareable_root` в `fs.nodes`** (не отдельная таблица): узел и так регистрируется лениво, флаг живёт с узлом, проверка `share_add` без лишнего JOIN (§5.6).
+11. **Trash-семантика (находка 11, ревизия 4) — закрыта.** С упразднением гранта на `''` Trash недоступен получателям автоматически: отсекатель `NOT LIKE 'Trash/%'` в машине §5.4 не вводится. Единственный путь Trash к получателю — владелец сам слинковал Trash-подпуть в воркспейс и сам расшарил (осознанное действие, машина ACL работает как для любого пути).
 
 ---
 
@@ -116,10 +123,20 @@ class FsAccessor:
 
     # Статистика (для refresh_home-фасада workspace)
     def folder_stats(path: Path) -> tuple[int, int]
+
+    # Shareable roots (ревизия 5) — ВНУТРЕННИЕ методы для workspace,
+    # НЕ api=True RPC; контракт §5.6
+    def register_shareable_root(user: str, rel: str) -> dict
+      # exists-проверка + ленивая регистрация узла c is_shareable_root=TRUE
+      # → {node_uuid, path, already_registered: bool}; путь не существует → NOT_FOUND
+    def unregister_shareable_root(user: str, rel: str) -> dict
+      # флаг снимается (идемпотентный no-op, если узла/флага нет);
+      # гранты НЕ отзываются (политика §5.6) → {node_uuid, unmarked: bool}
 ```
 
 - **Домен fs — один пользователь-владелец за вызов.** Первый аргумент `user` — uid (uuid) или username; accessor нормализует через `auth` и `unix_name`. Никаких «путей вне песочницы» через state.fs — инвариант плана (§2: «имя fs, но скоуп — домашние каталоги»).
-- `workspace.link_home_path` = `state.fs.exists(uid, rel)` (fs) + `ws.link_path` (membership). fs только подтверждает существование пути — ровно как требует план.
+- `workspace.link_home_path` = `state.fs.register_shareable_root(uid, rel)` (fs) + `ws.link_path` (membership). fs подтверждает существование пути И регистрирует shareable-корень одним вызовом (ревизия 5; до ревизии 5 здесь планировался чистый `exists` — проверка существования не потеряна, она внутри `register_shareable_root`). Стрелка workspace→fs сохраняется: проверка кода (`mia/modules/workspace/provider.py:330` → `facade.link_path`, где сейчас прямые `join_rel`/`exists` из workspace/fs.py) подтверждает — точка встраивания одна, `facade.link_path` остаётся membership-логикой, диск проверяет fs.
+- `workspace.unlink_home_path` = `state.fs.unregister_shareable_root(uid, rel)` + `ws.unlink_path` (membership). Судьба грантов — политика §5.6 (не отзываются).
 - `workspace.delete_workspace`: если root вне `home_root` — `state.fs.remove_outside_home`; внутри — диск не трогаем (сегодняшнее поведение сохранено).
 
 ### 3.1. Как workspace использует state.fs (тонкий фасад)
@@ -133,7 +150,8 @@ provider.trash_home_path     = state.fs.trash(...)         + ws._unlink_prefix(.
 provider.refresh_home        = state.fs.folder_stats(...)  + ws.touch_folder_stats(...)
 provider.list_git            = state.fs.git_repos(...)
 provider.ensure_home         = state.fs.ensure_home(...)
-provider.link_home_path      = state.fs.exists(...)        + ws.link_path(...)
+provider.link_home_path      = state.fs.register_shareable_root(...)  + ws.link_path(...)
+provider.unlink_home_path    = state.fs.unregister_shareable_root(...) + ws.unlink_path(...)
 provider._home(uid)          = state.fs.ensure_home(uid)   # провижининг больше не в workspace
 ```
 
@@ -186,29 +204,37 @@ provider._home(uid)          = state.fs.ensure_home(uid)   # провижини�
 
 ```sql
 CREATE TABLE IF NOT EXISTS fs.nodes (
-    node_uuid     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    path          TEXT NOT NULL,               -- относительный путь от ~ владельца; '' = весь home
-    node_type     VARCHAR(4) NOT NULL CHECK (node_type IN ('dir', 'file')),
-    display_name  TEXT NOT NULL,               -- basename(path); переименование обновляет
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at    TIMESTAMPTZ                  -- NOT NULL = живой; заполнено = «удалён» (trash)
+    node_uuid          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    path               TEXT NOT NULL,               -- относительный путь от ~ владельца
+    node_type          VARCHAR(4) NOT NULL CHECK (node_type IN ('dir', 'file')),
+    display_name       TEXT NOT NULL,               -- basename(path); переименование обновляет
+    is_shareable_root  BOOLEAN NOT NULL DEFAULT FALSE,  -- ревизия 5: узел = корень линковки workspace
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at         TIMESTAMPTZ                  -- NOT NULL = живой; заполнено = «удалён» (trash)
 );
 -- один живой узел на путь владельца (ленивая регистрация идемпотентна)
 CREATE UNIQUE INDEX IF NOT EXISTS nodes_owner_path_live_idx
     ON fs.nodes (owner_user_id, path) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS nodes_owner_path_idx ON fs.nodes (owner_user_id, path);
+-- проверка share_add: живые корни линковки владельца (ревизия 5, §5.6)
+CREATE INDEX IF NOT EXISTS nodes_shareable_roots_idx
+    ON fs.nodes (owner_user_id, path) WHERE deleted_at IS NULL AND is_shareable_root;
 ```
 
-**Ленивая регистрация:** реестр заполняется не заранее, а в момент первого `share_add` по пути — одним CTE (ревью Норы, 02.09.2026: не INSERT+SELECT двумя стейтментами; предикат `WHERE deleted_at IS NULL` в conflict_target обязателен — без него PG не найдёт арбитра частичного индекса):
+> **Если `001_nodes.sql` уже накатан в среде** (шаг 1 плана выполнен до ревизии 5) — идемпотентная догонка: `ALTER TABLE fs.nodes ADD COLUMN IF NOT EXISTS is_shareable_root BOOLEAN NOT NULL DEFAULT FALSE;` + `CREATE INDEX IF NOT EXISTS nodes_shareable_roots_idx ...`. Свежие развёртывания получают колонку из `001_nodes.sql` сразу.
+
+**Ленивая регистрация:** реестр заполняется не заранее, а в момент первой нужды — одним CTE (ревью Норы, 02.09.2026: не INSERT+SELECT двумя стейтментами; предикат `WHERE deleted_at IS NULL` в conflict_target обязателен — без него PG не найдёт арбитра частичного индекса). Ревизия 5 добавляет второй триггер регистрации: **`register_shareable_root` при `workspace.link_home_path`** — узел корня линковки создаётся сразу с `is_shareable_root = TRUE`; `share_add` по вложенному пути регистрирует узел с `FALSE` (флаг есть только у корней линковки — шарить вложенное разрешает prefix-матч от корня, §5.6):
 
 ```
 WITH ins AS (
-    INSERT INTO fs.nodes (owner_user_id, path, node_type, display_name)
-    VALUES (:owner, :path, :type, basename(:path))
+    INSERT INTO fs.nodes (owner_user_id, path, node_type, display_name, is_shareable_root)
+    VALUES (:owner, :path, :type, basename(:path), :as_shareable_root)
     ON CONFLICT (owner_user_id, path) WHERE deleted_at IS NULL
-    DO NOTHING RETURNING node_uuid)
+    DO UPDATE SET is_shareable_root = fs.nodes.is_shareable_root OR :as_shareable_root,
+                  updated_at = NOW()
+    RETURNING node_uuid)
 SELECT node_uuid FROM ins
 UNION ALL
 SELECT node_uuid FROM fs.nodes
@@ -216,7 +242,9 @@ WHERE owner_user_id = :owner AND path = :path AND deleted_at IS NULL
 LIMIT 1;
 ```
 
-До первого шаринга строк нет — реестр не фонит; наличие папки на диске не требует записи в `fs.nodes`.
+(`DO UPDATE` делает вызов идемпотентным и повторной линковкой того же пути возвращает флаг в `TRUE` после отлинковки; `share_add` передаёт `as_shareable_root = FALSE` — UPDATE-ветка тогда не меняет флаг и остаётся чистым «подтверди узел».)
+
+До первой линковки/шаринга строк нет — реестр не фонит; наличие папки на диске не требует записи в `fs.nodes`. `path = ''` в реестре **не возникает никогда**: `register_shareable_root` и `share_add` отвергают пустой rel доменной ошибкой `NOT_SHAREABLE` (§5.6).
 
 **Инвариант источников истины:** диск — истина о существовании контента; `fs.nodes` — истина о том, «кто что расшаривал». Расхождение (реестр жив, папка стёрта внешним процессом) даёт честный `NOT_FOUND` на дисковой операции — гранты при этом не чистятся (см. §19, риск 8).
 
@@ -270,7 +298,7 @@ CREATE INDEX IF NOT EXISTS acl_grantee_group_idx ON fs.acl (grantee_group_id);
 2. Гранты при trash **не удаляются** — они «спят» вместе с узлом; восстановление оживляет доступ без перевыдачи.
 3. Дисковый путь в Trash не резолвится для получателя вдвойне: (а) `deleted_at` фильтрует узел, (б) путь `Trash/belle/{utc}/...` не матчится prefix-правилом гранта.
 4. `fs.rename/move/trash` выполняют UPDATE реестра в той же воркерной задаче после успешной дисковой операции; ошибка UPDATE реестра → лог `fs_nodes_update_failed` (WARN) + метрика — диск не откатывается, рассинхронизация самотерапевтична следующей операцией владельца над тем же путём.
-5. **[PENDING MASTER: Trash-семантика]** (security review Литы, находка 11, низкий приоритет — ожидает вердикта Мастера). Спорный вопрос: распространяется ли грант на `''` (весь home) на содержимое `Trash/` для получателей (не-OWNER)? **Рекомендуемый вариант — НЕ распространяется**: корзина содержит копии удалённых файлов, и грант «на весь home» не должен открывать чтение чужих удалённых артефактов (в т.ч. восстановленных из старых шарингов). Отсекатель — в машине §5.4: `AND n.path NOT LIKE 'Trash/%'` (точная SQL-форма дизъюнкта `n.path = ''` в шаге 3a уточняется вердиктом — см. примечание в §5.4). **Альтернатива (текущая де-факто):** грант на весь home включает Trash — грантополучатель с editor видит и корзину. До вердикта реализация шага 3a не меняется.
+5. **Trash-семантика — ЗАКРЫТО решением Мастера (ревизия 5; была находка 11 Литы, ревизия 4).** Вердикт: **Trash недоступен получателям автоматически, отсекатель не нужен.** Раньше вопрос существовал из-за гранта на `''` (весь home), чей дизъюнкт `OR n.path = ''` в машине §5.4 протаскивал `Trash/`-пути. Ревизия 5 упраздняет грант на `''` как класс (§5.6) — вектор исчез вместе с ним: линковка воркспейса на `Trash/...` не происходит в обычном потоке, а линковка+шаринг Trash-подпути вручную — осознанное действие владельца, которое машина ACL обрабатывает как любой другой путь. Дизъюнкт `OR n.path = ''` удалён из шага 3a (мёртвая ветка несуществующего класса грантов).
 
 ### 5.3. Уровни доступа
 
@@ -312,7 +340,9 @@ CREATE INDEX IF NOT EXISTS acl_grantee_group_idx ON fs.acl (grantee_group_id);
         FROM fs.nodes n
         WHERE n.owner_user_id = :owner_uid
           AND n.deleted_at IS NULL
-          AND (:rel = n.path OR :rel LIKE n.path || '/%' OR n.path = '');
+          AND (:rel = n.path OR :rel LIKE n.path || '/%');
+      -- (ревизия 5: дизъюнкт OR n.path = '' удалён — грант на '' не существует
+      --  как класс, см. §5.6; ветка была бы мёртвым кодом)
    b) самый специфичный грант по uuid кандидатов:
         SELECT n.path, a.level
         FROM fs.acl a
@@ -334,19 +364,16 @@ CREATE INDEX IF NOT EXISTS acl_grantee_group_idx ON fs.acl (grantee_group_id);
    уже отсёк узел на шаге 3a)
 ```
 
-> **[PENDING MASTER: Trash-семантика]** (находка 11; правило 5 §5.2). Предложение Литы:
-> отсекатель `AND n.path NOT LIKE 'Trash/%'` в шаге 3a — грант на `''` (весь home) не
-> распространяется на `Trash/` для не-OWNER. **Внимание при имплементации:** дословный
-> `AND` к WHERE отсекает только узлы, *расшаренные из* `Trash/...`, но дизъюнкт `OR n.path = ''`
-> по-прежнему матчит целевой путь в Trash через узел «весь home». Точная SQL-форма
-> рекомендуемого варианта — заменить дизъюнкт на `OR (n.path = '' AND :rel NOT LIKE 'Trash/%')`.
-> До вердикта Мастера шаг 3a остаётся в текущем виде (грант на весь home включает Trash).
+> **Trash-семантика — закрыта (ревизия 5, бывшая находка 11).** Отсекатель
+> `AND n.path NOT LIKE 'Trash/%'` НЕ вводится: Trash недоступен получателям
+> автоматически, потому что гранта на `''` (единственного, кто матчил `Trash/...`
+> через дизъюнкт) больше не существует как класс — §5.6. Детали — правило 5 §5.2.
 
 **Почему гибрид, честно:**
 
 - **identity (`node_uuid`) даёт стабильность**: переименовал/перенос владелец — гранты и имя у получателя целы (§5.2).
 - **path-prefix даёт наследование вниз**: грант на папку-uuid покрывает всё поддерево, включая **созданные после шаринга** вложенные пути — их не существует в реестре, и префикс-матч по `path` родителя ловит их без регистрации каждого потомка. Альтернатива «материализовать узел на каждый потомок» отклонена: взрыв строк реестра и запись в БД на каждый `mkdir` владельца.
-- Порядок специфичности — по длине `path` узла (как раньше по `base_path`): грант на `projects/x` перекрывает грант на `''` (весь home) для поддерева.
+- Порядок специфичности — по длине `path` узла (как раньше по `base_path`): грант на вложенную папку `projects/x` перекрывает грант на корень линковки `projects` для её поддерева. *(Ревизия 5: прежний пример «перекрывает грант на `''`» снят — такого гранта больше не существует, §5.6.)*
 
 Свойства машины:
 
@@ -380,7 +407,100 @@ CREATE INDEX IF NOT EXISTS acl_grantee_group_idx ON fs.acl (grantee_group_id);
 
 Диалог обязателен перед отправкой `share_add` с Everyone-грантом; отказ в confirm = этот получатель не добавляется (остальные выбранные grantees обрабатываются штатно).
 
-### 5.6. Где живёт и почему
+### 5.6. Shareable roots — шаринг только прилинкованных корней (вердикт Мастера, ревизия 5)
+
+**Норма.** Объект шаринга — ТОЛЬКО пути, лежащие под прилинкованными корнями воркспейсов владельца, **включая сам корень линковки** (шарить корень — можно; вложенные папки прилинкованного корня — можно). Шаринг всего остального — запрещён:
+
+| Попытка | Результат |
+|---------|-----------|
+| `share_add(rel='')` — весь home | **`NOT_SHAREABLE`** немедленно, до всякого поиска по реестру |
+| `share_add(rel)` — путь вне всех линковок владельца | **`NOT_SHAREABLE`** |
+| `share_add(rel)` — путь внутри прилинкованного корня (в т.ч. созданный после линковки) | разрешён (prefix-матч от корня) |
+| `share_add(rel == корень линковки)` | разрешён (точный матч) |
+
+Ошибка доменная: `FS_NOT_SHAREABLE` в envelope (транспортный HTTP остаётся 200, albedo ADR-001), security-событие **не** генерируется — это не атака, а легитимный отказ валидации владельца.
+
+**Почему норма именно такая.** Линковка в воркспейс — единственное место, где владелец осознанно объявляет «эта папка — часть моей публичной работы». Home целиком — свалка всего (черновики, Trash, служебное); расшарить его одной кнопкой — дыра в приватности (включая протечку в Trash — бывшая находка 11, §5.2). Превью шаринга в UI тоже честнее: Share-диалог открывается из дерева воркспейса, т.е. уже линкованного пути — пользователь физически не встретит кнопку, которая отвалится с `NOT_SHAREABLE`.
+
+#### 5.6.1. Механизм реестра корней — колонка `is_shareable_root` в `fs.nodes`
+
+**Выбрано: колонка в `fs.nodes`, не отдельная таблица `fs.shareable_roots`.**
+
+| Критерий | Колонка в `fs.nodes` ✅ | Отдельная таблица ❌ |
+|----------|------------------------|---------------------|
+| Синхронизация с узлом | Флаг живёт и умирает с узлом: `deleted_at` (trash), `path` (rename/move) обслуживают корень тем же механизмом §5.2 — ноль нового кода | Вторая сущность с собственным `path`, который надо обновлять параллельно узлу; два источника истины об одном объекте |
+| Проверка в `share_add` | Один запрос: `SELECT ... WHERE owner_user_id = :owner AND deleted_at IS NULL AND is_shareable_root` — prefix-матч по живым корням; частичный индекс `nodes_shareable_roots_idx` | Всегда JOIN `fs.shareable_roots × fs.nodes` — а узел всё равно нужен: гранты ссылаются на `node_uuid`, значит узел существует в обеих моделях |
+| Поведение при отлинковке | `UPDATE is_shareable_root = FALSE` — узел с грантами остаётся жить (политика §5.6.3) | DELETE строки корня при живом узле-носителе грантов — расщепление: «корня нет, узел есть» выражается двумя таблицами вместо одного флага |
+| Стоимость записи | `register_shareable_root` — тот же CTE §5.0 с `as_shareable_root = TRUE` | INSERT в дополнительную таблицу в той же транзакции |
+
+Таблица `fs.shareable_roots` рассматривалась и отклонена окончательно (см. §18): единственный её выигрыш — «чистая» семантика узла, оплаченная JOIN'ом в горячей проверке `share_add`, дублированием жизненного цикла и расщеплением identity. Склонность Мастера (колонка, меньше JOIN, флаг живёт с узлом) подтверждена анализом.
+
+**Инварианты флага:**
+
+- `is_shareable_root = TRUE` имеет **только узел самого корня линковки**; узлы вложенных расшаренных папок несут `FALSE` — право шарить вложенное каждый раз заново доказывается prefix-матчем от живого корня, а не наследуется флагом. Следствие: отлинковка корня мгновенно закрывает `share_add` на всю его бывшую территорию, включая ранее расшаренные вложенные пути (гранты при этом живут, §5.6.3).
+- Повторная линковка того же пути → CTE `DO UPDATE` возвращает флаг в `TRUE` — шаринг этой территории снова разрешается, идемпотентно.
+- Trash → `deleted_at` → корень выпадает из проверки `share_add` (живых корней нет → `NOT_SHAREABLE`), restore возвращает. Отдельного правила не нужно — работает общий жизненный цикл узла §5.2.
+
+#### 5.6.2. Контракты `register/unregister_shareable_root` (стрелка workspace → fs)
+
+fs → workspace запрещена (§2.2), поэтому registry живёт в fs и **вызывается workspace'ом** через разрешённую стрелку — на уже существующей точке касания. Проверка кода (02.09.2026): `workspace.provider.link_home_path` (provider.py:322) зовёт `ws.link_path(rel, create_missing=False)`, а проверку существования выполняет `facade.link_path` (facade.py:588: `join_rel` + `path.exists()` — сегодня прямые руки workspace на диск через свои `fs.py`/`homes.py`). После переноса (шаги 3–6 плана §17) диск из этого места трогает только `state.fs` — `register_shareable_root` встраивается ровно туда, где планировался `exists`, **одна стрелка сохраняется**:
+
+```
+provider.link_home_path   = state.fs.register_shareable_root(uid, rel)   # fs: exists + узел c флагом
+                          + ws.link_path(rel, create_missing=False)      # membership, без диска
+provider.unlink_home_path = state.fs.unregister_shareable_root(uid, rel) # fs: флаг снять
+                          + ws.unlink_path(rel)                          # membership
+```
+
+Контракт (внутренние методы `FsAccessor` для workspace, **НЕ `api=True` RPC** — с фронта их не существует, permission не проверяется: вызывает только доверенный workspace-фасад в том же процессе):
+
+```python
+def register_shareable_root(user: str, rel: str) -> dict:
+    """Регистрирует/подтверждает узел корня линковки в fs.nodes.
+    rel: канонический относительный путь от ~ владельца; '' → NOT_SHAREABLE.
+    Путь не существует на диске → NOT_FOUND (та же семантика, что у бывшего
+    state.fs.exists — линковка несуществующего пути по-прежнему невозможна).
+    Идемпотентен: узел есть → DO UPDATE (флаг OR TRUE); возвращает
+    {node_uuid, path, already_registered: bool}."""
+
+def unregister_shareable_root(user: str, rel: str) -> dict:
+    """Снимает is_shareable_root (UPDATE ... WHERE is_shareable_root).
+    Идемпотентный no-op, если узла/флага нет (отлинковка нелинкованного,
+    повторная отлинковка). Узел и гранты НЕ удаляются → {node_uuid, unmarked: bool}."""
+```
+
+Оба метода исполняются в теле воркерных задач workspace (`type="database"`), SQL — на воркере, инвариант плана не нарушен.
+
+#### 5.6.3. Валидация `share_add` и политика грантов при отлинковке
+
+**Валидация (до INSERT, в теле задачи `share_add`, после канонизации rel):**
+
+1. `rel == ''` → `NOT_SHAREABLE` немедленно (дешёвый early-return).
+2. Иначе — один запрос по живым корням владельца:
+
+```sql
+SELECT 1 FROM fs.nodes
+WHERE owner_user_id = :owner
+  AND deleted_at IS NULL
+  AND is_shareable_root
+  AND (:rel = path OR :rel LIKE path || '/%')
+LIMIT 1;
+-- нет строки → NOT_SHAREABLE
+```
+
+Запрос каноническим rel (аксиома §5.4 распространяется и сюда: валидация после `join_rel`-канонизации, сырая строка от клиента не матчится). Дальше — прежний поток `share_add` без изменений: ленивый CTE узла (`as_shareable_root = FALSE`), квота, INSERT `fs.acl`, уведомления.
+
+**`list_shared` — без изменений** (§9): он строится по узлам с грантами, а не по корням; `share_list`, `share_remove`, `resolve_entities` — без изменений.
+
+**ACL-машина доступа — без изменений** (§5.4): она и так работает по узлам/префиксам; корень линковки — просто узел с флагом, для получателя ничего не меняется.
+
+**Политика грантов при отлинковке — решение по умолчанию (Мастер может ужесточить):**
+
+> **Гранты НЕ отзываются.** `unregister_shareable_root` снимает только флаг: данные и узел живы, получатели сохраняют доступ (drill-down, read/write по своим уровням, узел в их `list_shared`). НО новые `share_add` на эту территорию — `NOT_SHAREABLE` (живых корней нет), вплоть до повторной линковки.
+
+Обоснование выбора «не отзывать»: (а) identity-модель держит доступ на узле, а не на административном состоянии воркспейса — прецедент «спящих» грантов уже есть (trash/restore, §5.2 правило 2); (б) отлинковка — проектная операция («эта папка больше не часть проекта»), а не санкция на получателей; отзыв доступа — явное `share_remove`, у него есть свой UI и своё уведомление-будущее; (в) тихий массовый DELETE грантов при отлинковке был бы неотслеживаемым для владельца — а он видит гранты в `share_list` и отзывает их адресно. Цена политики — грант может жить на пути, которого больше нет в воркспейсе владельца: та же полу-осознанная цена identity-модели, что и §19 риск 9.
+
+#### 5.6.4. Где живёт и почему
 
 `fs.nodes` и `fs.acl` — в **системной БД belle** (схема `fs`), не в user-БД `belle_workspace_{hex}`:
 
@@ -406,7 +526,7 @@ Unix-права (`own_path`, 0755/0644, chown) сохраняются как и�
 
 1. Диск и проект — разные агрегаты (этот ADR §2). Шаринг воркспейса утянул бы membership в fs или ACL в workspace — ровно то слияние, от которого мы уходим.
 2. Практически «расшарить проект» = расшарить его корневые папки. UI: ПКМ на папке в дереве → Share; папки прилинкованы к воркспейсу, поэтому проект расшаривается через свои корни. Membership воркспейса остаётся в workspace и не даёт доступа к диску.
-3. Узел-грант модель покрывает оба случая: одна папка (`reports`), поддерево (`projects/x`), весь home (`''`). ACL на «корневые папки воркспейса» — просто частный случай узла.
+3. Узел-грант модель покрывает оба случая: одна папка (`reports`), поддерево (`projects/x`), сам корень линковки. ACL на «корневые папки воркспейса» — просто частный случай узла. *Ревизия 5: «весь home» (`''`) из этого ряда исключён — шаринг только под линковками (§5.6).*
 4. Если позже понадобится нативный шаринг воркспейса (доступ к сессиям/нодам чужого воркспейса) — это отдельный ADR в домене workspace, ACL диска ему не мешает.
 
 ---
@@ -455,6 +575,9 @@ fs.share_add(path: str, grantees: [{type, id}], level: "viewer"|"editor")
   # ИДЕМПОТЕНТНО (вердикт №6): существующий грант на пару «узел+получатель»
   # ИГНОРИРУЕТСЯ (уровень не меняется; смена уровня = share_remove + share_add);
   # новые получатели добавляются. Самогрант → skipped(self_grant).
+  # ВАЛИДАЦИЯ ПУТИ до INSERT (ревизия 5, §5.6.3): канонический path должен
+  # быть равен или лежать под живым is_shareable_root-узлом владельца;
+  # path = '' → NOT_SHAREABLE немедленно. Иначе → NOT_SHAREABLE.
   # По added[] после коммита — вызов state.notification.send(...) (ADR-003,
   # graceful: сбой уведомлений не валит share_add)
 
@@ -694,6 +817,7 @@ sequenceDiagram
 
   UI->>B: fs.share_add(path, grantees[], level)
   B->>W: dispatch (io, fs:share)
+  W->>W: валидация §5.6.3: rel≠'' и под живым is_shareable_root → иначе NOT_SHAREABLE
   W->>W: ленивая регистрация fs.nodes (ON CONFLICT DO NOTHING)
   W->>W: INSERT fs.acl ON CONFLICT DO NOTHING → added[] / skipped[]
   W->>W: UPDATE fs.nodes.path при rename/move; deleted_at при trash
@@ -706,10 +830,10 @@ sequenceDiagram
 ```mermaid
 flowchart LR
   WP["workspace provider/facade<br/>list_home / link_home_path / trash_path / rewrite_after_move"]
-  FS["state.fs (FsAccessor)"]
+  FS["state.fs (FsAccessor)<br/>register/unregister_shareable_root"]
   H[("/home/{unix_name}")]
 
-  WP -->|"exists / list / trash / ensure_home"| FS
+  WP -->|"exists / list / trash / ensure_home<br/>link → register_shareable_root<br/>unlink → unregister_shareable_root"| FS
   FS --> H
   WP -->|"membership: linked_conflict,<br/>nodes, sessions"| UDB[("user-БД<br/>belle_workspace_{hex}")]
 ```
@@ -726,8 +850,8 @@ flowchart LR
 | 2. Миграция | `_MODULES` в `belle/migrate.py` += `fs` (после llm, до admin); env worker + fs | migrate зелёный, повторный — идемпотентный |
 | 3. Перенос чистых функций | `fs/paths.py` ← workspace/fs.py; `fs/homes.py` ← homes.py; `fs/gitinfo.py` ← gitinfo.py. Из workspace — удалить файлы, все импорты переключить на `state.fs` | workspace импортирует fs только через accessor; старые юнит-тесты диска зелёные |
 | 4. RPC | `fs/provider.py`: все `fs.*` из §4 с `@task(api=True, type="io", permission=..., timeout=...)`; `owner`-параметр пока валидируется как «только свой» (ACL на шаге 5) | list/create/trash/move/rename через fs.* работают с фронта |
-| 5. Шаринг | `fs/acl.py` (машина §5.4) + `FsRepository` (fs.nodes: ленивая регистрация, rename/move/trash/restore-обновления; fs.acl: added/skipped) + `share_list/add/remove`, `resolve_entities` (3 статуса), `list_shared`; включить `owner` во всех RPC; хук `state.notification.send` по `added[]` (ADR-003, graceful) | ПКМ→ACL-таблица→Add→поиск→уведомления работают end-to-end |
-| 6. Интеграция workspace | Финальная зачистка: provider.workspace — тонкий фасад (§3.1), удаление `_home`-самодеятельности, `grep` на отсутствие `ensure_unix_home` в mia-workspace | критерий приёмки фазы 2 закрыт |
+| 5. Шаринг | `fs/acl.py` (машина §5.4) + `FsRepository` (fs.nodes: ленивая регистрация, rename/move/trash/restore-обновления; fs.acl: added/skipped) + `share_list/add/remove`, `resolve_entities` (3 статуса), `list_shared`; **валидация shareable roots §5.6.3** (`rel=''` и пути вне живых корней → `NOT_SHAREABLE`, до INSERT); включить `owner` во всех RPC; хук `state.notification.send` по `added[]` (ADR-003, graceful) | ПКМ→ACL-таблица→Add→поиск→уведомления работают end-to-end; `NOT_SHAREABLE` на нелинкованные пути |
+| 6. Интеграция workspace | Финальная зачистка: provider.workspace — тонкий фасад (§3.1), **`link_home_path` → `register_shareable_root` + `link_path`, `unlink_home_path` → `unregister_shareable_root` + `unlink_path` (§5.6.2)**, удаление `_home`-самодеятельности, `grep` на отсутствие `ensure_unix_home` в mia-workspace | критерий приёмки фазы 2 закрыт; линковка регистрирует корень, отлинковка снимает флаг |
 
 Тесты Катерины (до любых UI-изменений):
 
@@ -739,8 +863,14 @@ flowchart LR
    - **Двухпутевые операции** (находка 3, ревизия 4): editor на `shared/` → `move("private/x", "shared")` → **`ACL_DENIED`** (проверяются ОБА пути: `private/x` без гранта, оба ≥ write, §4); симметрично — viewer на `shared/` → `move("shared/f", "private")` → `ACL_DENIED` по `private`.
 5. **Identity-модель**: rename расшаренной папки → получатель видит новое имя без перевыдачи; move — аналогично; trash → папка исчезает из `list_shared` и drill-down даёт NOT_FOUND; restore → снова видна; гранты переживают все четыре операции.
 6. **share_add идемпотентность**: повторный вызов с теми же grantees → `added: [], skipped: [...]`; смесь новых/старых → только новые в `added[]`; самогрант → `skipped(self_grant)`; disabled-получатель → `added` с `active: false`; уведомления уходят только по `added[]`.
+   - **Shareable roots (ревизия 5, §5.6)**:
+     - `share_add` на **нелинкованный** путь → **`FS_NOT_SHAREABLE`**, грант не создан, реестр не засорён;
+     - `share_add(rel='')` (весь home) → **`FS_NOT_SHAREABLE`** немедленно, даже если узел `''` кем-то насажен руками;
+     - сценарий **линковка → шаринг → отлинковка**: после `unlink_home_path` получатель **сохраняет доступ** (drill-down и `list_shared` работают — политика §5.6.3), повторный `share_add` на тот же путь → **`FS_NOT_SHAREABLE`** (живых корней нет); повторная линковка того же пути → `share_add` снова разрешён;
+     - `share_add` на вложенную папку прилинкованного корня → разрешён (prefix-матч), узел вложенного пути получает `is_shareable_root = FALSE`;
+     - `register/unregister_shareable_root` идемпотентны (повторная линковка/отлинковка нелинкованного — no-op без ошибок).
 7. **resolve_entities**: uuid/email/phone/username/groupname → resolved; мусор → unresolved; коллизия (username = groupname) → ambiguous с candidates; `;`-список > 50 → ошибка валидации.
-8. **Workspace-фасад**: `link_home_path` к несуществующему пути → NOT_FOUND (fs-проверка), к существующему → линкуется; move/rename переписывают ноды; trash отцепляет ноды; regression — полный прогон workspace-тестов.
+8. **Workspace-фасад**: `link_home_path` к несуществующему пути → NOT_FOUND (fs-проверка внутри `register_shareable_root`, §5.6.2), к существующему → линкуется и ставит `is_shareable_root = TRUE`; `unlink_home_path` снимает флаг, не трогая гранты; move/rename переписывают ноды; trash отцепляет ноды; regression — полный прогон workspace-тестов.
 9. **Миграция**: два параллельных migrate не ломают fs.nodes/fs.acl; worker-ребёнок не делает DDL (belle ADR-004 §13.1).
 
 ---
@@ -757,6 +887,9 @@ flowchart LR
 | **Полиморфный `grantee_id` без FK** | Теряется ссылочная целостность; два nullable FK + CHECK дают CASCADE и честные связи |
 | **Виртуальный общий корень** (`/shared/{owner}/...` в list_home) | Усложняет валидацию (какой root проверять?), путает дерево UI, ломает инвариант «песочница = моя ~/». Явный `owner`-параметр проще и безопаснее |
 | **Кеш ACL** | Отзыв доступа должен работать мгновенно; indexed lookup дешевле кеша с инвалидацией |
+| **Отдельная таблица `fs.shareable_roots`** (ревизия 5) | Узел для грантов всё равно живёт в `fs.nodes` — флаг на узле не плодит сущность; таблица дала бы JOIN в горячей проверке `share_add`, второй источник истины о `path` и расщепление «корня» и «узла-носителя грантов» при отлинковке (§5.6.1) |
+| **Грант на весь home (`''`)** | Отменён Мастером (ревизия 5): шаринг — только под линковками воркспейсов (§5.6); грант на `''` протекал в `Trash/` (находка 11) и открывал свалку черновиков одним кликом; дизъюнкт `OR n.path = ''` из машины §5.4 удалён как мёртвый |
+| **Отзыв грантов при отлинковке корня** | Решение по умолчанию — гранты живут (§5.6.3): отлинковка — проектная операция, а не санкция; тихий массовый DELETE неотслеживаем для владельца; отзыв — явное `share_remove`. Мастер может ужесточить |
 | **`fs:manage` (админ-обход песочницы)** | Отклонён окончательно (вердикт Мастера 02.09.2026): ни одна роль не даёт доступ к чужим нерасшаренным папкам; админ управляет людьми, не файлами |
 | **resolve через AuthProvider-порт** | Нет batch-API, асинхронный порт в sync-воркере = обёртки; read-only SELECT на auth.users/groups в v1 допустим, перенос в порт — при появлении batch-метода |
 | **Расширение `list_home` чужими папками** | Ломает модель песочницы и дерево; `list_shared` + `owner`-параметр честнее |
@@ -814,10 +947,14 @@ flowchart LR
 | 10 | Владелец удалил/переименовал расшаренную папку | 🔄 Изменено: identity-модель `fs.nodes` — rename/move обновляет `path` (доступ и имя сохраняются), trash → `deleted_at` (пропадает у получателя), restore → оживает; авто-чистка мёртвых узлов — волна N+1 | §5.0, §5.2 |
 | 11 | `owner`-параметр: username или uuid? | ✅ Принято: оба на входе, оба в ответах | §4 |
 | 12 | Кириллица в именах папок/файлов | ✅ Принято: разрешена | §10.1, §8.2 |
+| 13 | **(ревизия 5)** Шаринг всего home / путей вне линковок | 🔄 Изменено: объект шаринга — ТОЛЬКО пути под прилинкованными корнями воркспейсов (включая сам корень); `rel=''` и вне линковок → `NOT_SHAREABLE`; грант на `''` не существует как класс | §5.6, §8.1, §5.4 (дизъюнкт `''` удалён) |
+| 14 | **(ревизия 5)** Механизм реестра корней | ✅ Колонка `is_shareable_root` в `fs.nodes` (узел и так ленивый, флаг живёт с узлом, меньше JOIN) | §5.0, §5.6.1 |
+| 15 | **(ревизия 5)** Гранты при отлинковке корня | ✅ По умолчанию НЕ отзываются (данные и узел живы, получатели сохраняют доступ); новые `share_add` → `NOT_SHAREABLE`; Мастер может ужесточить | §5.6.3 |
+| 16 | **(ревизия 5)** Trash-семантика (находка 11, PENDING ревизии 4) | ✅ Закрыто: Trash недоступен получателям автоматически (гранта на `''` нет), отсекатель не нужен | §5.2 п. 5, §5.4 |
 
 Дополнительные вердикты этой ревизии (внесены в текст):
 
 - **Identity-based ACL вместо path-based** — главный архитектурный сдвиг (§5.0–§5.2).
 - **Админы без обхода**: ни одна роль не даёт доступ к чужим нерасшаренным; `fs:manage` отклонён окончательно (§5.7).
 - **`resolve_entities`**: статусы `resolved | unresolved | ambiguous` + candidates (§8.1, §8.2).
-- Статус документа: **accepted**; security review Литы внесено в ревизию 4 (находки 2, 3, 6, 7, 11 + фронт-требования ADR-003 §9.3); PENDING MASTER: находка 1 (unix_name) и вердикт по находке 11 (Trash-семантика).
+- Статус документа: **accepted**; security review Литы внесено в ревизию 4 (находки 2, 3, 6, 7, 11 + фронт-требования ADR-003 §9.3); ревизия 5 — вердикты Мастера: shareable roots (№13–15), Trash-семантика закрыта (№16). **PENDING MASTER остаётся ровно один: находка 1 (unix_name, вариант A/B) — решение не принято, в ревизию не вносится.**
