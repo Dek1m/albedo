@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
-import type { DomainGroup, DomainOu, DomainUser } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
+import type { DomainGroup, DomainOu, DomainUser } from '../../api/systemApi';
 import { ApiError, humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ContextMenu } from '../../shared/ui/ContextMenu';
@@ -72,7 +72,7 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
 
   const load = useCallback(async (): Promise<void> => {
     try {
-      const data = await adminApi.domainTree();
+      const data = await systemApi.domainTree();
       setTree(data);
       setSelection((current) => current ?? (data[0] ? { type: 'ou', id: data[0].id } : null));
     } catch (err) {
@@ -85,7 +85,7 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
       return;
     }
     let cancelled = false;
-    void adminApi
+    void systemApi
       .domainTree()
       .then((data) => {
         if (!cancelled) {
@@ -125,7 +125,7 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         title: 'New folder',
         label: 'Name',
         confirmLabel: 'Create',
-        submit: (name) => run(() => adminApi.createOu(ou.id, name)),
+        submit: (name) => run(() => systemApi.createOu(ou.id, name)),
       }),
     onCreateUser: (ou) => setSelection({ type: 'create-user', id: ou.id, ouId: ou.id }),
     onCreateGroup: (ou) => {
@@ -140,7 +140,7 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         title: 'Rename',
         label: 'Name',
         confirmLabel: 'Save',
-        submit: (name) => run(() => adminApi.renameOu(ou.id, name)),
+        submit: (name) => run(() => systemApi.renameOu(ou.id, name)),
       }),
     onDelete: (ou) => {
       const empty = !ou.children.length && !ou.users.length && !ou.groups.length;
@@ -148,7 +148,7 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         toast('Folder is not empty', 'error');
         return;
       }
-      void run(() => adminApi.deleteOu(ou.id));
+      void run(() => systemApi.deleteOu(ou.id));
     },
   });
 
@@ -158,13 +158,13 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         title: 'Rename',
         label: 'Username',
         confirmLabel: 'Save',
-        submit: (name) => run(() => adminApi.renameUser(user.id, name)),
+        submit: (name) => run(() => systemApi.renameUser(user.id, name)),
       }),
     onDelete: (user) =>
       setConfirm({
         title: 'Delete user',
         body: `Delete user ${user.username}? This cannot be undone.`,
-        submit: () => run(() => adminApi.deleteUser(user.id)),
+        submit: () => run(() => systemApi.deleteUser(user.id)),
       }),
   });
 
@@ -174,13 +174,13 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         title: 'Rename',
         label: 'Name',
         confirmLabel: 'Save',
-        submit: (name) => run(() => adminApi.renameGroup(group.id, name)),
+        submit: (name) => run(() => systemApi.renameGroup(group.id, name)),
       }),
     onDelete: (group) =>
       setConfirm({
         title: 'Delete group',
         body: `Delete group ${group.name}? This cannot be undone.`,
-        submit: () => run(() => adminApi.deleteGroup(group.id)),
+        submit: () => run(() => systemApi.deleteGroup(group.id)),
       }),
   });
 

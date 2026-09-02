@@ -78,6 +78,13 @@ export interface AdminRole {
   permissions: string[];
 }
 
+export interface SystemModule {
+  name: string;
+  version: string;
+  status: string;
+  source: string;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -354,6 +361,34 @@ function normalizeDomainTree(raw: unknown): DomainOu[] {
   return [];
 }
 
+function mapModule(raw: unknown): SystemModule | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const name = pickStr(row, 'name');
+  if (!name) {
+    return null;
+  }
+  return {
+    name,
+    version: pickStr(row, 'version'),
+    status: pickStr(row, 'status'),
+    source: pickStr(row, 'source'),
+  };
+}
+
+function mapPrefKey(raw: unknown): string | null {
+  if (typeof raw === 'string' && raw) {
+    return raw;
+  }
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  return pickStr(row, 'key') || null;
+}
+
 function mapRole(raw: unknown): AdminRole | null {
   const row = asRecord(raw);
   if (!row) {
@@ -375,35 +410,35 @@ function mapRole(raw: unknown): AdminRole | null {
   };
 }
 
-export const adminApi = {
+export const systemApi = {
   async caps(): Promise<AdminCaps> {
-    const raw = await apiClient.call<unknown>('admin', 'caps', {});
+    const raw = await apiClient.call<unknown>('system', 'caps', {});
     return mapCaps(raw);
   },
 
   async domainTree(): Promise<DomainOu[]> {
-    const raw = await apiClient.call<unknown>('admin', 'domain_tree', {});
+    const raw = await apiClient.call<unknown>('system', 'domain_tree', {});
     return normalizeDomainTree(raw);
   },
 
   async createOu(parentId: string, name: string): Promise<void> {
-    await apiClient.call('admin', 'create_ou', { parent_id: parentId, name });
+    await apiClient.call('system', 'create_ou', { parent_id: parentId, name });
   },
 
   async renameOu(ouId: string, name: string): Promise<void> {
-    await apiClient.call('admin', 'rename_ou', { ou_id: ouId, name });
+    await apiClient.call('system', 'rename_ou', { ou_id: ouId, name });
   },
 
   async deleteOu(ouId: string): Promise<void> {
-    await apiClient.call('admin', 'delete_ou', { ou_id: ouId });
+    await apiClient.call('system', 'delete_ou', { ou_id: ouId });
   },
 
   async deleteUser(userId: string): Promise<void> {
-    await apiClient.call('admin', 'delete_directory_user', { user_id: userId });
+    await apiClient.call('system', 'delete_directory_user', { user_id: userId });
   },
 
   async deleteGroup(groupId: string): Promise<void> {
-    await apiClient.call('admin', 'delete_directory_group', { group_id: groupId });
+    await apiClient.call('system', 'delete_directory_group', { group_id: groupId });
   },
 
   async createUserInOu(input: {
@@ -412,7 +447,7 @@ export const adminApi = {
     email?: string;
     ouId?: string;
   }): Promise<string | null> {
-    const raw = await apiClient.call<unknown>('admin', 'create_user_in_ou', {
+    const raw = await apiClient.call<unknown>('system', 'create_user_in_ou', {
       username: input.username,
       password: input.password,
       email: input.email ?? null,
@@ -422,12 +457,12 @@ export const adminApi = {
   },
 
   async getDirectoryUser(userId: string): Promise<DirectoryUser | null> {
-    const raw = await apiClient.call<unknown>('admin', 'get_directory_user', { user_id: userId });
+    const raw = await apiClient.call<unknown>('system', 'get_directory_user', { user_id: userId });
     return mapDirectoryUser(raw);
   },
 
   async setDirectoryAvatar(userId: string, imageB64: string, contentType: string): Promise<string> {
-    const row = await apiClient.call<{ avatar_url?: string }>('admin', 'set_directory_avatar', {
+    const row = await apiClient.call<{ avatar_url?: string }>('system', 'set_directory_avatar', {
       user_id: userId,
       image_b64: imageB64,
       content_type: contentType,
@@ -436,7 +471,7 @@ export const adminApi = {
   },
 
   async updateDirectoryUser(userId: string, patch: DirectoryUserPatch): Promise<void> {
-    await apiClient.call('admin', 'update_directory_user', {
+    await apiClient.call('system', 'update_directory_user', {
       user_id: userId,
       username: patch.username,
       nickname: patch.nickname,
@@ -451,13 +486,13 @@ export const adminApi = {
   },
 
   async listUserGroups(userId: string): Promise<UserGroup[]> {
-    const raw = await apiClient.call<unknown>('admin', 'list_user_groups', { user_id: userId });
+    const raw = await apiClient.call<unknown>('system', 'list_user_groups', { user_id: userId });
     const list = Array.isArray(raw) ? raw : pickList(asRecord(raw) ?? {}, 'items', 'groups');
     return list.map(mapUserGroup).filter((group): group is UserGroup => group !== null);
   },
 
   async createGroupInOu(name: string, ouId?: string, description?: string): Promise<string | null> {
-    const raw = await apiClient.call<unknown>('admin', 'create_group_in_ou', {
+    const raw = await apiClient.call<unknown>('system', 'create_group_in_ou', {
       name,
       description: description ?? null,
       ou_id: ouId ?? null,
@@ -466,15 +501,15 @@ export const adminApi = {
   },
 
   async renameUser(userId: string, username: string): Promise<void> {
-    await apiClient.call('admin', 'rename_user', { user_id: userId, username });
+    await apiClient.call('system', 'rename_user', { user_id: userId, username });
   },
 
   async renameGroup(groupId: string, name: string): Promise<void> {
-    await apiClient.call('admin', 'rename_group', { group_id: groupId, name });
+    await apiClient.call('system', 'rename_group', { group_id: groupId, name });
   },
 
   async listRoles(): Promise<AdminRole[]> {
-    const raw = await apiClient.call<unknown>('admin', 'list_roles', {});
+    const raw = await apiClient.call<unknown>('system', 'list_roles', {});
     if (Array.isArray(raw)) {
       return raw.map(mapRole).filter((role): role is AdminRole => role !== null);
     }
@@ -484,14 +519,14 @@ export const adminApi = {
   },
 
   async upsertRoleMask(roleId: string, capabilityMask: number): Promise<void> {
-    await apiClient.call('admin', 'upsert_role_mask', {
+    await apiClient.call('system', 'upsert_role_mask', {
       role_id: roleId,
       capability_mask: capabilityMask,
     });
   },
 
   async createRole(name: string, capabilityMask: number): Promise<string | null> {
-    const raw = await apiClient.call<unknown>('admin', 'create_role', {
+    const raw = await apiClient.call<unknown>('system', 'create_role', {
       name,
       capability_mask: capabilityMask,
     });
@@ -499,20 +534,36 @@ export const adminApi = {
   },
 
   async listRoleGroups(roleId: string): Promise<string[]> {
-    const raw = await apiClient.call<unknown>('admin', 'list_role_groups', { role_id: roleId });
+    const raw = await apiClient.call<unknown>('system', 'list_role_groups', { role_id: roleId });
     return mapIdList(raw, 'items', 'groups', 'group_ids', 'groupIds');
   },
 
   async listGroupRoles(groupId: string): Promise<string[]> {
-    const raw = await apiClient.call<unknown>('admin', 'list_group_roles', { group_id: groupId });
+    const raw = await apiClient.call<unknown>('system', 'list_group_roles', { group_id: groupId });
     return mapIdList(raw, 'items', 'roles', 'role_ids', 'roleIds');
   },
 
   async assignGroupRole(groupId: string, roleId: string): Promise<void> {
-    await apiClient.call('admin', 'assign_group_role', { group_id: groupId, role_id: roleId });
+    await apiClient.call('system', 'assign_group_role', { group_id: groupId, role_id: roleId });
   },
 
   async removeGroupRole(groupId: string, roleId: string): Promise<void> {
-    await apiClient.call('admin', 'remove_group_role', { group_id: groupId, role_id: roleId });
+    await apiClient.call('system', 'remove_group_role', { group_id: groupId, role_id: roleId });
+  },
+
+  async modulesList(): Promise<SystemModule[]> {
+    const raw = await apiClient.call<unknown>('system', 'modules_list', {});
+    const list = Array.isArray(raw) ? raw : pickList(asRecord(raw) ?? {}, 'items', 'modules');
+    return list.map(mapModule).filter((item): item is SystemModule => item !== null);
+  },
+
+  async prefList(): Promise<string[]> {
+    const raw = await apiClient.call<unknown>('system', 'pref_list', {});
+    const list = Array.isArray(raw) ? raw : pickList(asRecord(raw) ?? {}, 'items', 'prefs', 'keys');
+    return list.map(mapPrefKey).filter((key): key is string => key !== null);
+  },
+
+  async prefGet(key: string): Promise<unknown> {
+    return apiClient.call<unknown>('system', 'pref_get', { key });
   },
 };

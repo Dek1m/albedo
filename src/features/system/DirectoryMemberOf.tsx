@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
-import type { UserGroup } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
+import type { UserGroup } from '../../api/systemApi';
 import { authApi } from '../../api/authApi';
 import { humanMessage } from '../../api/errors';
 import type { Group } from '../../domain/group';
@@ -19,7 +19,7 @@ export function DirectoryMemberOf({ userId }: DirectoryMemberOfProps): ReactElem
 
   const load = async (): Promise<void> => {
     try {
-      const [groups, all] = await Promise.all([adminApi.listUserGroups(userId), authApi.listGroups()]);
+      const [groups, all] = await Promise.all([systemApi.listUserGroups(userId), authApi.listGroups()]);
       setMine(groups);
       setCatalog(all);
     } catch (err) {

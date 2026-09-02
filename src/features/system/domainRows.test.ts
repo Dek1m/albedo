@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DomainOu } from '../../api/adminApi';
+import type { DomainOu } from '../../api/systemApi';
 import { allRows, filterRows, folderRows, userRow, visibleRows } from './domainRows';
 
 function ou(partial: Partial<DomainOu> & Pick<DomainOu, 'id' | 'name'>): DomainOu {

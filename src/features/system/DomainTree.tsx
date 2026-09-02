@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
-import type { DomainGroup, DomainOu, DomainUser } from '../../api/adminApi';
+import type { DomainGroup, DomainOu, DomainUser } from '../../api/systemApi';
 import type { DomainSelection } from './domainSelection';
 
 interface DomainTreeProps {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DomainOu } from '../../../api/adminApi';
+import type { DomainOu } from '../../../api/systemApi';
 import { DomainFolderMenu } from './DomainFolderMenu';
 
 function ou(partial: Partial<DomainOu> & Pick<DomainOu, 'name' | 'kind' | 'isSystem'>): DomainOu {

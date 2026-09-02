@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { Window } from '../../shared/ui/Window';
@@ -45,7 +45,7 @@ export function RoleCreateDialog({ open, onClose, onCreated }: RoleCreateDialogP
     }
     setSaving(true);
     try {
-      const created = await adminApi.createRole(name.trim(), maskForModules(mask, modules));
+      const created = await systemApi.createRole(name.trim(), maskForModules(mask, modules));
       toast('Saved', 'ok');
       onCreated(created ?? '');
       onClose();

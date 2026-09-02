@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
-import type { AdminRole } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
+import type { AdminRole } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { RoleEditWindow } from './RoleEditWindow';
@@ -42,7 +42,7 @@ export function DirectoryGroupPane({
     setChosen(null);
     setPickOpen(false);
     let cancelled = false;
-    void adminApi
+    void systemApi
       .listRoles()
       .then(async (roles) => {
         if (cancelled) {
@@ -52,7 +52,7 @@ export function DirectoryGroupPane({
         if (!groupId) {
           return;
         }
-        const ids = new Set(await adminApi.listGroupRoles(groupId));
+        const ids = new Set(await systemApi.listGroupRoles(groupId));
         if (!cancelled) {
           setAssigned(roles.filter((role) => ids.has(role.id)));
         }
@@ -90,21 +90,21 @@ export function DirectoryGroupPane({
     try {
       let groupId = mode.kind === 'edit' ? mode.groupId : null;
       if (mode.kind === 'create') {
-        groupId = await adminApi.createGroupInOu(name.trim(), mode.ouId, description || undefined);
+        groupId = await systemApi.createGroupInOu(name.trim(), mode.ouId, description || undefined);
       } else {
-        await adminApi.renameGroup(mode.groupId, name.trim());
+        await systemApi.renameGroup(mode.groupId, name.trim());
       }
       if (groupId) {
-        const current = new Set(mode.kind === 'edit' ? await adminApi.listGroupRoles(groupId) : []);
+        const current = new Set(mode.kind === 'edit' ? await systemApi.listGroupRoles(groupId) : []);
         const wanted = new Set(assigned.map((role) => role.id));
         for (const roleId of wanted) {
           if (!current.has(roleId)) {
-            await adminApi.assignGroupRole(groupId, roleId);
+            await systemApi.assignGroupRole(groupId, roleId);
           }
         }
         for (const roleId of current) {
           if (!wanted.has(roleId)) {
-            await adminApi.removeGroupRole(groupId, roleId);
+            await systemApi.removeGroupRole(groupId, roleId);
           }
         }
       }

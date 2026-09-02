@@ -9,8 +9,6 @@ import { ChatPane } from '../workspace/ChatPane';
 import { SessionTabs } from '../workspace/SessionTabs';
 import { workspaceApi } from '../../api/workspaceApi';
 import { syncLlmCatalogOnAuth } from '../../application/llm/syncCatalog';
-import { AdminMenu } from '../admin/AdminMenu';
-import { AdminWindow } from '../admin/AdminWindow';
 import { AiMenu } from '../ai/AiMenu';
 import type { AiPane } from '../ai/AiMenu';
 import { AiWindows } from '../ai/AiWindows';
@@ -27,6 +25,9 @@ import {
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { ShareDialog } from '../share/ShareDialog';
+import { SystemMenu } from '../system/SystemMenu';
+import type { SystemPane } from '../system/SystemMenu';
+import { SystemWindows } from '../system/SystemWindows';
 import { UserChip } from './UserChip';
 
 export function AppShell(): ReactElement {
@@ -36,7 +37,7 @@ export function AppShell(): ReactElement {
   const [createOpen, setCreateOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [aiPane, setAiPane] = useState<AiPane | null>(null);
-  const [adminOpen, setAdminOpen] = useState(false);
+  const [systemPane, setSystemPane] = useState<SystemPane | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +105,7 @@ export function AppShell(): ReactElement {
             onOpenSessions={() => setSessionsOpen(true)}
           />
           <AiMenu onOpen={setAiPane} />
-          <AdminMenu onOpen={() => setAdminOpen(true)} />
+          <SystemMenu onOpen={setSystemPane} />
         </div>
         <div className="albedo-header-actions">
           <UserChip />
@@ -122,7 +123,7 @@ export function AppShell(): ReactElement {
         </main>
       </div>
       <AiWindows pane={aiPane} onClose={() => setAiPane(null)} />
-      <AdminWindow open={adminOpen} onClose={() => setAdminOpen(false)} />
+      <SystemWindows pane={systemPane} onClose={() => setSystemPane(null)} />
       <WorkspaceModals
         listOpen={listOpen}
         createOpen={createOpen}

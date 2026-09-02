@@ -1,4 +1,4 @@
-import type { AdminCaps } from '../../api/adminApi';
+import type { AdminCaps } from '../../api/systemApi';
 
 export interface AdminIdentity {
   isBootstrapAdmin: boolean;

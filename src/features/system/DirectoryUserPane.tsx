@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
-import type { DirectoryUser } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
+import type { DirectoryUser } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { readImageFile } from '../../shared/ui/readImageFile';
@@ -52,7 +52,7 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
       return;
     }
     let cancelled = false;
-    void adminApi
+    void systemApi
       .getDirectoryUser(userId)
       .then((user) => {
         if (!cancelled && user) {
@@ -84,19 +84,19 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
     setSaving(true);
     try {
       if (mode.kind === 'create') {
-        const created = await adminApi.createUserInOu({
+        const created = await systemApi.createUserInOu({
           username: draft.username.trim(),
           password,
           email: draft.email || undefined,
           ouId: mode.ouId,
         });
         if (created) {
-          await adminApi.updateDirectoryUser(created, { ...draft, username: draft.username.trim() });
+          await systemApi.updateDirectoryUser(created, { ...draft, username: draft.username.trim() });
         }
         toast('Saved', 'ok');
         onSaved(created);
       } else {
-        await adminApi.updateDirectoryUser(mode.userId, { ...draft, username: draft.username.trim() });
+        await systemApi.updateDirectoryUser(mode.userId, { ...draft, username: draft.username.trim() });
         toast('Saved', 'ok');
         onSaved(mode.userId);
       }
@@ -153,7 +153,7 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
                     void (async () => {
                       try {
                         const packed = await readImageFile(file);
-                        const url = await adminApi.setDirectoryAvatar(userId, packed.imageB64, packed.contentType);
+                        const url = await systemApi.setDirectoryAvatar(userId, packed.imageB64, packed.contentType);
                         setAvatarUrl(`${url}&t=${String(Date.now())}`);
                         toast('Saved', 'ok');
                       } catch (err) {

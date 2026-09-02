@@ -1,4 +1,4 @@
-import type { DomainGroup, DomainOu, DomainUser } from '../../api/adminApi';
+import type { DomainGroup, DomainOu, DomainUser } from '../../api/systemApi';
 
 export type DomainFilterField = 'any' | 'uuid' | 'name' | 'type' | 'email' | 'workspace';
 export type DirectoryType = 'ou' | 'user' | 'group';

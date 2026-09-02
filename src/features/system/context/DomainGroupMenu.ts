@@ -1,4 +1,4 @@
-import type { DomainGroup } from '../../../api/adminApi';
+import type { DomainGroup } from '../../../api/systemApi';
 import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface DomainGroupActions {

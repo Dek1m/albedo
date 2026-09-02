@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import type { DomainOu } from '../../api/adminApi';
-import { adminApi } from '../../api/adminApi';
+import type { DomainOu } from '../../api/systemApi';
+import { systemApi } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 
@@ -26,7 +26,7 @@ export function DirectoryOuPane({ ou, canEdit, onSaved }: DirectoryOuPaneProps):
     }
     setSaving(true);
     try {
-      await adminApi.renameOu(ou.id, name.trim());
+      await systemApi.renameOu(ou.id, name.trim());
       toast('Saved', 'ok');
       onSaved();
     } catch (err) {

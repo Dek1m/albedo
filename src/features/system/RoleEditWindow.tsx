@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
-import type { AdminRole } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
+import type { AdminRole } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { Window } from '../../shared/ui/Window';
@@ -41,7 +41,7 @@ export function RoleEditWindow({ roleId, canEdit, onClose, onSaved }: RoleEditWi
       return;
     }
     let cancelled = false;
-    void adminApi
+    void systemApi
       .listRoles()
       .then((roles) => {
         const found = roles.find((item) => item.id === roleId) ?? null;
@@ -68,7 +68,7 @@ export function RoleEditWindow({ roleId, canEdit, onClose, onSaved }: RoleEditWi
     }
     setSaving(true);
     try {
-      await adminApi.upsertRoleMask(role.id, mask);
+      await systemApi.upsertRoleMask(role.id, mask);
       const next = { ...role, capabilityMask: mask };
       toast('Saved', 'ok');
       onSaved(next);

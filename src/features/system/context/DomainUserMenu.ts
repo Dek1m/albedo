@@ -1,4 +1,4 @@
-import type { DomainUser } from '../../../api/adminApi';
+import type { DomainUser } from '../../../api/systemApi';
 import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface DomainUserActions {

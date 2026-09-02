@@ -1,4 +1,4 @@
-import type { DomainOu } from '../../../api/adminApi';
+import type { DomainOu } from '../../../api/systemApi';
 import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface DomainFolderActions {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import type { AdminRole } from '../../api/adminApi';
+import type { AdminRole } from '../../api/systemApi';
 import { Window } from '../../shared/ui/Window';
 
 interface RolePickDialogProps {

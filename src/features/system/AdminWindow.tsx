@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
-import type { AdminCaps } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
+import type { AdminCaps } from '../../api/systemApi';
 import { useAuthStore } from '../../auth/AuthStore';
 import { Window } from '../../shared/ui/Window';
 import { DomainTab } from './DomainTab';
@@ -25,7 +25,7 @@ export function AdminWindow({ open, onClose }: AdminWindowProps): ReactElement {
       return;
     }
     let cancelled = false;
-    void adminApi
+    void systemApi
       .caps()
       .then((value) => {
         if (!cancelled) {
@@ -52,7 +52,7 @@ export function AdminWindow({ open, onClose }: AdminWindowProps): ReactElement {
   const roleAdmin = isRoleAdmin(caps, profile);
 
   return (
-    <Window className="albedo-admin" windowId="albedo-admin" open={open} title="Admin Panel" onClose={close}>
+    <Window className="albedo-admin" windowId="albedo-admin" open={open} title="Users & Roles" onClose={close}>
       <ul className="nav nav-tabs mb-2">
         <li className="nav-item">
           <button

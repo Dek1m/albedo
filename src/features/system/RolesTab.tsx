@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { adminApi } from '../../api/adminApi';
-import type { AdminRole } from '../../api/adminApi';
+import { systemApi } from '../../api/systemApi';
+import type { AdminRole } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { SkeletonList } from '../../shared/ui/Skeleton';
@@ -24,7 +24,7 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
 
   const load = useCallback(async (current: string | null): Promise<void> => {
     try {
-      applyRoles(await adminApi.listRoles(), current);
+      applyRoles(await systemApi.listRoles(), current);
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -35,7 +35,7 @@ export function RolesTab({ visible }: RolesTabProps): ReactElement {
       return;
     }
     let cancelled = false;
-    void adminApi
+    void systemApi
       .listRoles()
       .then((items) => {
         if (!cancelled) {
