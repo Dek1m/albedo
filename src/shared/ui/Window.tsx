@@ -33,6 +33,8 @@ const WINDOW_ICONS: Record<string, string> = {
   'albedo-workspaces': 'bi-collection',
   'albedo-workspace-create': 'bi-plus-square',
   'albedo-sessions': 'bi-chat-dots',
+  'albedo-share': 'bi-share',
+  'albedo-share-add': 'bi-person-plus',
 };
 
 const CLOSE_MS = 180;

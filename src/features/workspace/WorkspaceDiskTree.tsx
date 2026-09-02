@@ -11,6 +11,8 @@ import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { GitBranch } from './GitBranch';
+import { isOwnShareablePath } from '../share/shareable';
+import { useShareStore } from '../share/shareStore';
 import { WorkspaceFolderMenu } from './context/WorkspaceFolderMenu';
 import { folderToast, pathTail } from './folderToast';
 import type { GitRepo } from '../../api/workspaceApi';
@@ -120,23 +122,32 @@ export function WorkspaceDiskTree({
     }
   };
 
-  const openFolderMenu = (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, item: HomeEntry): void => {
+  const openFolderMenu = (
+    event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number },
+    item: HomeEntry,
+  ): void => {
     event.preventDefault();
     event.stopPropagation();
-    onSelect(item.relPath, 'folder');
+    onSelect(item.relPath, item.kind);
+    const underRoot = roots.some(
+      (root) => item.relPath === root.relPath || item.relPath.startsWith(`${root.relPath}/`),
+    );
     const menu = new WorkspaceFolderMenu({
       onNewFolder: (rel) => setPrompt({ mode: 'folder', rel }),
       onNewFile: (rel) => setPrompt({ mode: 'file', rel }),
-      onRename: (rel) => setRenaming({ rel, kind: 'folder' }),
+      onRename: (rel) => setRenaming({ rel, kind: item.kind }),
       onRemoveFromWorkspace: (rel) => void exclude(rel),
       onDeleteFromDisk: (rel) => void askTrash(rel),
+      onShare: (rel) => useShareStore.getState().open(rel),
     });
     setCtx({
       x: event.clientX,
       y: event.clientY,
       items: menu.items({
         relPath: item.relPath,
+        kind: item.kind,
         canRemoveFromWorkspace: item.linked || item.inherited,
+        canShare: isOwnShareablePath(item.relPath, item) || underRoot,
       }),
     });
   };
@@ -276,12 +287,7 @@ function DiskNode({
         className={`albedo-tree-item${selectedRel === item.relPath ? ' is-selected' : ''}${over ? ' is-drop' : ''}`}
         draggable={renamingRel !== item.relPath}
         onClick={onNameClick}
-        onContextMenu={(event) => {
-          if (item.kind !== 'folder') {
-            return;
-          }
-          onFolderMenu(event, item);
-        }}
+        onContextMenu={(event) => onFolderMenu(event, item)}
         onDragStart={(event) => {
           event.dataTransfer.setData('text/albedo-rel', item.relPath);
           event.dataTransfer.effectAllowed = 'move';

@@ -9,6 +9,8 @@ import { ContextMenu } from '../../shared/ui/ContextMenu';
 import type { MenuItem } from '../../shared/ui/ContextMenu';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
+import { isOwnShareablePath } from '../share/shareable';
+import { useShareStore } from '../share/shareStore';
 import { WorkspaceFolderMenu } from './context/WorkspaceFolderMenu';
 import { folderToast, newSegments, pathTail } from './folderToast';
 
@@ -143,11 +145,14 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
     }
   };
 
-  const openFolderMenu = (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, rel: string): void => {
+  const openFolderMenu = (
+    event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number },
+    item: HomeEntry,
+  ): void => {
     event.preventDefault();
     event.stopPropagation();
-    setFocusRel(rel);
-    setFocusKind('folder');
+    setFocusRel(item.relPath);
+    setFocusKind(item.kind);
     const menu = new WorkspaceFolderMenu({
       onNewFolder: (path) => startCreate('folder', path),
       onNewFile: (path) => startCreate('file', path),
@@ -160,11 +165,17 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         folderToast('removed', [pathTail(path)]);
       },
       onDeleteFromDisk: (path) => void trash(path),
+      onShare: (path) => useShareStore.getState().open(path),
     });
     setCtx({
       x: event.clientX,
       y: event.clientY,
-      items: menu.items({ relPath: rel, canRemoveFromWorkspace: selected.has(rel) }),
+      items: menu.items({
+        relPath: item.relPath,
+        kind: item.kind,
+        canRemoveFromWorkspace: selected.has(item.relPath),
+        canShare: isOwnShareablePath(item.relPath, item),
+      }),
     });
   };
 
@@ -433,7 +444,10 @@ interface BranchProps {
   hidden: boolean;
   showSize: boolean;
   onMoved: () => void;
-  onFolderMenu: (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, rel: string) => void;
+  onFolderMenu: (
+    event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number },
+    item: HomeEntry,
+  ) => void;
   parentRel?: string;
 }
 
@@ -498,7 +512,10 @@ interface NodeProps {
   hidden: boolean;
   showSize: boolean;
   onMoved: () => void;
-  onFolderMenu: (event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number }, rel: string) => void;
+  onFolderMenu: (
+    event: { preventDefault: () => void; stopPropagation: () => void; clientX: number; clientY: number },
+    item: HomeEntry,
+  ) => void;
 }
 
 function HomeNode({
@@ -553,12 +570,7 @@ function HomeNode({
         className={`albedo-home-row${focused ? ' is-focus' : ''}${cover}`}
         draggable
         onClick={() => onFocus(item.relPath, item.kind)}
-        onContextMenu={(event) => {
-          if (item.kind !== 'folder') {
-            return;
-          }
-          onFolderMenu(event, item.relPath);
-        }}
+        onContextMenu={(event) => onFolderMenu(event, item)}
         onDragStart={(event) => {
           event.dataTransfer.setData('text/albedo-rel', item.relPath);
           event.dataTransfer.effectAllowed = 'move';

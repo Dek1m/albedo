@@ -2,9 +2,11 @@ import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface WorkspaceFolderTarget {
   relPath: string;
+  kind?: 'folder' | 'file';
   canRemoveFromWorkspace: boolean;
   canRename?: boolean;
   canDeleteFromDisk?: boolean;
+  canShare?: boolean;
 }
 
 export interface WorkspaceFolderActions {
@@ -13,29 +15,43 @@ export interface WorkspaceFolderActions {
   onRename: (relPath: string) => void;
   onRemoveFromWorkspace: (relPath: string) => void;
   onDeleteFromDisk: (relPath: string) => void;
+  onShare?: (relPath: string) => void;
 }
 
 export class WorkspaceFolderMenu {
   constructor(private readonly actions: WorkspaceFolderActions) {}
 
   items(target: WorkspaceFolderTarget): MenuItem[] {
-    return [
-      {
-        id: 'new-folder',
-        label: 'New folder',
-        action: () => this.actions.onNewFolder(target.relPath),
-      },
-      {
-        id: 'new-file',
-        label: 'New file',
-        action: () => this.actions.onNewFile(target.relPath),
-      },
-      {
-        id: 'rename',
-        label: 'Rename',
-        disabled: target.canRename === false,
-        action: () => this.actions.onRename(target.relPath),
-      },
+    const folder = target.kind !== 'file';
+    const rows: MenuItem[] = [];
+    if (folder) {
+      rows.push(
+        {
+          id: 'new-folder',
+          label: 'New folder',
+          action: () => this.actions.onNewFolder(target.relPath),
+        },
+        {
+          id: 'new-file',
+          label: 'New file',
+          action: () => this.actions.onNewFile(target.relPath),
+        },
+      );
+    }
+    rows.push({
+      id: 'rename',
+      label: 'Rename',
+      disabled: target.canRename === false,
+      action: () => this.actions.onRename(target.relPath),
+    });
+    if (target.canShare && this.actions.onShare) {
+      rows.push({
+        id: 'share',
+        label: 'Share',
+        action: () => this.actions.onShare?.(target.relPath),
+      });
+    }
+    rows.push(
       {
         id: 'remove-from-workspace',
         label: 'Remove from workspace',
@@ -48,6 +64,7 @@ export class WorkspaceFolderMenu {
         disabled: target.canDeleteFromDisk === false,
         action: () => this.actions.onDeleteFromDisk(target.relPath),
       },
-    ];
+    );
+    return rows;
   }
 }
