@@ -28,6 +28,7 @@ const CODE_MESSAGES: Record<string, string> = {
   AUTH_ERROR: 'Sign-in failed',
   VALIDATION: 'Invalid request',
   NOTIFICATION_ERROR: 'Could not load notifications',
+  QUERY_FAILED: 'Could not load notifications',
   PAYLOAD_NOT_SERIALIZABLE: 'Invalid request',
   TIMEOUT: 'The service did not respond. Try again',
   METHOD_NOT_FOUND: 'Method not found',
@@ -58,8 +59,8 @@ const CODE_MESSAGES: Record<string, string> = {
   OAUTH_EXPIRED: 'Sign-in expired. Start again',
   OAUTH_PENDING: 'Finish sign-in first',
   OAUTH_UNSUPPORTED: 'This OAuth provider is not supported yet',
-  TASK_FAILED: 'Something went wrong',
-  LLM_ERROR: 'Something went wrong',
+  TASK_FAILED: 'Request failed',
+  LLM_ERROR: 'Request failed',
   UPSTREAM: 'Wrong URL',
 };
 
@@ -85,13 +86,13 @@ export function humanMessage(error: unknown): string {
     if (error.message && !looksTechnical(error.message)) {
       return error.message;
     }
-    return 'Something went wrong';
+    return 'Request failed';
   }
   if (error instanceof Error) {
     if (error.message && !looksTechnical(error.message)) {
       return error.message;
     }
-    return 'Something went wrong';
+    return 'Request failed';
   }
-  return 'Something went wrong';
+  return 'Request failed';
 }
