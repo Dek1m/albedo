@@ -2,11 +2,12 @@
 
 | Поле | Значение |
 |------|----------|
-| **Статус** | accepted (решения утверждены Мастером 02.09.2026; schema review Норы внесено в ревизию 3; security review Литы внесено в ревизию 4 — до шага 5 плана; ревизия 5 — решения Мастера по шарингу: объект шаринга — только прилинкованные корни воркспейсов. Trash-PENDING закрыт. Открытым остаётся единственный вопрос: находка 1, unix_name — решение Мастера не принято, в ревизию не вносится) |
-| **Дата** | 2026-09-02 (ревизия 5 — shareable roots, вердикты Мастера, вечер) |
+| **Статус** | accepted (решения утверждены Мастером 02.09.2026; schema review Норы внесено в ревизию 3; security review Литы внесено в ревизию 4 — до шага 5 плана; ревизия 5 — решения Мастера по шарингу: объект шаринга — только прилинкованные корни воркспейсов; ревизия 6 — unix UID-привязка, username as-is (вердикт Мастера, закрыт PENDING unix_name). **PENDING MASTER: нет — все закрыты**) |
+| **Дата** | 2026-09-02 (ревизия 6 — unix UID-привязка, username as-is, вечер; ревизия 5 — shareable roots, вердикты Мастера) |
 | **Ревизия 3** | schema review Норы (02.09.2026): `created_by` → ON DELETE SET NULL (FK-блокер), `nodes_owner_path_idx` вместо одиночного owner, `acl_node_idx` вычеркнут, ленивая регистрация узла — один CTE-стейтмент |
-| **Ревизия 4** | security review Литы (02.09.2026): находки 2 (ACL только на каноническом rel, §5.4), 3 (проверка каждого затрагиваемого пути, §4), 6 (приватностная цена Everyone + confirm, §5.5), 7 (rate-limit/квоты, §10), 11 (Trash-семантика — PENDING, §5.2/§5.4); фронт-требования — ADR-003 §9.3. **PENDING MASTER**: находка 1 (unix_name) и вердикт по находке 11 (Trash-семантика) ожидают решения Мастера *(пометка историческая: находка 11 закрыта в ревизии 5)* |
+| **Ревизия 4** | security review Литы (02.09.2026): находки 2 (ACL только на каноническом rel, §5.4), 3 (проверка каждого затрагиваемого пути, §4), 6 (приватностная цена Everyone + confirm, §5.5), 7 (rate-limit/квоты, §10), 11 (Trash-семантика — PENDING, §5.2/§5.4); фронт-требования — ADR-003 §9.3. **PENDING MASTER**: находка 1 (unix_name) и вердикт по находке 11 (Trash-семантика) ожидают решения Мастера *(пометка историческая: находка 11 закрыта в ревизии 5, находка 1 — в ревизии 6)* |
 | **Ревизия 5** | решения Мастера (02.09.2026, вечер): **шаринг только линкованных корней** (§5.6) — объект шаринга только пути под прилинкованными корнями воркспейсов владельца, `rel=''` и пути вне линковок → `NOT_SHAREABLE`, грант на `''` не существует как класс; механизм реестра корней — колонка `is_shareable_root` в `fs.nodes` + внутренние методы `register/unregister_shareable_root` через разрешённую стрелку workspace→fs (§3, §5.6); гранты при отлинковке не отзываются (§5.6, решение по умолчанию); **Trash-PENDING (находка 11) закрыт**: грант на `''` упразднён → Trash недоступен получателям автоматически, отсекатель в машине §5.4 не нужен; тесты Катерины — кейсы `NOT_SHAREABLE` (§17) |
+| **Ревизия 6** | вердикт Мастера (02.09.2026, вечер): **вариант C по находке 1** — «Уберем lower case, пусть делает так, как есть» + привязка домашней папки к real system UID. Домашняя папка = `/home/{username}` **без всякой нормализации** (регистр и кириллица as-is, биекция путей — существующий `UNIQUE(username)` в auth); функция `unix_name()` с `lower()` устраняется из fs/homes.py; новая таблица `fs.unix_accounts` (user_id PK, unix_uid UNIQUE, login UNIQUE, home_path) — §10, DDL `000_unix_accounts.sql` — §14; новый флоу `ensure_unix_home` — useradd под advisory lock, идемпотентен — §3.1; ACL не смотрит на UID — §5.4; root-режим воркера fs-операций — §10; дверь фазы 7 (unix_uid как второй рубеж) — §19; тесты Катерины — Anna/anna, Иван, chown/chmod — §17 |
 | **Авторы** | Эна (architect) |
 | **Проекты** | mia-fs (новый репо → `mia/modules/fs`), mia-workspace, mia-worker, belle, albedo |
 | **Связанные** | `albedo/plan-admin.md` (фаза 2, инварианты §2, приёмка §7); belle ADR-003 (named pools, user-БД), ADR-004 (apply один раз под lock); albedo ADR-001 (транспорт, cookies); **albedo ADR-003 (notification — уведомления о share_add)**; гранулы: переименование homes→fs, инвариант «FS только через state.fs» |
@@ -17,7 +18,7 @@
 
 ## Решение (одна строка)
 
-FS-домен выносится из workspace в отдельный модуль `mia/modules/fs`: чистая файловая логика (fs.py, homes.py, gitinfo.py) переезжает целиком, workspace оставляет себе только membership/сессии и зовёт диск через `state.fs`; все fs-RPC исполняются на Celery-воркере (`type="io"`) в песочнице `/home/{unix_name}`; шаринг — **identity-based ACL**: реестр узлов `fs.nodes` (стабильный uuid на расшаренный путь) + гранты `fs.acl` по `node_uuid`, с уровнями viewer/editor, наследованием вниз по path-prefix и batch-резолвом сущностей (resolved/unresolved/ambiguous) для AD-подобного поиска.
+FS-домен выносится из workspace в отдельный модуль `mia/modules/fs`: чистая файловая логика (fs.py, homes.py, gitinfo.py) переезжает целиком, workspace оставляет себе только membership/сессии и зовёт диск через `state.fs`; все fs-RPC исполняются на Celery-воркере (`type="io"`) в песочнице `/home/{username}` (username **as-is**, без нормализации — ревизия 6; unix-аккаунт владельца привязан через `fs.unix_accounts`); шаринг — **identity-based ACL**: реестр узлов `fs.nodes` (стабильный uuid на расшаренный путь) + гранты `fs.acl` по `node_uuid`, с уровнями viewer/editor, наследованием вниз по path-prefix и batch-резолвом сущностей (resolved/unresolved/ambiguous) для AD-подобного поиска.
 
 **Вердикты Мастера (02.09.2026), встроенные в эту ревизию:**
 
@@ -70,7 +71,7 @@ FS-домен выносится из workspace в отдельный модул
 | Источник (workspace) | Судьба в fs |
 |----------------------|-------------|
 | `fs.py` — все 11 публичных функций + `FsError` | `fs/paths.py` (без изменений логики; `FsError` → `fs/errors.py`) |
-| `homes.py` — `unix_name`, `ensure_unix_home`, `own_path`, `ensure_nested`, `list_home` | `fs/homes.py` |
+| `homes.py` — `unix_name`, `ensure_unix_home`, `own_path`, `ensure_nested`, `list_home` | `fs/homes.py`; **`unix_name` не переезжает — устраняется** (ревизия 6: username as-is + `fs.unix_accounts`) |
 | `gitinfo.py` — `list_repos` | `fs/gitinfo.py` |
 | `config.home_root` | `FsConfig.home_root` (`FS_HOME_ROOT`, default `/home`) |
 | RPC из `provider.py`: `ensure_home`, `create_home_path`, `home_stat`, `list_git` | fs-RPC `fs.ensure_home`, `fs.mkdir`+`fs.touch` (см. §4), `fs.stat`, `fs.git_status` |
@@ -104,8 +105,8 @@ state.fs = FsAccessor(config, log, database)
 ```python
 class FsAccessor:
     # Провижининг
-    def ensure_home(user: str) -> dict            # {home, unix_name}; useradd + mkdir + chown
-    def home_for(user: str) -> str                # резолв пути без создания (валидация unix_name)
+    def ensure_home(user: str) -> dict            # {home, username, unix_uid, login}; fs.unix_accounts + useradd + mkdir + chown (§3.1)
+    def home_for(user: str) -> str                # резолв home_path из fs.unix_accounts без создания (§10)
 
     # Диск (все rel — относительно home, валидация песочницы внутри)
     def exists(user: str, rel: str) -> bool       # для workspace.link_home_path
@@ -134,12 +135,80 @@ class FsAccessor:
       # гранты НЕ отзываются (политика §5.6) → {node_uuid, unmarked: bool}
 ```
 
-- **Домен fs — один пользователь-владелец за вызов.** Первый аргумент `user` — uid (uuid) или username; accessor нормализует через `auth` и `unix_name`. Никаких «путей вне песочницы» через state.fs — инвариант плана (§2: «имя fs, но скоуп — домашние каталоги»).
+- **Домен fs — один пользователь-владелец за вызов.** Первый аргумент `user` — user_id (uuid) или username; accessor резолвит в `user_id` через `auth`. Домашняя папка = `/home/{username}` **как есть** (ревизия 6, вердикт Мастера: «пусть делает так, как есть»): ни lower, ни вырезание символов — биекция путей гарантируется существующим `UNIQUE(username)` в auth. Unix-аккаунт (UID, login) — чисто системная привязка в `fs.unix_accounts`, домен fs её нигде не выдаёт за identity. Никаких «путей вне песочницы» через state.fs — инвариант плана (§2: «имя fs, но скоуп — домашние каталоги»).
 - `workspace.link_home_path` = `state.fs.register_shareable_root(uid, rel)` (fs) + `ws.link_path` (membership). fs подтверждает существование пути И регистрирует shareable-корень одним вызовом (ревизия 5; до ревизии 5 здесь планировался чистый `exists` — проверка существования не потеряна, она внутри `register_shareable_root`). Стрелка workspace→fs сохраняется: проверка кода (`mia/modules/workspace/provider.py:330` → `facade.link_path`, где сейчас прямые `join_rel`/`exists` из workspace/fs.py) подтверждает — точка встраивания одна, `facade.link_path` остаётся membership-логикой, диск проверяет fs.
 - `workspace.unlink_home_path` = `state.fs.unregister_shareable_root(uid, rel)` + `ws.unlink_path` (membership). Судьба грантов — политика §5.6 (не отзываются).
 - `workspace.delete_workspace`: если root вне `home_root` — `state.fs.remove_outside_home`; внутри — диск не трогаем (сегодняшнее поведение сохранено).
 
-### 3.1. Как workspace использует state.fs (тонкий фасад)
+### 3.1. `ensure_unix_home` — провижининг unix-аккаунта (ревизия 6, воркер, type=io)
+
+**Identity-модель домашней папки (закрывает находку 1 Литы, вердикт Мастера — вариант C):**
+
+| Сущность | Значение |
+|----------|----------|
+| Домашняя папка | `/home/{username}` — путь **как есть**: регистр (`Anna` ≠ `anna`) и кириллица (`/home/Иван`) сохраняются, никакой нормализации |
+| Биекция путей | гарантируется **существующим** `UNIQUE(username)` в auth (binary collation — `Anna`/`anna` уже различимы); fs не строит собственную уникальность путей |
+| `unix_name()` | **УСТРАНЕН** из fs/homes.py (шаг Соны): `lower()` + вырезание символов больше не существуют; везде, где был `unix_name`, теперь `username` as-is |
+| Unix-аккаунт | системная привязка в `fs.unix_accounts`: real system UID + технический login; **не** identity пользователя — identity всюду `user_id` (uuid) |
+| Технический login | `mia-{8 hex из user_id}` (первые 8 hex-символов uuid без дефисов): `useradd` не принимает регистр/кириллицу в логине — логину это и не нужно, home задаётся отдельно `-d /home/{username}`; username в системе UNIX не светится |
+
+**Таблица `fs.unix_accounts`** (системная БД belle, схема `fs`; DDL — `000_unix_accounts.sql`, §14):
+
+```sql
+CREATE TABLE IF NOT EXISTS fs.unix_accounts (
+    user_id    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    unix_uid   INTEGER UNIQUE NOT NULL,      -- real system UID, диапазон fs.uid_min..fs.uid_max
+    login      TEXT   UNIQUE NOT NULL,       -- mia-{8 hex user_id}
+    home_path  TEXT   NOT NULL,              -- /home/{username} as-is (регистр/кириллица)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+FK → `auth.users` — единственная зависимость от auth (read-only INSERT/SELECT своих строк); удаление пользователя каскадно чистит привязку. **Диапазон UID: 10000–60000** (config `fs.uid_min`/`fs.uid_max`, §13) — вне системных (<1000) и вне сценарных (60000+).
+
+**Механизм выдачи UID — advisory lock + MAX+1:**
+
+```sql
+SELECT pg_advisory_xact_lock(hashtext('mia.schema.fs_uid'));   -- серийность выдачи (стиль belle ADR-004)
+SELECT COALESCE(MAX(unix_uid), :uid_min - 1) + 1 FROM fs.unix_accounts;  -- первый юзер → uid_min
+-- вне диапазона [uid_min, uid_max] → доменная ошибка UID_EXHAUSTED
+```
+
+Почему так: конкурентность выдачи минимальна (провижининг ленивый — один раз на пользователя за жизнь), отдельная sequence избыточна — она живёт вне таблицы, рассинхронизируется при restore из бэкапа и ручных правках, тогда как `MAX+1` под локом самоконсистентен с данными. `UNIQUE(unix_uid)` — последний рубеж: гипотетическая гонка в обход лока ловится unique_violation, второй воркер читает существующую строку (идемпотентный retry).
+
+**Флоу `ensure_unix_home(user_id, username)` (полный, идемпотентный):**
+
+```
+1. fast path: SELECT ... FROM fs.unix_accounts WHERE user_id = :user_id
+   → строка есть → вернуть {home: home_path, username, unix_uid, login} (без дисковых операций)
+
+2. BEGIN
+     pg_advisory_xact_lock(hashtext('mia.schema.fs_uid'))        -- оба лока в фиксированном
+     pg_advisory_xact_lock(hashtext('mia.fs.user:' || :user_id)) -- порядке → дедлоков нет
+     double-check lookup по user_id → появилась при ожидании лока → COMMIT, вернуть
+     uid = MAX(unix_uid)+1 (см. выше); login = 'mia-' || substr(uuid, 1, 8)
+     UNIQUE(login)/UNIQUE(unix_uid) violate → ROLLBACK → повторный lookup → вернуть
+3.   useradd -M -N -u {uid} -l -s /usr/sbin/nologin -d /home/{username} {login}
+     -- -M: не создавать home силами useradd (mkdir ниже сам);
+     -- -N: без именной домашней группы (primary = системная default);
+     -- -l: без записи в lastlog/last;
+     -- nologin-шелл: аккаунт — привязка тома, не точка входа
+4.   mkdir -p /home/{username} → chown {uid}:{gid} → chmod 700
+5.   INSERT INTO fs.unix_accounts (user_id, unix_uid, login, home_path) ...
+   COMMIT
+```
+
+Ветвления:
+
+- **Каталог уже существует** (миграция старых пользователей, созданных до ревизии 6): `mkdir -p` — no-op, `chown` на новый UID + `chmod 700` поверх существующего содержимого, INSERT записи. Контент не трогается.
+- **useradd говорит «already exists»** (крах предыдущего прогона между шагами 3 и 5): самовосстановление — `id -u {login}` == выданный `uid` → догоняем INSERT (шаг 5) и продолжаем; `≠ uid` → доменная ошибка `UNIX_ACCOUNT_MISMATCH` + security-событие, ручная чистка (сигнализирует о внешнем вмешательстве в том).
+- **Повторный вызов ensure** — не ошибка ни на одном шаге: fast path по `user_id`; retry-путь ловит UNIQUE по `login`/`home_path`/`unix_uid`.
+
+**Требование root-режима воркера fs-операций (зафиксировано):** `useradd` и `chown` на произвольный UID требуют root; воркер fs-операций выполняется **от root** (проверено: Dockerfile без директивы `USER`). Это осознанная цена v1 — unix-слой здесь привязка тома, не граница безопасности (рубеж один — ACL, §5.4). Заметка на будущее: переход на не-root воркер + `cap_chown`/`cap_dac_override` через capability-набор — волна hardening, вне v1 (см. §19, дверь фазы 7).
+
+**Секретность:** username в login не светится (логин технический `mia-{hex8}`); команда useradd логируется **с путём** (`home_path` — системная операция, путь и есть evidence), но **`unix_uid` в INFO-логи не попадает** — только в DEBUG (`fs_home_provisioned`, §12).
+
+### 3.2. Как workspace использует state.fs (тонкий фасад)
 
 ```
 provider.list_home(...)      = state.fs.list(...)          + linked/excluded cover
@@ -165,7 +234,7 @@ provider._home(uid)          = state.fs.ensure_home(uid)   # провижини�
 
 | RPC `fs.*` | type | permission | timeout | Назначение |
 |------------|------|-----------|---------|------------|
-| `ensure_home()` | io | `fs:read` | 10 | создать unix-юзера и `~/` если нет → `{home, unix_name}` |
+| `ensure_home()` | io | `fs:read` | 10 | создать unix-аккаунт и `~/` если нет → `{home, username, unix_uid}` (флоу §3.1) |
 | `list(rel_path="", owner?=, include_hidden=false, include_size=false)` | io | `fs:read` | 10 | листинг каталога (своего или расшаренного, §6) |
 | `stat(rel_path, owner?=)` | io | `fs:read` | 5 | kind + child_count/size |
 | `read(rel_path, owner?=)` | io | `fs:read` | 30 | содержимое файла, b64, лимит `FS_MAX_WRITE_BYTES` |
@@ -359,10 +428,18 @@ CREATE INDEX IF NOT EXISTS acl_grantee_group_idx ON fs.acl (grantee_group_id);
         LIMIT 1;
       → row: сверить level ≥ требуемого (write требует editor)
       → нет строки / уровень ниже → ForbiddenError("FS_ACCESS_DENIED") + security-событие (§10)
-4. Целевой путь резолвится в песочнице ВЛАДЕЛЬЦА (/home/{unix_name(owner)});
+4. Целевой путь резолвится в песочнице ВЛАДЕЛЬЦА (home-корень владельца из
+   `fs.unix_accounts.home_path`, для владельца без записи — `/home/{username}`
+   as-is, ревизия 6);
    диска нет → NOT_FOUND — в т.ч. случай «грант есть, узел в trash» (deleted_at
    уже отсёк узел на шаге 3a)
 ```
+
+> **Identity vs unix-привязка (ревизия 6).** Вся машина оперирует **только `user_id`
+> (uuid)**: узлы (`owner_user_id`), гранты (`grantee_user_id`), membership. Unix-аккаунт
+> (`fs.unix_accounts`: UID, login) — исключительно системная привязка тома, и машина ACL
+> **не смотрит на UID никогда**: ни при проверке доступа, ни при резолве путей. UID не
+> появляется в API-ответах шаринга — только в `ensure_home` (системная операция владельца).
 
 > **Trash-семантика — закрыта (ревизия 5, бывшая находка 11).** Отсекатель
 > `AND n.path NOT LIKE 'Trash/%'` НЕ вводится: Trash недоступен получателям
@@ -508,7 +585,7 @@ LIMIT 1;
 - системная схема накатывается `migrate` под advisory lock (belle ADR-004) — единый механизм с auth/llm/admin;
 - модель людей не дублируется: FK на `auth.users` / `auth.groups` — источник истины (инвариант плана).
 
-Unix-права (`own_path`, 0755/0644, chown) сохраняются как историческое наследие для консистентности тома, но **доступ контролирует `fs.acl` на уровне приложения**, не ОС: воркер выполняет операции от своего uid и технически может писать в любой `/home/{unix_name}` — ограничение только машиной ACL и только от имени владельца/грантополучателя.
+Unix-права (`own_path`, chown) сохраняются как привязка тома к real system UID (ревизия 6: `fs.unix_accounts`, §3.1), но **доступ контролирует `fs.acl` на уровне приложения**, не ОС: воркер выполняет операции от своего uid (root в v1) и технически может писать в любой `/home/{username}` — ограничение только машиной ACL и только от имени владельца/грантополучателя.
 
 ### 5.7. Никакого админ-обхода (вердикт Мастера №2)
 
@@ -667,6 +744,8 @@ ORDER BY u.username, n.path;
 - **Механизм rate-limit — транспортный слой, не fs**: ограничители запросов живут в albedo/ADR-001 (edge), fs не строит собственный rate-limiter — это дублирование ответственности. Ответственность за имплементацию: **Рэй + Эна, волна деплоя** (вне скоупа шагов плана §17).
 - **Дублирующая защита домена fs — только квота грантов (п. 2)**: транспортный rate-limit обходит при прямой постановке задач; `share_add` на воркере обязан проверить квоту владельца — `SELECT count(*)` живых грантов владельца ≥ 1000 → доменная ошибка **`QUOTA_EXCEEDED`** (429-подобная по семантике: envelope `{error: {code: "FS_QUOTA_EXCEEDED", ...}}`, транспортный HTTP остаётся 200 — доменные ошибки не маппятся на HTTP-коды, albedo ADR-001). Проверка — до INSERT, в той же воркерной задаче.
 
+**Unix-привязка домашней папки и root-режим (ревизия 6, вердикт Мастера — вариант C).** Домашняя папка = `/home/{username}` без нормализации (регистр и кириллица as-is, биекция — `UNIQUE(username)` в auth); `unix_name()` с `lower()` устранён. Привязка к real system UID — таблица `fs.unix_accounts` (DDL `000_unix_accounts.sql`, §14), выдача UID и полный флоу `ensure_unix_home` — §3.1. Config: `fs.uid_min = 10000`, `fs.uid_max = 60000` (§13). Security-смысл: unix-слой — привязка тома (chown-консистентность, владельцы файлов на диске), **не** рубеж доступа: воркер fs-операций в v1 работает от root (`useradd`/`chown` требуют), единственный рубеж — ACL-машина §5.4, что осознанно. Не-root воркер с capability-набором (`cap_chown`, `cap_dac_override`) — волна hardening, вне v1; к тому моменту `fs.unix_accounts` уже даёт отображение user_id → UID, нужное для per-task seteuid (дверь фазы 7 — §19).
+
 Security-события (ревью Литы после accepted):
 
 - событие `fs_security_violation` с `kind`: `PATH_ESCAPE` | `SYMLINK_ESCAPE` | `ACL_DENIED` | `INVALID_NAME`;
@@ -709,7 +788,7 @@ Security-события (ревью Литы после accepted):
 | `fs_security_violation` | WARN | `kind`, `user_id`, `owner`, `rel_path`, `operation`, `code` |
 | `fs_acl_denied` | WARN | `user_id`, `owner`, `rel_path`, `required_level` |
 | `fs_operation_failed` | ERROR | `operation`, `error_type`, `duration_ms` |
-| `fs_home_provisioned` | INFO | `unix_name`, `home` |
+| `fs_home_provisioned` | INFO | `username`, `home`, `login` (unix_uid — только в DEBUG, §3.1) |
 | `fs_module_loaded` / `fs_module_unloaded` | INFO | `version` |
 
 Правила: не логировать содержимое файлов и содержимое `content_b64`; не логировать на ERROR то, что защищено машиной ACL (это WARN — система работает); каждое security-событие дублируется метрикой.
@@ -728,6 +807,8 @@ class FsConfig:
     default_page_size: int = 50           # env FS_DEFAULT_PAGE_SIZE
     max_page_size: int = 200              # env FS_MAX_PAGE_SIZE
     git_timeout: float = 3.0              # env FS_GIT_TIMEOUT (сек на git-команду)
+    uid_min: int = 10000                  # env FS_UID_MIN — нижняя граница выдаваемых unix UID (§3.1)
+    uid_max: int = 60000                  # env FS_UID_MAX — верхняя граница; исчерпание → UID_EXHAUSTED
 ```
 
 - `WORKSPACE_HOME_ROOT` остаётся рабочим для обратной совместимости деплоя до перехода (fs читает `FS_HOME_ROOT`, fallback `WORKSPACE_HOME_ROOT`), затем env workspace очищается. Volume `user-homes:/home` **не переименовывается** (инфраструктура, решение Мастера).
@@ -739,11 +820,11 @@ class FsConfig:
 
 По belle ADR-004 (`on_load` без DDL; накат один раз под advisory lock):
 
-1. `fs/DB_SCHEMA` (schema-first, образец `auth/schemas.py`): схема `fs`, таблицы `nodes` → `acl` + индексы (DDL в §5.0/§5.1). Порядок DDL строгий: `fs.nodes` до `fs.acl` (FK).
+1. `fs/DB_SCHEMA` (schema-first, образец `auth/schemas.py`): схема `fs`, таблицы `unix_accounts` → `nodes` → `acl` + индексы (DDL в §3.1/§5.0/§5.1). Файлы DDL в лексикографическом порядке DDLTracker: `ddl/000_unix_accounts.sql` → `ddl/001_nodes.sql` → `ddl/002_acl.sql` (000 до 001 — читаемость; FK между ними внутри fs нет, но порядок файлов не мешает). Порядок DDL строгий: `fs.unix_accounts` и `fs.nodes` до `fs.acl` (FK).
 2. `FsModule.apply_schema(state)`: `register_schema("fs", DB_SCHEMA)` (образец: `llm/__init__.apply_schema` → `initialize_sync`).
-3. `belle/migrate.py`: `_MODULES = ("db", "auth", "llm", "fs", "notification", "admin")` — порядок DDL; fs зовёт notification только в рантайме задач, FK `fs.nodes/fs.acl → auth.users/groups` требует **fs после auth** (auth уже идёт раньше admin по той же причине). Взаимных FK fs↔admin и fs→notification нет.
+3. `belle/migrate.py`: `_MODULES = ("db", "auth", "llm", "fs", "notification", "admin")` — порядок DDL; fs зовёт notification только в рантайме задач, FK `fs.unix_accounts/fs.nodes/fs.acl → auth.users/groups` требует **fs после auth** (auth уже идёт раньше admin по той же причине). Ревизия 6 добавляет `fs.unix_accounts` с тем же FK — **порядок модулей не меняется**. Взаимных FK fs↔admin и fs→notification нет.
 4. Идемпотентность: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`; единственный DML — сидов нет; повторный migrate безопасен, лок `mia.schema.system` сериализует параллельные деплоя. `ON CONFLICT` в рантайме `share_add` — против частичного уникального индекса (§5.0), это DML-идемпотентность, не DDL.
-5. CRUД `fs.nodes`/`fs.acl` в рантайме — через runtime-пул `pgbouncer:6432` (контур C), DDL — только контур B migrate.
+5. CRUД `fs.unix_accounts`/`fs.nodes`/`fs.acl` в рантайме — через runtime-пул `pgbouncer:6432` (контур C), DDL — только контур B migrate.
 
 Разрушающих миграций нет: таблицы новые, схема `fs` новая, обратной совместимости не требуется (ревизия 1 в код не попала — path-based DDL не накатывался).
 
@@ -778,8 +859,8 @@ flowchart TB
   end
 
   Q[("Redis очередь mia.run")]
-  H[("volume user-homes<br/>/home/{unix_name}")]
-  PG[("PostgreSQL<br/>fs.nodes + fs.acl + auth.users/groups")]
+  H[("volume user-homes<br/>/home/{username} as-is")]
+  PG[("PostgreSQL<br/>fs.unix_accounts + fs.nodes + fs.acl + auth.users/groups")]
 
   UI -->|POST, HttpOnly cookies| B
   B -->|dispatch| Q
@@ -831,7 +912,7 @@ sequenceDiagram
 flowchart LR
   WP["workspace provider/facade<br/>list_home / link_home_path / trash_path / rewrite_after_move"]
   FS["state.fs (FsAccessor)<br/>register/unregister_shareable_root"]
-  H[("/home/{unix_name}")]
+  H[("/home/{username} as-is")]
 
   WP -->|"exists / list / trash / ensure_home<br/>link → register_shareable_root<br/>unlink → unregister_shareable_root"| FS
   FS --> H
@@ -846,18 +927,21 @@ flowchart LR
 
 | Шаг | Что делает Сона | Готовность |
 |-----|-----------------|------------|
-| 1. Каркас | Репо mia-fs → `mia/modules/fs/`: `config.py`, `errors.py`, `schema.py` (FS_SCHEMA), `FsAccessor`, `FsModule` (on_load вешает `state.fs`, register_sync), `apply_schema` (DB_SCHEMA), `ddl/001_nodes.sql`, `ddl/002_acl.sql` | state.fs существует, права fs:* в auth, fs.nodes + fs.acl после migrate |
+| 1. Каркас | Репо mia-fs → `mia/modules/fs/`: `config.py` (включая `uid_min`/`uid_max`), `errors.py`, `schema.py` (FS_SCHEMA), `FsAccessor`, `FsModule` (on_load вешает `state.fs`, register_sync), `apply_schema` (DB_SCHEMA), `ddl/000_unix_accounts.sql`, `ddl/001_nodes.sql`, `ddl/002_acl.sql` | state.fs существует, права fs:* в auth, fs.unix_accounts + fs.nodes + fs.acl после migrate |
 | 2. Миграция | `_MODULES` в `belle/migrate.py` += `fs` (после llm, до admin); env worker + fs | migrate зелёный, повторный — идемпотентный |
-| 3. Перенос чистых функций | `fs/paths.py` ← workspace/fs.py; `fs/homes.py` ← homes.py; `fs/gitinfo.py` ← gitinfo.py. Из workspace — удалить файлы, все импорты переключить на `state.fs` | workspace импортирует fs только через accessor; старые юнит-тесты диска зелёные |
+| 3. Перенос чистых функций | `fs/paths.py` ← workspace/fs.py; `fs/homes.py` ← homes.py **без `unix_name`** (функция устраняется, ревизия 6 — username as-is + `fs.unix_accounts`, флоу ensure §3.1); `fs/gitinfo.py` ← gitinfo.py. Из workspace — удалить файлы, все импорты переключить на `state.fs` | workspace импортирует fs только через accessor; старые юнит-тесты диска зелёные |
 | 4. RPC | `fs/provider.py`: все `fs.*` из §4 с `@task(api=True, type="io", permission=..., timeout=...)`; `owner`-параметр пока валидируется как «только свой» (ACL на шаге 5) | list/create/trash/move/rename через fs.* работают с фронта |
 | 5. Шаринг | `fs/acl.py` (машина §5.4) + `FsRepository` (fs.nodes: ленивая регистрация, rename/move/trash/restore-обновления; fs.acl: added/skipped) + `share_list/add/remove`, `resolve_entities` (3 статуса), `list_shared`; **валидация shareable roots §5.6.3** (`rel=''` и пути вне живых корней → `NOT_SHAREABLE`, до INSERT); включить `owner` во всех RPC; хук `state.notification.send` по `added[]` (ADR-003, graceful) | ПКМ→ACL-таблица→Add→поиск→уведомления работают end-to-end; `NOT_SHAREABLE` на нелинкованные пути |
-| 6. Интеграция workspace | Финальная зачистка: provider.workspace — тонкий фасад (§3.1), **`link_home_path` → `register_shareable_root` + `link_path`, `unlink_home_path` → `unregister_shareable_root` + `unlink_path` (§5.6.2)**, удаление `_home`-самодеятельности, `grep` на отсутствие `ensure_unix_home` в mia-workspace | критерий приёмки фазы 2 закрыт; линковка регистрирует корень, отлинковка снимает флаг |
+| 6. Интеграция workspace | Финальная зачистка: provider.workspace — тонкий фасад (§3.2), **`link_home_path` → `register_shareable_root` + `link_path`, `unlink_home_path` → `unregister_shareable_root` + `unlink_path` (§5.6.2)**, удаление `_home`-самодеятельности, `grep` на отсутствие `ensure_unix_home` в mia-workspace | критерий приёмки фазы 2 закрыт; линковка регистрирует корень, отлинковка снимает флаг |
 
 Тесты Катерины (до любых UI-изменений):
 
 1. **RPC-пирамида fs.list/create/trash/move/rename** — happy path через `POST /api/v1/fs/*` с cookies.
 2. **Песочница**: `../escape`, абсолютный путь, symlink наружу, `Trash/..`, unicode/кириллица-имена → `FS_ERROR PATH_ESCAPE|INVALID_NAME`, метрика `fs_security_violations_total` растёт, лог `fs_security_violation` есть.
-3. **Провижининг**: новый пользователь → `fs.ensure_home` → unix-юзер создан, `~/` существует, повторный вызов идемпотентен.
+3. **Провижининг** (ревизия 6, §3.1): новый пользователь → `fs.ensure_home` → unix-аккаунт создан (строка в `fs.unix_accounts`: uid ≥ `uid_min`, login = `mia-{hex8}`), `~/` существует, повторный вызов идемпотентен.
+   - **Username as-is (находка 1, вариант C)**: пользователи `Anna` и `anna` → **РАЗНЫЕ** home (`/home/Anna` и `/home/anna`), **разные** unix_uid; кириллический `Иван` → `/home/Иван` с валидным unix-аккаунтом (login латиницей `mia-{hex8}`); нигде в путях нет lower-нормализации.
+   - **chown/chmod применились**: каталог home принадлежит выданному `unix_uid`, права `700`; миграция на существующий каталог: `chown` на новый UID поверх старого содержимого, контент не тронут.
+   - **Идемпотентность ensure**: два параллельных `ensure_home` одного юзера → один unix-аккаунт (advisory lock per-user), второй вызов возвращает существующую запись без ошибок; `UNIQUE(login/unix_uid/home_path)` — без двойного useradd.
 4. **ACL**: viewer не может `fs.write` (denied + метрика); editor может; грант на предок покрывает потомка **включая созданные после шаринга**; самый специфичный грант выигрывает; `share_remove` закрывает доступ немедленно; грант на группу работает через membership; **грант на Everyone виден любому юзеру без явного membership**; **system_admin без гранта получает `ACL_DENIED`** (нет обхода).
    - **Канонизация перед ACL** (находка 2, ревизия 4): получатель с грантом только на `shared/` запрашивает `rel="shared/../victim.txt"` → песочница канонизирует в `victim.txt`, ACL-lookup на каноническом rel → **`ACL_DENIED`** (сырой rel в машину не попал, LIKE `shared/%` не сработал); security-событие + метрика.
    - **Двухпутевые операции** (находка 3, ревизия 4): editor на `shared/` → `move("private/x", "shared")` → **`ACL_DENIED`** (проверяются ОБА пути: `private/x` без гранта, оба ≥ write, §4); симметрично — viewer на `shared/` → `move("shared/f", "private")` → `ACL_DENIED` по `private`.
@@ -879,6 +963,8 @@ flowchart LR
 
 | Вариант | Почему нет |
 |---------|------------|
+| **`unix_name()` — нормализация логина в путь (`lower()` + вырезание символов, текущий код)** | Отклонена Мастером (ревизия 6, находка 1 — вариант C): коллапсирует `Anna`/`anna`/`анна` в один путь — коллизии между реальными пользователями и сломанная кириллица; биекцию путей уже гарантирует `UNIQUE(username)` в auth, путь обязан повторять username as-is (`/home/Anna` ≠ `/home/anna`, `/home/Иван`) |
+| **Sequence БД для выдачи unix_uid** | Sequence живёт вне таблицы: рассинхронизируется при restore из бэкапа и ручных правках; `MAX(unix_uid)+1` под advisory lock (§3.1) самоконсистентен с данными, а конкурентность выдачи минимальна (один раз на пользователя); `UNIQUE(unix_uid)` — последний рубеж |
 | **Оставить FS в workspace** | Слияние доменов: workspace тянет дисковый код в каждый процесс, тулы фазы 7 зависят от workspace, шаринг некуда посадить. Прямое указание плана (фаза 2) |
 | **`type="database"` для fs-RPC** (как сейчас в workspace.provider) | Диспетчеризация врёт: диск — не БД-пул. `TaskType` не содержит `file`, для диска честный `io` |
 | **Path-based ACL: `base_path` в `fs.acl` (ревизия 1)** | Отклонена Мастером (правка №5): путь меняется rename/move — гранты «отваливались» от расшаренного объекта, имя у получателя застывало. Identity-модель: `fs.nodes.node_uuid` стабилен, path — атрибут узла |
@@ -907,6 +993,9 @@ flowchart LR
 - Появляется шаринг: identity-based ACL, устойчивый к rename/move/trash; мгновенный отзыв; batch-резолв сущностей с ambiguous-выбором; уровни viewer/editor; Everyone.
 - Права `fs:read/fs:write/fs:share` проверяются permission-машиной, а не «если username=admin»; админского обхода нет by design (§5.7).
 - Уведомления о выдаче доступа — сквозной сценарий модуля notification (ADR-003), без дублирования в fs.
+- Unix-привязка домашней папки к real system UID (`fs.unix_accounts`, ревизия 6) — фундамент для агентных тулов фазы 7 (§19 дверь) и честная chown-консистентность тома; username as-is убирает целый класс коллизий и багов кириллицы.
+
+**Дверь фазы 7: `unix_uid` как второй рубеж (ревизия 6).** Real system UID в `fs.unix_accounts` заложен не для v1-доступа (v1 — воркер root, рубеж один: ACL-машина §5.4, что осознанно), а для будущих **агентных тулов**: per-task `seteuid` в LLM-тулах — файловые операции агента от UID владельца, unix-права ОС как второй рубеж после ACL-машины. Отображение user_id → UID уже будет существовать к моменту фазы 7 — фаза получит его без новой миграции. До того — отображение используется только для chown-консистентности тома и `ensure_unix_home`.
 
 ### Цена
 
@@ -951,10 +1040,12 @@ flowchart LR
 | 14 | **(ревизия 5)** Механизм реестра корней | ✅ Колонка `is_shareable_root` в `fs.nodes` (узел и так ленивый, флаг живёт с узлом, меньше JOIN) | §5.0, §5.6.1 |
 | 15 | **(ревизия 5)** Гранты при отлинковке корня | ✅ По умолчанию НЕ отзываются (данные и узел живы, получатели сохраняют доступ); новые `share_add` → `NOT_SHAREABLE`; Мастер может ужесточить | §5.6.3 |
 | 16 | **(ревизия 5)** Trash-семантика (находка 11, PENDING ревизии 4) | ✅ Закрыто: Trash недоступен получателям автоматически (гранта на `''` нет), отсекатель не нужен | §5.2 п. 5, §5.4 |
+| 17 | **(ревизия 6)** Привязка домашней папки / `unix_name` (находка 1 Литы, последний PENDING ревизии 4) | ✅ **Вариант C**: «Уберем lower case, пусть делает так, как есть» + привязка к real system UID — home = `/home/{username}` без нормализации (регистр/кириллица as-is, биекция — `UNIQUE(username)` auth), `unix_name()` устранён, таблица `fs.unix_accounts` (UID 10000–60000, login `mia-{hex8}`), ensure с useradd под advisory lock | §3, §3.1, §10, §13, §14, §17 |
 
 Дополнительные вердикты этой ревизии (внесены в текст):
 
 - **Identity-based ACL вместо path-based** — главный архитектурный сдвиг (§5.0–§5.2).
 - **Админы без обхода**: ни одна роль не даёт доступ к чужим нерасшаренным; `fs:manage` отклонён окончательно (§5.7).
 - **`resolve_entities`**: статусы `resolved | unresolved | ambiguous` + candidates (§8.1, §8.2).
-- Статус документа: **accepted**; security review Литы внесено в ревизию 4 (находки 2, 3, 6, 7, 11 + фронт-требования ADR-003 §9.3); ревизия 5 — вердикты Мастера: shareable roots (№13–15), Trash-семантика закрыта (№16). **PENDING MASTER остаётся ровно один: находка 1 (unix_name, вариант A/B) — решение не принято, в ревизию не вносится.**
+- **Ревизия 6 — unix UID-привязка, username as-is (вердикт Мастера, закрыт PENDING unix_name)**: home = `/home/{username}` без нормализации + real system UID через `fs.unix_accounts` (§3.1, §10, §14); ACL не смотрит на UID (§5.4); `unix_uid` — дверь фазы 7 (§19).
+- Статус документа: **accepted**; security review Литы внесено в ревизию 4 (находки 2, 3, 6, 7, 11 + фронт-требования ADR-003 §9.3); ревизия 5 — вердикты Мастера: shareable roots (№13–15), Trash-семантика закрыта (№16); ревизия 6 — находка 1 закрыта вариантом C (№17). **PENDING MASTER: нет — все закрыты.**
