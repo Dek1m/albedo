@@ -651,6 +651,7 @@ body {
   animation: toast-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   opacity: 1;
   transition: opacity 1.2s ease;
+  cursor: pointer;
 }
 
 .albedo-toast--fade {
@@ -2236,6 +2237,237 @@ body {
   padding: 0.1rem 0.35rem;
   border-radius: var(--radius);
   outline: none;
+}
+
+/* ── Safe names (bidi / XSS-text) ─────────── */
+
+.albedo-safe-name {
+  unicode-bidi: plaintext;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ── Notification bell ─────────────────────── */
+
+.albedo-bell {
+  position: relative;
+}
+
+.albedo-bell-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.albedo-bell-btn:hover,
+.albedo-bell-btn:focus-visible {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.albedo-bell-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.22rem;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #1e1f22;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.05rem;
+  text-align: center;
+}
+
+.albedo-bell-drop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  width: 22rem;
+  max-width: min(22rem, 90vw);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.albedo-bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.albedo-bell-list {
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.albedo-bell-empty {
+  margin: 0;
+  padding: 1.2rem 0.8rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.albedo-bell-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.albedo-bell-item:hover,
+.albedo-bell-item:focus-visible {
+  background: var(--bg-hover);
+}
+
+.albedo-bell-item.is-unread {
+  background: rgb(255 122 26 / 8%);
+}
+
+.albedo-bell-item-text {
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.albedo-bell-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.albedo-bell-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* ── Share dialog ──────────────────────────── */
+
+.albedo-share,
+.albedo-share-add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+  height: 100%;
+}
+
+.albedo-share-path {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.albedo-share-table-wrap {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+}
+
+.albedo-share-foot {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.albedo-share-icon {
+  width: 1.6rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.albedo-share-everyone,
+.albedo-share-off {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: var(--radius);
+  font-size: 0.68rem;
+}
+
+.albedo-share-everyone {
+  background: rgb(255 122 26 / 16%);
+  color: var(--brand);
+}
+
+.albedo-share-off {
+  background: rgb(242 63 67 / 14%);
+  color: var(--danger);
+}
+
+.albedo-share-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text-secondary);
+}
+
+.albedo-share-missed {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  list-style: none;
+  color: var(--danger);
+  background: rgb(242 63 67 / 10%);
+  border-radius: var(--radius);
+}
+
+.albedo-share-picked,
+.albedo-share-ambiguous {
+  margin: 0;
+  padding: 0.4rem 0;
+}
+
+.albedo-share-picked li,
+.albedo-share-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.albedo-share-email {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.albedo-share-add-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.albedo-share-amb-group p {
+  margin: 0 0 0.35rem;
+  color: var(--text-secondary);
 }
 
 /* ── Responsive ────────────────────────────── */

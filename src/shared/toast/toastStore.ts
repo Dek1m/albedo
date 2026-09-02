@@ -8,6 +8,7 @@ export interface Toast {
   kind: ToastKind;
   removing: boolean;
   frozen: boolean;
+  pinned: boolean;
 }
 
 interface ToastState {
@@ -18,6 +19,8 @@ interface ToastState {
   remove: (id: number) => void;
   freeze: (id: number) => void;
   unfreeze: (id: number) => void;
+  pause: (id: number) => void;
+  resume: (id: number) => void;
 }
 
 const FADE_DELAY = 2000;
@@ -28,7 +31,7 @@ function scheduleFade(id: number) {
   setTimeout(() => {
     const state = useToastStore.getState();
     const item = state.items.find((t) => t.id === id);
-    if (item && !item.frozen && !item.removing) {
+    if (item && !item.frozen && !item.pinned && !item.removing) {
       state.dismiss(id);
     }
   }, FADE_DELAY);
@@ -44,7 +47,7 @@ function scheduleAutoDismiss(id: number) {
   setTimeout(() => {
     const state = useToastStore.getState();
     const item = state.items.find((t) => t.id === id);
-    if (item && !item.frozen && !item.removing) {
+    if (item && !item.frozen && !item.pinned && !item.removing) {
       state.dismiss(id);
       scheduleRemove(id);
     }
@@ -57,7 +60,10 @@ export const useToastStore = create<ToastState>((set, get) => ({
 
   add(text, kind = 'error') {
     const id = get().nextId;
-    set((s) => ({ items: [...s.items, { id, text, kind, removing: false, frozen: false }], nextId: id + 1 }));
+    set((s) => ({
+      items: [...s.items, { id, text, kind, removing: false, frozen: false, pinned: false }],
+      nextId: id + 1,
+    }));
     scheduleFade(id);
     scheduleAutoDismiss(id);
   },
@@ -80,8 +86,26 @@ export const useToastStore = create<ToastState>((set, get) => ({
   },
 
   unfreeze(id) {
+    const item = get().items.find((t) => t.id === id);
     set((s) => ({
       items: s.items.map((t) => (t.id === id ? { ...t, frozen: false } : t)),
+    }));
+    if (item?.pinned) {
+      return;
+    }
+    scheduleFade(id);
+    scheduleAutoDismiss(id);
+  },
+
+  pause(id) {
+    set((s) => ({
+      items: s.items.map((t) => (t.id === id ? { ...t, pinned: true } : t)),
+    }));
+  },
+
+  resume(id) {
+    set((s) => ({
+      items: s.items.map((t) => (t.id === id ? { ...t, pinned: false, frozen: false } : t)),
     }));
     scheduleFade(id);
     scheduleAutoDismiss(id);

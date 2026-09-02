@@ -25,6 +25,8 @@ import {
   readLayout,
 } from '../../workspace/layoutPersist';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
+import { NotificationBell } from '../notifications/NotificationBell';
+import { ShareDialog } from '../share/ShareDialog';
 import { UserChip } from './UserChip';
 
 export function AppShell(): ReactElement {
@@ -106,6 +108,7 @@ export function AppShell(): ReactElement {
         </div>
         <div className="albedo-header-actions">
           <UserChip />
+          <NotificationBell />
           <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => void onLogout()}>
             Sign out
           </button>
@@ -132,6 +135,7 @@ export function AppShell(): ReactElement {
           setCreateOpen(true);
         }}
       />
+      <ShareDialog />
       <ToastView />
       <UserSettingsModal />
     </div>
