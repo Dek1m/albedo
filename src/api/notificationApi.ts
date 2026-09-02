@@ -27,7 +27,7 @@ function toItem(dto: NotificationDto): NotificationItem {
 }
 
 export const notificationApi = {
-  async list(limit = 50, before?: string | null, unreadFirst = true): Promise<{
+  async list(limit = 50, cursor?: string | null): Promise<{
     items: NotificationItem[];
     nextCursor: string | null;
   }> {
@@ -36,8 +36,7 @@ export const notificationApi = {
       'list',
       {
         limit,
-        unread_first: unreadFirst,
-        ...(before ? { before } : {}),
+        ...(cursor ? { cursor } : {}),
       },
     );
     return {

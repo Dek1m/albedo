@@ -26,6 +26,8 @@ const CODE_MESSAGES: Record<string, string> = {
   DISABLED: 'Account is disabled',
   REUSE_DETECTED: 'Session was reused. Sign in again',
   AUTH_ERROR: 'Sign-in failed',
+  VALIDATION: 'Invalid request',
+  NOTIFICATION_ERROR: 'Could not load notifications',
   PAYLOAD_NOT_SERIALIZABLE: 'Invalid request',
   TIMEOUT: 'The service did not respond. Try again',
   METHOD_NOT_FOUND: 'Method not found',
