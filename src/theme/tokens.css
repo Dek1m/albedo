@@ -1715,6 +1715,24 @@ body {
   flex-shrink: 0;
 }
 
+.albedo-module-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 0.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.albedo-module-chevron:hover,
+.albedo-module-chevron:focus-visible {
+  color: var(--brand);
+}
+
 .albedo-admin-caps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

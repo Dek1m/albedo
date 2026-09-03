@@ -1,15 +1,24 @@
 import { useEffect, useState } from 'react';
-import type { ReactElement } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import { systemApi } from '../../api/systemApi';
 import type { SystemModule } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
+import { ContextMenu } from '../../shared/ui/ContextMenu';
+import type { MenuItem } from '../../shared/ui/ContextMenu';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { Window } from '../../shared/ui/Window';
+import { ModuleMenu } from './context/ModuleMenu';
 
 interface ModulesWindowProps {
   open: boolean;
   onClose: () => void;
+}
+
+interface Ctx {
+  x: number;
+  y: number;
+  items: MenuItem[];
 }
 
 function moduleBall(mod: SystemModule): string {
@@ -30,10 +39,12 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [installOpen, setInstallOpen] = useState(false);
+  const [ctx, setCtx] = useState<Ctx | null>(null);
 
   useEffect(() => {
     if (!open) {
       setInstallOpen(false);
+      setCtx(null);
       return;
     }
     let cancelled = false;
@@ -61,6 +72,29 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
     };
   }, [open]);
 
+  const run = async (work: () => Promise<void>): Promise<void> => {
+    try {
+      await work();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
+  const menu = new ModuleMenu({
+    onReload: (mod) => void run(() => systemApi.modulesReload(mod.name)),
+    onUpdate: (mod) => void run(() => systemApi.modulesUpdate(mod.name)),
+    onUnload: (mod) => void run(() => systemApi.modulesUnload(mod.name)),
+    onDisable: (mod) => void run(() => systemApi.modulesDisable(mod.name)),
+    onEnable: (mod) => void run(() => systemApi.modulesEnable(mod.name)),
+    onDelete: (mod) => void run(() => systemApi.modulesDelete(mod.name)),
+  });
+
+  const openMenu = (event: ReactMouseEvent, mod: SystemModule): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    setCtx({ x: event.clientX, y: event.clientY, items: menu.items(mod) });
+  };
+
   return (
     <>
       <Window className="albedo-admin" windowId="albedo-system-modules" open={open} title="Modules" onClose={onClose}>
@@ -82,6 +116,14 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
                       {mod.version ? <span>{mod.version}</span> : null}
                       {mod.status ? <span className="albedo-badge">{mod.status}</span> : null}
                     </span>
+                    <button
+                      type="button"
+                      className="albedo-module-chevron"
+                      aria-label="Module actions"
+                      onClick={(event) => openMenu(event, mod)}
+                    >
+                      <i className="bi bi-chevron-right" />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -96,6 +138,7 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
           </div>
         )}
       </Window>
+      {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
       <Window
         className="albedo-admin"
         windowId="albedo-system-install"

@@ -648,6 +648,30 @@ export const systemApi = {
     return list.map(mapModule).filter((item): item is SystemModule => item !== null);
   },
 
+  async modulesReload(name: string): Promise<void> {
+    await apiClient.call('system', 'modules_reload', { name });
+  },
+
+  async modulesUpdate(name: string): Promise<void> {
+    await apiClient.call('system', 'modules_update', { name });
+  },
+
+  async modulesUnload(name: string): Promise<void> {
+    await apiClient.call('system', 'modules_unload', { name });
+  },
+
+  async modulesDisable(name: string): Promise<void> {
+    await apiClient.call('system', 'modules_disable', { name });
+  },
+
+  async modulesEnable(name: string): Promise<void> {
+    await apiClient.call('system', 'modules_enable', { name });
+  },
+
+  async modulesDelete(name: string): Promise<void> {
+    await apiClient.call('system', 'modules_delete', { name });
+  },
+
   async prefList(): Promise<string[]> {
     const raw = await apiClient.call<unknown>('system', 'pref_list', {});
     const list = Array.isArray(raw) ? raw : pickList(asRecord(raw) ?? {}, 'items', 'prefs', 'keys');

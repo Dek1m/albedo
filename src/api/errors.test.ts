@@ -21,4 +21,8 @@ describe('humanMessage', () => {
       'Request failed',
     );
   });
+
+  it('maps NOT_IMPLEMENTED', () => {
+    expect(humanMessage(new ApiError('NOT_IMPLEMENTED', 'stub'))).toBe('Not implemented yet');
+  });
 });
