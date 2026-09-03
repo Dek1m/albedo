@@ -125,7 +125,7 @@ export function AppShell(): ReactElement {
         {active ? <SessionTabs /> : null}
       </header>
       <div className="albedo-body">
-        {active ? <WorkspaceSidebar onOpenSessions={() => setSessionsOpen(true)} /> : null}
+        {active ? <WorkspaceSidebar /> : null}
         <div className="albedo-main">
           <main className="albedo-workspace">
             {active ? <ChatPane /> : <p className="albedo-workspace-ready">ready</p>}
