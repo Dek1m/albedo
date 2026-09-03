@@ -33,6 +33,7 @@ describe('WorkspaceFolderMenu', () => {
     expect(hidden.some((item) => item.id === 'share')).toBe(false);
     const shown = menu.items({ relPath: 'docs', canRemoveFromWorkspace: true, canShare: true });
     expect(shown.map((item) => item.id)).toContain('share');
+    expect(shown.find((item) => item.id === 'share')?.icon).toContain('bi-link-45deg');
     shown.find((item) => item.id === 'share')?.action?.();
     expect(actions.onShare).toHaveBeenCalledWith('docs');
   });

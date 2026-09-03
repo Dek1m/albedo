@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { workspaceApi } from '../../api/workspaceApi';
 import type { GitRepo } from '../../api/workspaceApi';
 import { GitBranch } from './GitBranch';
@@ -7,6 +7,7 @@ import { humanMessage } from '../../api/errors';
 import type { WsNode } from '../../domain/workspace';
 import { toast } from '../../shared/toast/toastStore';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
+import { PanelGrip } from '../../shared/ui/PanelGrip';
 import { Window } from '../../shared/ui/Window';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
@@ -53,21 +54,6 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  const onDrag = (event: ReactMouseEvent): void => {
-    event.preventDefault();
-    const startX = event.clientX;
-    const startW = width;
-    const move = (ev: MouseEvent): void => {
-      setWidth(Math.min(420, Math.max(180, startW + ev.clientX - startX)));
-    };
-    const up = (): void => {
-      window.removeEventListener('mousemove', move);
-      window.removeEventListener('mouseup', up);
-    };
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
-  };
 
   if (!active) {
     return null;
@@ -237,7 +223,7 @@ export function WorkspaceSidebar({ onOpenSessions }: WorkspaceSidebarProps): Rea
           rev={diskRev}
         />
       ) : null}
-      <div className="albedo-sidebar-resizer" onMouseDown={onDrag} />
+      <PanelGrip axis="x" value={width} min={180} max={420} onChange={setWidth} />
       <Window className="albedo-folders" windowId="albedo-folders" open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
         <HomeTree
           selected={picked}

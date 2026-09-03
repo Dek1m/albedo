@@ -1,30 +1,34 @@
 import type { ReactElement } from 'react';
 
-const SETI: Record<string, { bg: string; fg: string; mark: string }> = {
-  ts: { bg: '#3178c6', fg: '#fff', mark: 'TS' },
-  tsx: { bg: '#3178c6', fg: '#fff', mark: 'TX' },
-  js: { bg: '#cbcb41', fg: '#1a1816', mark: 'JS' },
-  jsx: { bg: '#cbcb41', fg: '#1a1816', mark: 'JX' },
-  mjs: { bg: '#cbcb41', fg: '#1a1816', mark: 'JS' },
-  py: { bg: '#3572a5', fg: '#fff', mark: 'PY' },
-  rs: { bg: '#dea584', fg: '#1a1816', mark: 'RS' },
-  go: { bg: '#00add8', fg: '#1a1816', mark: 'GO' },
-  json: { bg: '#cbcb41', fg: '#1a1816', mark: '{ }' },
-  md: { bg: '#519aba', fg: '#fff', mark: 'MD' },
-  css: { bg: '#563d7c', fg: '#fff', mark: '#' },
-  scss: { bg: '#c6538c', fg: '#fff', mark: '#' },
-  html: { bg: '#e34c26', fg: '#fff', mark: '</>' },
-  svg: { bg: '#ffb13b', fg: '#1a1816', mark: 'SV' },
-  yml: { bg: '#cb171e', fg: '#fff', mark: 'Y' },
-  yaml: { bg: '#cb171e', fg: '#fff', mark: 'Y' },
-  toml: { bg: '#9c4221', fg: '#fff', mark: 'T' },
-  sql: { bg: '#dad8d8', fg: '#1a1816', mark: 'Q' },
-  sh: { bg: '#89e051', fg: '#1a1816', mark: '>' },
-  bash: { bg: '#89e051', fg: '#1a1816', mark: '>' },
-  txt: { bg: '#a0a0a0', fg: '#1a1816', mark: 'Aa' },
-  env: { bg: '#6a9955', fg: '#fff', mark: 'E' },
-  lock: { bg: '#a0a0a0', fg: '#1a1816', mark: 'L' },
+const ICONS: Record<string, string> = {
+  folder: '/file-icons/folder.svg',
+  'folder-open': '/file-icons/folder-open.svg',
+  ts: '/file-icons/typescript.svg',
+  tsx: '/file-icons/react_ts.svg',
+  js: '/file-icons/javascript.svg',
+  jsx: '/file-icons/react.svg',
+  py: '/file-icons/python.svg',
+  rs: '/file-icons/rust.svg',
+  go: '/file-icons/go.svg',
+  json: '/file-icons/json.svg',
+  md: '/file-icons/markdown.svg',
+  css: '/file-icons/css.svg',
+  html: '/file-icons/html.svg',
+  svg: '/file-icons/svg.svg',
+  yml: '/file-icons/yaml.svg',
+  yaml: '/file-icons/yaml.svg',
+  sh: '/file-icons/console.svg',
+  txt: '/file-icons/document.svg',
+  file: '/file-icons/file.svg',
 };
+
+export function fileIconSrc(name: string, kind: 'folder' | 'file', open?: boolean): string {
+  if (kind === 'folder') {
+    return open ? ICONS['folder-open']! : ICONS.folder!;
+  }
+  const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : '';
+  return ICONS[ext] ?? ICONS.file!;
+}
 
 interface FileGlyphProps {
   name: string;
@@ -33,15 +37,5 @@ interface FileGlyphProps {
 }
 
 export function FileGlyph({ name, kind, open }: FileGlyphProps): ReactElement {
-  if (kind === 'folder') {
-    return <i className={`bi ${open ? 'bi-folder2-open' : 'bi-folder'} albedo-ftype-folder`} />;
-  }
-  const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : '';
-  const fallback = { bg: '#6e6e6e', fg: '#fff', mark: ext.slice(0, 2).toUpperCase() || 'F' };
-  const skin = SETI[ext] ?? fallback;
-  return (
-    <span className="albedo-ftype" style={{ background: skin.bg, color: skin.fg }} title={ext || name}>
-      {skin.mark}
-    </span>
-  );
+  return <img className="albedo-file-glyph" src={fileIconSrc(name, kind, open)} alt="" draggable={false} />;
 }

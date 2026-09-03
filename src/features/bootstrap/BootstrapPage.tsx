@@ -7,6 +7,7 @@ import { authApi } from '../../api/authApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ToastView } from '../../shared/toast/ToastView';
+import { BrandMark } from '../shell/BrandMark';
 
 const bootstrapSchema = z.object({
   username: z.string().min(1, 'Enter username'),
@@ -68,7 +69,7 @@ export function BootstrapPage(): ReactElement {
   return (
     <main className="albedo-stage">
       <section className="albedo-auth-card">
-        <h1 className="albedo-brand">albedo</h1>
+        <BrandMark as="h1" />
         <p className="albedo-auth-hint">Создание первого администратора</p>
         <form className="albedo-auth-form" onSubmit={onSubmit} noValidate>
           <label className="form-label" htmlFor="bootstrap-username">

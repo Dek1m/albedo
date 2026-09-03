@@ -14,10 +14,10 @@ export function ChatPane(): ReactElement | null {
   const focused = useWorkspaceStore((s) => s.focusedSessionId);
   const sessions = useWorkspaceStore((s) => s.sessions);
   const tabs = useWorkspaceStore((s) => s.tabs);
+  const chatRev = useWorkspaceStore((s) => s.chatRev);
   const profile = useAuthStore((s) => s.profile);
   const session = tabs.find((s) => s.id === focused) ?? sessions.find((s) => s.id === focused);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [draft, setDraft] = useState('');
   const userName = profile ? chipLabel(profile) : 'You';
 
   useEffect(() => {
@@ -38,24 +38,11 @@ export function ChatPane(): ReactElement | null {
     return () => {
       cancelled = true;
     };
-  }, [active, focused, session?.workspaceId]);
+  }, [active, focused, session?.workspaceId, chatRev]);
 
   if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;
   }
-
-  const send = async (): Promise<void> => {
-    if (!draft.trim()) {
-      return;
-    }
-    try {
-      const msg = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', draft.trim());
-      setMessages((prev) => [...prev, msg]);
-      setDraft('');
-    } catch (err) {
-      toast(humanMessage(err));
-    }
-  };
 
   return (
     <section className="albedo-chat">
@@ -70,30 +57,6 @@ export function ChatPane(): ReactElement | null {
           );
         })}
       </div>
-      <form
-        className="albedo-chat-input"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send();
-        }}
-      >
-        <textarea
-          className="form-control form-control-sm"
-          rows={2}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Message"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-        />
-        <button className="btn btn-sm btn-albedo-primary" type="submit">
-          Send
-        </button>
-      </form>
     </section>
   );
 }

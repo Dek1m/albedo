@@ -13,6 +13,7 @@ export interface ShellLayout {
   openSessionIds: string[];
   foldersOpen: boolean;
   sidebarWidth: number;
+  dockHeight: number;
   expandedByWs: Record<string, string[]>;
 }
 
@@ -33,6 +34,7 @@ export function readLayout(userId: string): ShellLayout | null {
       openSessionIds: parsed.openSessionIds ?? [],
       foldersOpen: parsed.foldersOpen !== false,
       sidebarWidth: typeof parsed.sidebarWidth === 'number' ? parsed.sidebarWidth : 240,
+      dockHeight: typeof parsed.dockHeight === 'number' ? parsed.dockHeight : 200,
       expandedByWs: parsed.expandedByWs ?? {},
     };
   } catch {
@@ -78,6 +80,7 @@ export function persistCurrentLayout(): void {
     openSessionIds: state.tabs.filter((item) => item.tabOpen).map((item) => item.id),
     foldersOpen: state.foldersOpen,
     sidebarWidth: state.sidebarWidth,
+    dockHeight: state.dockHeight,
     expandedByWs,
   });
 }

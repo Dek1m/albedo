@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { Navigate } from 'react-router';
 import { authApi } from '../api/authApi';
+import { BrandMark } from '../features/shell/BrandMark';
 import { useAuthStore } from './AuthStore';
 
 interface AuthGuardProps {
@@ -42,7 +43,7 @@ export function AuthGuard({ children }: AuthGuardProps): ReactElement {
   if (!restoreFailed) {
     return (
       <main className="albedo-stage">
-        <h1 className="albedo-brand">albedo</h1>
+        <BrandMark as="h1" />
       </main>
     );
   }

@@ -1,14 +1,22 @@
 import { useRef } from 'react';
-import type { ChangeEvent, ReactElement } from 'react';
+import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
 import { highlightMarkdown } from './markdownPrompt';
 
 interface MarkdownPromptProps {
   value: string;
   disabled?: boolean;
+  showToolbar?: boolean;
   onChange: (value: string) => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
-export function MarkdownPrompt({ value, disabled, onChange }: MarkdownPromptProps): ReactElement {
+export function MarkdownPrompt({
+  value,
+  disabled,
+  showToolbar = true,
+  onChange,
+  onKeyDown,
+}: MarkdownPromptProps): ReactElement {
   const fileRef = useRef<HTMLInputElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
 
@@ -27,26 +35,28 @@ export function MarkdownPrompt({ value, disabled, onChange }: MarkdownPromptProp
 
   return (
     <div className="albedo-md">
-      <div className="albedo-md-toolbar">
-        <button
-          type="button"
-          className="btn btn-sm albedo-ghost-btn"
-          disabled={disabled}
-          onClick={() => fileRef.current?.click()}
-        >
-          Load file
-        </button>
-        <button type="button" className="btn btn-sm albedo-ghost-btn" disabled={disabled} onClick={() => onChange('')}>
-          Clear
-        </button>
-        <input
-          ref={fileRef}
-          className="d-none"
-          type="file"
-          accept=".md,.txt,text/markdown,text/plain"
-          onChange={loadFile}
-        />
-      </div>
+      {showToolbar ? (
+        <div className="albedo-md-toolbar">
+          <button
+            type="button"
+            className="btn btn-sm albedo-ghost-btn"
+            disabled={disabled}
+            onClick={() => fileRef.current?.click()}
+          >
+            Load file
+          </button>
+          <button type="button" className="btn btn-sm albedo-ghost-btn" disabled={disabled} onClick={() => onChange('')}>
+            Clear
+          </button>
+          <input
+            ref={fileRef}
+            className="d-none"
+            type="file"
+            accept=".md,.txt,text/markdown,text/plain"
+            onChange={loadFile}
+          />
+        </div>
+      ) : null}
       <div className="albedo-md-editor">
         <pre
           ref={highlightRef}
@@ -66,6 +76,7 @@ export function MarkdownPrompt({ value, disabled, onChange }: MarkdownPromptProp
               node.scrollLeft = event.currentTarget.scrollLeft;
             }
           }}
+          onKeyDown={onKeyDown}
           onChange={(event) => onChange(event.target.value)}
         />
       </div>

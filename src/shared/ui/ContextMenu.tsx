@@ -6,6 +6,7 @@ import { useClickOutside } from './useClickOutside';
 export interface MenuItem {
   id: string;
   label: string;
+  icon?: string;
   disabled?: boolean;
   children?: MenuItem[];
   action?: () => void;
@@ -66,7 +67,10 @@ function MenuList({
               disabled={item.disabled}
               onClick={() => run(item)}
             >
-              <span>{item.label}</span>
+              <span className="albedo-ws-drop-label">
+                {item.icon ? <i className={item.icon} aria-hidden="true" /> : null}
+                <span>{item.label}</span>
+              </span>
               {hasKids ? <i className="bi bi-chevron-right" /> : null}
             </button>
             {showKids && item.children ? (

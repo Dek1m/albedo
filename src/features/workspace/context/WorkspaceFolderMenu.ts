@@ -48,6 +48,7 @@ export class WorkspaceFolderMenu {
       rows.push({
         id: 'share',
         label: 'Share',
+        icon: 'bi bi-link-45deg',
         action: () => this.actions.onShare?.(target.relPath),
       });
     }

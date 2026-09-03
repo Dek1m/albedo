@@ -5,6 +5,6 @@ import { App } from './App';
 describe('App', () => {
   it('renders root', () => {
     render(<App />);
-    expect(screen.getByText('albedo')).toBeInTheDocument();
+    expect(screen.getByLabelText('albedo')).toBeInTheDocument();
   });
 });

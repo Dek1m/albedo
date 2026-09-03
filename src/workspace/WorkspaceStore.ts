@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import type { SessionId, Workspace, WorkspaceId, WsSession } from '../domain/workspace';
 
+export function dockHeightMax(): number {
+  const vh = typeof window === 'undefined' ? 480 : Math.round(window.innerHeight * 0.5);
+  return Math.min(480, Math.max(120, vh || 480));
+}
+
+export function clampDockHeight(height: number): number {
+  return Math.min(Math.max(height, 120), dockHeightMax());
+}
+
 export function mergeWorkspaceTabs(
   tabs: WsSession[],
   workspaceId: string,
@@ -33,6 +42,9 @@ interface WorkspaceState {
   tabs: WsSession[];
   focusedSessionId: SessionId | null;
   sidebarWidth: number;
+  dockHeight: number;
+  dockTab: 'message' | 'terminal';
+  chatRev: number;
   foldersOpen: boolean;
   expanded: string[];
   setCatalog: (items: Workspace[]) => void;
@@ -41,6 +53,9 @@ interface WorkspaceState {
   setSessions: (items: WsSession[]) => void;
   setFocused: (id: SessionId | null) => void;
   setSidebarWidth: (width: number) => void;
+  setDockHeight: (height: number) => void;
+  setDockTab: (tab: 'message' | 'terminal') => void;
+  bumpChatRev: () => void;
   setFoldersOpen: (open: boolean) => void;
   setExpanded: (paths: string[]) => void;
   toggleExpanded: (path: string) => void;
@@ -54,6 +69,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   tabs: [],
   focusedSessionId: null,
   sidebarWidth: 240,
+  dockHeight: 200,
+  dockTab: 'message',
+  chatRev: 0,
   foldersOpen: true,
   expanded: [],
   setCatalog: (catalog) => set({ catalog }),
@@ -76,6 +94,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     })),
   setFocused: (focusedSessionId) => set({ focusedSessionId }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
+  setDockHeight: (height) => set({ dockHeight: clampDockHeight(height) }),
+  setDockTab: (dockTab) => set({ dockTab }),
+  bumpChatRev: () => set((state) => ({ chatRev: state.chatRev + 1 })),
   setFoldersOpen: (foldersOpen) => set({ foldersOpen }),
   setExpanded: (expanded) => set({ expanded: withAncestors(expanded) }),
   toggleExpanded: (path) =>

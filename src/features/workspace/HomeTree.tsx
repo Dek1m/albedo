@@ -611,7 +611,25 @@ function HomeNode({
         )}
         <FileGlyph name={item.name} kind={item.kind} open={open} />
         <span className="albedo-home-name">{item.name}</span>
+        {(item.linked || item.inherited) && !item.excluded ? (
+          <i className="bi bi-link-45deg albedo-share-grant" title="Shared" aria-label="Shared" />
+        ) : null}
         {showSize ? <span className="albedo-home-size">{formatSize(item.sizeBytes)}</span> : null}
+        <span className="albedo-row-actions">
+          {isOwnShareablePath(item.relPath, item) ? (
+            <button
+              type="button"
+              className="albedo-icon-btn albedo-share-hover"
+              title="Share"
+              onClick={(event) => {
+                event.stopPropagation();
+                useShareStore.getState().open(item.relPath);
+              }}
+            >
+              <i className="bi bi-link-45deg" />
+            </button>
+          ) : null}
+        </span>
         <button
           type="button"
           className="albedo-home-ghost"

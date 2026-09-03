@@ -28,6 +28,8 @@ import { ShareDialog } from '../share/ShareDialog';
 import { SystemMenu } from '../system/SystemMenu';
 import type { SystemPane } from '../system/SystemMenu';
 import { SystemWindows } from '../system/SystemWindows';
+import { Dock } from '../dock/Dock';
+import { BrandMark } from './BrandMark';
 import { UserChip } from './UserChip';
 
 export function AppShell(): ReactElement {
@@ -51,6 +53,11 @@ export function AppShell(): ReactElement {
         return;
       }
       const layout = readLayout(userId);
+      if (layout) {
+        const store = useWorkspaceStore.getState();
+        store.setSidebarWidth(layout.sidebarWidth);
+        store.setDockHeight(layout.dockHeight);
+      }
       if (layout?.workspaceId) {
         try {
           const ws = await workspaceApi.get(layout.workspaceId);
@@ -66,7 +73,6 @@ export function AppShell(): ReactElement {
             const store = useWorkspaceStore.getState();
             store.openDashboard(ws, sessions);
             store.setFoldersOpen(layout.foldersOpen);
-            store.setSidebarWidth(layout.sidebarWidth);
             applySavedWorkspaceChrome(ws.id, sessions);
           }
         } catch {
@@ -95,33 +101,36 @@ export function AppShell(): ReactElement {
   return (
     <div className="albedo-shell">
       <header className="albedo-header">
-        <div className="albedo-header-left">
-          <span className="albedo-brand">albedo</span>
-          <WorkspaceMenu
-            onOpenList={() => {
-              void loadCatalog();
-              setListOpen(true);
-            }}
-            onOpenSessions={() => setSessionsOpen(true)}
-          />
-          <AiMenu onOpen={setAiPane} />
-          <SystemMenu onOpen={setSystemPane} />
+        <div className="albedo-header-row">
+          <div className="albedo-header-left">
+            <BrandMark />
+            <WorkspaceMenu
+              onOpenList={() => {
+                void loadCatalog();
+                setListOpen(true);
+              }}
+              onOpenSessions={() => setSessionsOpen(true)}
+            />
+            <AiMenu onOpen={setAiPane} />
+            <SystemMenu onOpen={setSystemPane} />
+          </div>
+          <div className="albedo-header-actions">
+            <UserChip />
+            <NotificationBell />
+            <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => void onLogout()}>
+              Sign out
+            </button>
+          </div>
         </div>
-        <div className="albedo-header-actions">
-          <UserChip />
-          <NotificationBell />
-          <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => void onLogout()}>
-            Sign out
-          </button>
-        </div>
+        {active ? <SessionTabs /> : null}
       </header>
-      {active ? <SessionTabs /> : null}
       <div className="albedo-body">
         {active ? <WorkspaceSidebar onOpenSessions={() => setSessionsOpen(true)} /> : null}
         <main className="albedo-workspace">
           {active ? <ChatPane /> : <p className="albedo-workspace-ready">ready</p>}
         </main>
       </div>
+      <Dock />
       <AiWindows pane={aiPane} onClose={() => setAiPane(null)} />
       <SystemWindows pane={systemPane} onClose={() => setSystemPane(null)} />
       <WorkspaceModals

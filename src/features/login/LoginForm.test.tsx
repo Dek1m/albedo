@@ -15,7 +15,7 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Войти' }));
     await waitFor(() => {
       const toasts = useToastStore.getState().items;
-      expect(toasts.some((t) => t.text === 'Invalid username or password')).toBe(true);
+      expect(toasts.some((t) => t.text === 'Wrong username or password')).toBe(true);
     });
   });
 });
