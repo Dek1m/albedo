@@ -41,13 +41,13 @@
   --font-title: 1.2rem;
   --font-menu: var(--font-ui);
   --radius: 4px;
-  --radius-window: 12px;
+  --radius-window: 18px;
 
   --danger: #f23f43;
   --success: #23a55a;
 
   --shadow: 0 16px 48px rgb(0 0 0 / 55%);
-  --dur: 180ms;
+  --dur: 140ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Bootstrap 5.3 читает эти переменные в .table */
@@ -215,22 +215,26 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: calc(0.15rem + 5px) 0.5rem calc(0.15rem + 5px) 0.65rem;
+  min-width: 13.5rem;
+  padding: 0.35rem 1.05rem 0.35rem 0.9rem;
   margin: 2px 0;
   border: 0;
   border-radius: 999px;
   background: var(--bg-3);
   border: 1px solid var(--hairline);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 42%);
   color: var(--text-primary);
   cursor: pointer;
   transition:
     background-color var(--dur) var(--ease),
-    border-color var(--dur) var(--ease);
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
 }
 
 .albedo-chip:hover {
   background: var(--bg-hover);
   border-color: var(--border-hover);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 50%);
 }
 
 .albedo-chip-text {
@@ -317,6 +321,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: var(--radius-window);
+  box-shadow: var(--shadow);
 }
 
 .albedo-window-frame.is-centered {
@@ -413,12 +419,13 @@ body {
 .albedo-window-resize::after {
   content: '';
   position: absolute;
-  right: 3px;
-  bottom: 3px;
+  right: 5px;
+  bottom: 5px;
   width: 8px;
   height: 8px;
   border-right: 2px solid var(--text-muted);
   border-bottom: 2px solid var(--text-muted);
+  border-bottom-right-radius: 2px;
 }
 
 .albedo-window.is-open .albedo-window-backdrop {
@@ -775,7 +782,7 @@ body {
   padding: 1.1rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-window);
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -953,7 +960,7 @@ body {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  animation: albedo-rise 160ms var(--ease);
+  animation: albedo-rise var(--dur) var(--ease);
 }
 
 .albedo-ws-drop-item {
@@ -1006,7 +1013,7 @@ body {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  animation: albedo-rise 160ms var(--ease);
+  animation: albedo-rise var(--dur) var(--ease);
 }
 
 .albedo-ai-drop-item {
@@ -1416,7 +1423,45 @@ body {
 .albedo-sidebar-fold-block {
   display: flex;
   flex-direction: column;
+  flex: 0 0 auto;
   min-height: 0;
+  margin: 0 0.5rem 0.7rem;
+  background: var(--bg-3);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 18px rgb(0 0 0 / 48%),
+    0 1px 0 rgb(255 255 255 / 4%) inset;
+  overflow: hidden;
+}
+
+.albedo-sidebar-fold-block.is-open {
+  flex: 1 1 auto;
+}
+
+.albedo-fold-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur) var(--ease);
+}
+
+.albedo-fold-body.is-open {
+  grid-template-rows: 1fr;
+}
+
+.albedo-fold-body-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.albedo-fold-well {
+  margin: 0 0.4rem 0.45rem;
+  background: var(--bg-1);
+  border-radius: 8px;
+  box-shadow: inset 0 2px 10px rgb(0 0 0 / 55%);
+  min-height: 0;
+  overflow: auto;
 }
 
 .albedo-sidebar-section {
@@ -1430,6 +1475,10 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: 1;
+}
+
+.albedo-tree-block .albedo-fold-well {
   flex: 1;
 }
 
@@ -2835,7 +2884,11 @@ body {
   .albedo-confirm,
   .albedo-toast,
   .albedo-skeleton-line,
-  .albedo-skeleton-block {
+  .albedo-skeleton-block,
+  .albedo-fold-body,
+  .albedo-ws-drop,
+  .albedo-sidebar {
     animation: none;
+    transition: none;
   }
 }

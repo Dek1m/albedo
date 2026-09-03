@@ -221,6 +221,8 @@ export function Window({
     maxWidth: 'none',
     minHeight: 0,
     transform: 'none',
+    borderRadius: 'var(--radius-window)',
+    overflow: 'hidden',
   };
 
   const rootClass = [

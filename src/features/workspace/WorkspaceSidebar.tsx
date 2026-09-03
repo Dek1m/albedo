@@ -13,6 +13,7 @@ import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { folderToast, pathTail } from './folderToast';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { HomeTree } from './HomeTree';
 import { WorkspaceDiskTree } from './WorkspaceDiskTree';
 
@@ -36,6 +37,7 @@ export function WorkspaceSidebar(): ReactElement | null {
   const [filePrompt, setFilePrompt] = useState(false);
   const [diskRev, setDiskRev] = useState(0);
   const [gitRepos, setGitRepos] = useState<GitRepo[]>([]);
+  const [busy, setBusy] = useState(true);
   const kebab = useRef<HTMLDivElement>(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   useClickOutside(menuOpen, kebab, closeMenu);
@@ -44,11 +46,16 @@ export function WorkspaceSidebar(): ReactElement | null {
     if (!active) {
       return;
     }
-    setNodes(await workspaceApi.listNodes(active.id, null));
+    setBusy(true);
     try {
-      setGitRepos(await workspaceApi.listGit(active.id));
-    } catch {
-      setGitRepos([]);
+      setNodes(await workspaceApi.listNodes(active.id, null));
+      try {
+        setGitRepos(await workspaceApi.listGit(active.id));
+      } catch {
+        setGitRepos([]);
+      }
+    } finally {
+      setBusy(false);
     }
   }, [active]);
 
@@ -156,7 +163,7 @@ export function WorkspaceSidebar(): ReactElement | null {
     >
       <h2 className="albedo-sidebar-title">{active.name}</h2>
       <div className="albedo-sidebar-rule" />
-      <div className="albedo-sidebar-fold-block">
+      <div className={`albedo-sidebar-fold-block${sessionsOpen ? ' is-open' : ''}`}>
         <button
           type="button"
           className="albedo-sidebar-fold"
@@ -171,35 +178,43 @@ export function WorkspaceSidebar(): ReactElement | null {
           Sessions
           <i className={`bi ${sessionsOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
         </button>
-        {sessionsOpen ? (
-          <ul className="albedo-sidebar-sessions">
-            {sessions.map((session) => (
-              <li key={session.id}>
-                <button
-                  type="button"
-                  className={`albedo-sidebar-session${focused === session.id ? ' is-focused' : ''}`}
-                  onClick={() => {
-                    void (async () => {
-                      try {
-                        const opened = await workspaceApi.openSession(active.id, session.id);
-                        const list = await workspaceApi.listSessions(active.id);
-                        setSessions(list);
-                        setFocused(asSessionId(opened.id));
-                      } catch (err) {
-                        toast(humanMessage(err));
-                      }
-                    })();
-                  }}
-                >
-                  {session.title}
-                </button>
-              </li>
-            ))}
-            {!sessions.length ? <li className="albedo-sidebar-empty">No sessions</li> : null}
-          </ul>
-        ) : null}
+        <div className={`albedo-fold-body${sessionsOpen ? ' is-open' : ''}`}>
+          <div className="albedo-fold-body-inner">
+            <div className="albedo-fold-well">
+              {busy ? (
+                <SkeletonList rows={4} />
+              ) : (
+                <ul className="albedo-sidebar-sessions">
+                  {sessions.map((session) => (
+                    <li key={session.id}>
+                      <button
+                        type="button"
+                        className={`albedo-sidebar-session${focused === session.id ? ' is-focused' : ''}`}
+                        onClick={() => {
+                          void (async () => {
+                            try {
+                              const opened = await workspaceApi.openSession(active.id, session.id);
+                              const list = await workspaceApi.listSessions(active.id);
+                              setSessions(list);
+                              setFocused(asSessionId(opened.id));
+                            } catch (err) {
+                              toast(humanMessage(err));
+                            }
+                          })();
+                        }}
+                      >
+                        {session.title}
+                      </button>
+                    </li>
+                  ))}
+                  {!sessions.length ? <li className="albedo-sidebar-empty">No sessions</li> : null}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="albedo-sidebar-fold-block">
+      <div className={`albedo-sidebar-fold-block${foldersOpen ? ' is-open' : ''}`}>
         <button
           type="button"
           className="albedo-sidebar-fold"
@@ -214,94 +229,102 @@ export function WorkspaceSidebar(): ReactElement | null {
           Folders & Files
           <i className={`bi ${foldersOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
         </button>
-        {foldersOpen ? (
-          <div className="albedo-tree-block">
-            <div className="albedo-tree-toolbar">
-              <button
-                type="button"
-                className="albedo-icon-btn"
-                title="New folder"
-                onClick={() => {
-                  setSelectedRel(null);
-                  addFolder();
-                }}
-              >
-                <i className="bi bi-folder-plus" />
-              </button>
-              <div className="albedo-kebab" ref={kebab}>
-                <button type="button" className="albedo-icon-btn" onClick={() => setMenuOpen((v) => !v)}>
-                  <i className="bi bi-three-dots-vertical" />
+        <div className={`albedo-fold-body${foldersOpen ? ' is-open' : ''}`}>
+          <div className="albedo-fold-body-inner">
+            <div className="albedo-tree-block">
+              <div className="albedo-tree-toolbar">
+                <button
+                  type="button"
+                  className="albedo-icon-btn"
+                  title="New folder"
+                  onClick={() => {
+                    setSelectedRel(null);
+                    addFolder();
+                  }}
+                >
+                  <i className="bi bi-folder-plus" />
                 </button>
-                {menuOpen ? (
-                  <div className="albedo-ws-drop albedo-kebab-drop">
-                    <button type="button" className="albedo-ws-drop-item" onClick={addFolder}>
-                      New folder
-                    </button>
-                    <button
-                      type="button"
-                      className="albedo-ws-drop-item"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setFilePrompt(true);
-                      }}
-                    >
-                      New file
-                    </button>
-                    <button type="button" className="albedo-ws-drop-item" disabled>
-                      Rename
-                    </button>
-                    <button type="button" className="albedo-ws-drop-item" disabled>
-                      Move to…
-                    </button>
-                    <button type="button" className="albedo-ws-drop-item" onClick={() => setFoldersOpen(false)}>
-                      Collapse all
-                    </button>
-                    <button type="button" className="albedo-ws-drop-item" onClick={() => setFoldersOpen(true)}>
-                      Expand all
-                    </button>
-                    <button
-                      type="button"
-                      className="albedo-ws-drop-item"
-                      disabled={!selectedRel}
-                      onClick={() => void removeFromWorkspace()}
-                    >
-                      Remove from workspace
-                    </button>
-                    <button
-                      type="button"
-                      className="albedo-ws-drop-item"
-                      disabled={!selectedRel}
-                      onClick={() => void askTrash()}
-                    >
-                      Delete from disk
-                    </button>
+                <div className="albedo-kebab" ref={kebab}>
+                  <button type="button" className="albedo-icon-btn" onClick={() => setMenuOpen((v) => !v)}>
+                    <i className="bi bi-three-dots-vertical" />
+                  </button>
+                  {menuOpen ? (
+                    <div className="albedo-ws-drop albedo-kebab-drop">
+                      <button type="button" className="albedo-ws-drop-item" onClick={addFolder}>
+                        New folder
+                      </button>
+                      <button
+                        type="button"
+                        className="albedo-ws-drop-item"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setFilePrompt(true);
+                        }}
+                      >
+                        New file
+                      </button>
+                      <button type="button" className="albedo-ws-drop-item" disabled>
+                        Rename
+                      </button>
+                      <button type="button" className="albedo-ws-drop-item" disabled>
+                        Move to…
+                      </button>
+                      <button type="button" className="albedo-ws-drop-item" onClick={() => setFoldersOpen(false)}>
+                        Collapse all
+                      </button>
+                      <button type="button" className="albedo-ws-drop-item" onClick={() => setFoldersOpen(true)}>
+                        Expand all
+                      </button>
+                      <button
+                        type="button"
+                        className="albedo-ws-drop-item"
+                        disabled={!selectedRel}
+                        onClick={() => void removeFromWorkspace()}
+                      >
+                        Remove from workspace
+                      </button>
+                      <button
+                        type="button"
+                        className="albedo-ws-drop-item"
+                        disabled={!selectedRel}
+                        onClick={() => void askTrash()}
+                      >
+                        Delete from disk
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <div className="albedo-fold-well">
+                {gitRepos.length === 1 && gitRepos[0] ? (
+                  <div className="albedo-git-bar">
+                    <GitBranch repo={gitRepos[0]} />
                   </div>
                 ) : null}
+                {busy ? (
+                  <SkeletonList rows={6} />
+                ) : (
+                  <WorkspaceDiskTree
+                    roots={nodes.map((node) => ({
+                      name: node.name,
+                      relPath: node.relPath,
+                      kind: node.kind,
+                      git: gitRepos.length > 1 ? gitRepos.find((repo) => repo.relPath === node.relPath) : undefined,
+                    }))}
+                    workspaceId={active.id}
+                    selectedRel={selectedRel}
+                    onSelect={(rel) => setSelectedRel(rel)}
+                    onMoved={() => {
+                      setDiskRev((value) => value + 1);
+                      void reload();
+                    }}
+                    rev={diskRev}
+                  />
+                )}
               </div>
             </div>
-            {gitRepos.length === 1 && gitRepos[0] ? (
-              <div className="albedo-git-bar">
-                <GitBranch repo={gitRepos[0]} />
-              </div>
-            ) : null}
-            <WorkspaceDiskTree
-              roots={nodes.map((node) => ({
-                name: node.name,
-                relPath: node.relPath,
-                kind: node.kind,
-                git: gitRepos.length > 1 ? gitRepos.find((repo) => repo.relPath === node.relPath) : undefined,
-              }))}
-              workspaceId={active.id}
-              selectedRel={selectedRel}
-              onSelect={(rel) => setSelectedRel(rel)}
-              onMoved={() => {
-                setDiskRev((value) => value + 1);
-                void reload();
-              }}
-              rev={diskRev}
-            />
           </div>
-        ) : null}
+        </div>
       </div>
       <PanelGrip axis="x" value={width} min={180} max={420} onChange={setWidth} />
       <Window className="albedo-folders" windowId="albedo-folders" open={pickerOpen} title="Add folders" onClose={() => setPickerOpen(false)}>
