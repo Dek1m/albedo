@@ -1,4 +1,4 @@
-import type { SystemModule } from '../../../api/systemApi';
+import type { SystemModule } from '../../../api/modopsApi';
 import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface ModuleActions {

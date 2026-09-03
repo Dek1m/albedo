@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
-import { systemApi } from '../../api/systemApi';
-import type { SystemModule } from '../../api/systemApi';
+import { modopsApi } from '../../api/modopsApi';
+import type { SystemModule } from '../../api/modopsApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { ContextMenu } from '../../shared/ui/ContextMenu';
@@ -51,8 +51,8 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
     }
     let cancelled = false;
     setLoading(true);
-    void systemApi
-      .modulesList()
+    void modopsApi
+      .list()
       .then((list) => {
         if (!cancelled) {
           setItems(list);
@@ -83,7 +83,7 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
   };
 
   const refresh = async (): Promise<void> => {
-    const list = await systemApi.modulesList();
+    const list = await modopsApi.list();
     setItems(list);
   };
 
@@ -91,7 +91,7 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
     onReload: (mod) => {
       void (async () => {
         try {
-          await systemApi.modulesReload(mod.name);
+          await modopsApi.reload(mod.name);
           toast('Reloaded', 'ok');
           await refresh();
         } catch (err) {
@@ -102,7 +102,7 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
     onCheckUpdate: (mod) => {
       void (async () => {
         try {
-          const result = await systemApi.modulesCheckUpdate(mod.name);
+          const result = await modopsApi.checkUpdate(mod.name);
           if (!result.updateAvailable) {
             toast('Already up to date', 'info');
             return;
@@ -116,7 +116,7 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
     onUpdate: (mod) => {
       void (async () => {
         try {
-          const result = await systemApi.modulesUpdate(mod.name);
+          const result = await modopsApi.update(mod.name);
           setPending((prev) => {
             const next = new Map(prev);
             next.delete(mod.name);
@@ -133,10 +133,10 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
         }
       })();
     },
-    onUnload: (mod) => void run(() => systemApi.modulesUnload(mod.name)),
-    onDisable: (mod) => void run(() => systemApi.modulesDisable(mod.name)),
-    onEnable: (mod) => void run(() => systemApi.modulesEnable(mod.name)),
-    onDelete: (mod) => void run(() => systemApi.modulesDelete(mod.name)),
+    onUnload: (mod) => void run(() => modopsApi.unload(mod.name)),
+    onDisable: (mod) => void run(() => modopsApi.disable(mod.name)),
+    onEnable: (mod) => void run(() => modopsApi.enable(mod.name)),
+    onDelete: (mod) => void run(() => modopsApi.delete(mod.name)),
   });
 
   const openMenu = (event: ReactMouseEvent, mod: SystemModule): void => {

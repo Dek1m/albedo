@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { SystemModule } from '../../../api/systemApi';
+import type { SystemModule } from '../../../api/modopsApi';
 import { ModuleMenu } from './ModuleMenu';
 
 function mod(partial: Partial<SystemModule> & Pick<SystemModule, 'name'>): SystemModule {
