@@ -105,6 +105,7 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
     <Window
       className="albedo-settings"
       windowId="albedo-ai-agent-form"
+      parentId="albedo-ai-agents"
       open={Boolean(mode)}
       title={editing ? 'Edit agent' : 'New agent'}
       icon="bi-robot"

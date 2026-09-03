@@ -84,6 +84,7 @@ export function RoleEditWindow({ roleId, canEdit, onClose, onSaved }: RoleEditWi
     <Window
       className="albedo-settings"
       windowId="albedo-admin-role-edit"
+      parentId="albedo-admin"
       open={Boolean(roleId)}
       title={role ? `Role: ${role.name}` : 'Role'}
       onClose={onClose}

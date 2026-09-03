@@ -60,6 +60,7 @@ export function RoleCreateDialog({ open, onClose, onCreated }: RoleCreateDialogP
     <Window
       className="albedo-settings"
       windowId="albedo-admin-role-create"
+      parentId="albedo-admin"
       open={open}
       title="New role"
       onClose={onClose}

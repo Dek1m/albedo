@@ -194,7 +194,7 @@ export function WorkspaceModals({
         </div>
       </Window>
 
-      <Window className="albedo-workspace-create" windowId="albedo-workspace-create" open={createOpen} title="New workspace" onClose={onCloseCreate}>
+      <Window className="albedo-workspace-create" windowId="albedo-workspace-create" parentId="albedo-workspaces" open={createOpen} title="New workspace" onClose={onCloseCreate}>
         <label className="form-label" htmlFor="ws-name">
           Name
         </label>

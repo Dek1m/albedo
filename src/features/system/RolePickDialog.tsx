@@ -27,6 +27,7 @@ export function RolePickDialog({
     <Window
       className="albedo-admin"
       windowId="albedo-admin-role-pick"
+      parentId="albedo-admin"
       open={open}
       title="Add role"
       onClose={onClose}

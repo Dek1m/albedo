@@ -19,6 +19,7 @@ const ASK_W = 380;
 const ASK_H = 200;
 const ASK_MIN_W = 280;
 const ASK_MIN_H = 140;
+const CASCADE = 28;
 
 export function viewport(): { vw: number; vh: number } {
   return { vw: window.innerWidth, vh: window.innerHeight };
@@ -31,6 +32,38 @@ export function defaultBox(): WindowBox {
     y: vh * MARGIN,
     w: vw * (1 - 2 * MARGIN),
     h: vh * (1 - 2 * MARGIN),
+  });
+}
+
+export function topCenterBox(): WindowBox {
+  const { vw, vh } = viewport();
+  const w = vw * (1 - 2 * MARGIN);
+  const h = vh * (1 - 2 * MARGIN);
+  return clampBox({
+    x: (vw - w) / 2,
+    y: 0,
+    w,
+    h,
+  });
+}
+
+export function cascadeBox(parent: WindowBox): WindowBox {
+  return clampBox({
+    x: parent.x + CASCADE,
+    y: parent.y + CASCADE,
+    w: parent.w,
+    h: parent.h,
+  });
+}
+
+export function growHeightSnapY(box: WindowBox, neededH: number): WindowBox {
+  const { vh } = viewport();
+  const h = Math.min(vh, Math.max(box.h, neededH));
+  return clampBox({
+    x: box.x,
+    y: 0,
+    w: box.w,
+    h,
   });
 }
 

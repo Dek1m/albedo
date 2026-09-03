@@ -192,6 +192,7 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
       <Window
         className="albedo-admin"
         windowId="albedo-system-install"
+        parentId="albedo-system-modules"
         open={installOpen}
         title="Install"
         onClose={() => setInstallOpen(false)}

@@ -183,6 +183,7 @@ export function ShareAddDialog({ open, path, onClose, onAdded }: ShareAddDialogP
         open={open}
         title="Add"
         windowId="albedo-share-add"
+        parentId="albedo-share"
         icon="bi-person-plus"
         onClose={close}
       >
