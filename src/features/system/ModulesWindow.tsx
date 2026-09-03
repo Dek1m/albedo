@@ -82,8 +82,23 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
     }
   };
 
+  const refresh = async (): Promise<void> => {
+    const list = await systemApi.modulesList();
+    setItems(list);
+  };
+
   const menu = new ModuleMenu({
-    onReload: (mod) => void run(() => systemApi.modulesReload(mod.name)),
+    onReload: (mod) => {
+      void (async () => {
+        try {
+          await systemApi.modulesReload(mod.name);
+          toast('Reloaded', 'ok');
+          await refresh();
+        } catch (err) {
+          toast(humanMessage(err));
+        }
+      })();
+    },
     onCheckUpdate: (mod) => {
       void (async () => {
         try {
