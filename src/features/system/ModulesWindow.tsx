@@ -12,6 +12,19 @@ interface ModulesWindowProps {
   onClose: () => void;
 }
 
+function moduleBall(mod: SystemModule): string {
+  if (mod.status === 'failed') {
+    return 'var(--danger)';
+  }
+  if (mod.health === 'degraded') {
+    return '#f0b232';
+  }
+  if (mod.status === 'loaded' && mod.health === 'ok') {
+    return 'var(--success)';
+  }
+  return 'var(--text-muted)';
+}
+
 export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactElement {
   const [items, setItems] = useState<SystemModule[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -55,19 +68,26 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
           <SkeletonList rows={6} />
         ) : (
           <div className="albedo-admin-roles">
-            <ul className="list-group albedo-admin-listbox">
-              {items.map((mod) => (
-                <li
-                  key={mod.name}
-                  className={`list-group-item albedo-session-row${selected === mod.name ? ' active' : ''}`}
-                  onClick={() => setSelected(mod.name)}
-                >
-                  <span className="albedo-session-ball" style={{ background: 'var(--text-muted)' }} />
-                  <span>{mod.name}</span>
-                </li>
-              ))}
-            </ul>
-            {!items.length ? <p className="albedo-ai-muted">No modules</p> : null}
+            {items.length ? (
+              <ul className="list-group albedo-admin-listbox">
+                {items.map((mod) => (
+                  <li
+                    key={mod.name}
+                    className={`list-group-item albedo-session-row${selected === mod.name ? ' active' : ''}`}
+                    onClick={() => setSelected(mod.name)}
+                  >
+                    <span className="albedo-session-ball" style={{ background: moduleBall(mod) }} />
+                    <span className="albedo-module-name">{mod.displayName || mod.name}</span>
+                    <span className="albedo-module-meta">
+                      {mod.version ? <span>{mod.version}</span> : null}
+                      {mod.status ? <span className="albedo-badge">{mod.status}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="albedo-ai-muted">No modules</p>
+            )}
             <div className="albedo-list-create">
               <button type="button" className="btn btn-sm btn-albedo-primary" onClick={() => setInstallOpen(true)}>
                 Install

@@ -1697,6 +1697,24 @@ body {
   overflow: auto;
 }
 
+.albedo-module-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.albedo-module-meta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
 .albedo-admin-caps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

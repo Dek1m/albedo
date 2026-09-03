@@ -78,11 +78,26 @@ export interface AdminRole {
   permissions: string[];
 }
 
+export interface SystemModuleService {
+  status: string;
+  health: string;
+  pid: number | null;
+  error: string | null;
+}
+
+export interface SystemModuleServices {
+  belle?: SystemModuleService;
+  worker?: SystemModuleService;
+}
+
 export interface SystemModule {
   name: string;
+  displayName: string;
   version: string;
   status: string;
-  source: string;
+  health: string;
+  isSystem: boolean;
+  services: SystemModuleServices;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -361,6 +376,78 @@ function normalizeDomainTree(raw: unknown): DomainOu[] {
   return [];
 }
 
+function pickPid(row: Record<string, unknown>): number | null {
+  const value = row.pid;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value)) {
+    return Number(value);
+  }
+  return null;
+}
+
+function mapService(raw: unknown): SystemModuleService | undefined {
+  const row = asRecord(raw);
+  if (!row) {
+    return undefined;
+  }
+  const error = row.error;
+  return {
+    status: pickStr(row, 'status') || 'unknown',
+    health: pickStr(row, 'health') || 'unknown',
+    pid: pickPid(row),
+    error: typeof error === 'string' && error ? error : null,
+  };
+}
+
+function mapServices(raw: unknown): SystemModuleServices {
+  const row = asRecord(raw);
+  if (!row) {
+    return {};
+  }
+  const belle = mapService(row.belle);
+  const worker = mapService(row.worker) ?? mapService(row['belle-worker']);
+  return {
+    ...(belle ? { belle } : {}),
+    ...(worker ? { worker } : {}),
+  };
+}
+
+function rollupStatus(services: SystemModuleServices, explicit: string): string {
+  if (explicit) {
+    return explicit;
+  }
+  const all = [services.belle?.status, services.worker?.status].filter(Boolean);
+  if (all.includes('failed')) {
+    return 'failed';
+  }
+  if (all.includes('loaded')) {
+    return 'loaded';
+  }
+  if (all.includes('disabled')) {
+    return 'disabled';
+  }
+  if (all.includes('unloaded')) {
+    return 'unloaded';
+  }
+  return all[0] ?? 'unknown';
+}
+
+function rollupHealth(services: SystemModuleServices, explicit: string): string {
+  if (explicit) {
+    return explicit;
+  }
+  const all = [services.belle?.health, services.worker?.health].filter(Boolean);
+  if (all.includes('degraded')) {
+    return 'degraded';
+  }
+  if (all.includes('ok')) {
+    return 'ok';
+  }
+  return all[0] ?? 'unknown';
+}
+
 function mapModule(raw: unknown): SystemModule | null {
   const row = asRecord(raw);
   if (!row) {
@@ -370,11 +457,15 @@ function mapModule(raw: unknown): SystemModule | null {
   if (!name) {
     return null;
   }
+  const services = mapServices(row.services);
   return {
     name,
+    displayName: pickStr(row, 'display_name', 'displayName'),
     version: pickStr(row, 'version'),
-    status: pickStr(row, 'status'),
-    source: pickStr(row, 'source'),
+    status: rollupStatus(services, pickStr(row, 'status')),
+    health: rollupHealth(services, pickStr(row, 'health')),
+    isSystem: pickBool(row, 'is_system', 'isSystem'),
+    services,
   };
 }
 
