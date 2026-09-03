@@ -100,6 +100,21 @@ export interface SystemModule {
   services: SystemModuleServices;
 }
 
+export interface ModuleUpdateCheck {
+  name: string;
+  currentSha: string;
+  remoteSha: string;
+  currentLabel: string;
+  remoteLabel: string;
+  updateAvailable: boolean;
+}
+
+export interface ModuleUpdateResult {
+  name: string;
+  sha: string;
+  version: string;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -652,8 +667,27 @@ export const systemApi = {
     await apiClient.call('system', 'modules_reload', { name });
   },
 
-  async modulesUpdate(name: string): Promise<void> {
-    await apiClient.call('system', 'modules_update', { name });
+  async modulesCheckUpdate(name: string): Promise<ModuleUpdateCheck> {
+    const raw = await apiClient.call<unknown>('system', 'modules_check_update', { name });
+    const row = asRecord(raw) ?? {};
+    return {
+      name: pickStr(row, 'name') || name,
+      currentSha: pickStr(row, 'current_sha', 'currentSha'),
+      remoteSha: pickStr(row, 'remote_sha', 'remoteSha'),
+      currentLabel: pickStr(row, 'current_label', 'currentLabel'),
+      remoteLabel: pickStr(row, 'remote_label', 'remoteLabel'),
+      updateAvailable: pickBool(row, 'update_available', 'updateAvailable'),
+    };
+  },
+
+  async modulesUpdate(name: string): Promise<ModuleUpdateResult> {
+    const raw = await apiClient.call<unknown>('system', 'modules_update', { name });
+    const row = asRecord(raw) ?? {};
+    return {
+      name: pickStr(row, 'name') || name,
+      sha: pickStr(row, 'sha'),
+      version: pickStr(row, 'version'),
+    };
   },
 
   async modulesUnload(name: string): Promise<void> {

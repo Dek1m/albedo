@@ -40,11 +40,13 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
   const [loading, setLoading] = useState(true);
   const [installOpen, setInstallOpen] = useState(false);
   const [ctx, setCtx] = useState<Ctx | null>(null);
+  const [pending, setPending] = useState<Map<string, string>>(() => new Map());
 
   useEffect(() => {
     if (!open) {
       setInstallOpen(false);
       setCtx(null);
+      setPending(new Map());
       return;
     }
     let cancelled = false;
@@ -82,7 +84,40 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
 
   const menu = new ModuleMenu({
     onReload: (mod) => void run(() => systemApi.modulesReload(mod.name)),
-    onUpdate: (mod) => void run(() => systemApi.modulesUpdate(mod.name)),
+    onCheckUpdate: (mod) => {
+      void (async () => {
+        try {
+          const result = await systemApi.modulesCheckUpdate(mod.name);
+          if (!result.updateAvailable) {
+            toast('Already up to date', 'info');
+            return;
+          }
+          setPending((prev) => new Map(prev).set(mod.name, result.remoteLabel));
+        } catch (err) {
+          toast(humanMessage(err));
+        }
+      })();
+    },
+    onUpdate: (mod) => {
+      void (async () => {
+        try {
+          const result = await systemApi.modulesUpdate(mod.name);
+          setPending((prev) => {
+            const next = new Map(prev);
+            next.delete(mod.name);
+            return next;
+          });
+          if (result.version) {
+            setItems((prev) =>
+              prev.map((item) => (item.name === mod.name ? { ...item, version: result.version } : item)),
+            );
+          }
+          toast('Updated', 'ok');
+        } catch (err) {
+          toast(humanMessage(err));
+        }
+      })();
+    },
     onUnload: (mod) => void run(() => systemApi.modulesUnload(mod.name)),
     onDisable: (mod) => void run(() => systemApi.modulesDisable(mod.name)),
     onEnable: (mod) => void run(() => systemApi.modulesEnable(mod.name)),
@@ -92,7 +127,7 @@ export function ModulesWindow({ open, onClose }: ModulesWindowProps): ReactEleme
   const openMenu = (event: ReactMouseEvent, mod: SystemModule): void => {
     event.preventDefault();
     event.stopPropagation();
-    setCtx({ x: event.clientX, y: event.clientY, items: menu.items(mod) });
+    setCtx({ x: event.clientX, y: event.clientY, items: menu.items(mod, pending.get(mod.name)) });
   };
 
   return (

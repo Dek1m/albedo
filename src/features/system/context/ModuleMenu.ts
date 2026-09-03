@@ -3,6 +3,7 @@ import type { MenuItem } from '../../../shared/ui/ContextMenu';
 
 export interface ModuleActions {
   onReload: (mod: SystemModule) => void;
+  onCheckUpdate: (mod: SystemModule) => void;
   onUpdate: (mod: SystemModule) => void;
   onUnload: (mod: SystemModule) => void;
   onDisable: (mod: SystemModule) => void;
@@ -13,7 +14,7 @@ export interface ModuleActions {
 export class ModuleMenu {
   constructor(private readonly actions: ModuleActions) {}
 
-  items(target: SystemModule): MenuItem[] {
+  items(target: SystemModule, pendingVersion?: string): MenuItem[] {
     const core = target.isSystem;
     const disabled = target.status === 'disabled';
     const items: MenuItem[] = [
@@ -22,11 +23,21 @@ export class ModuleMenu {
         label: 'Reload',
         action: () => this.actions.onReload(target),
       },
-      {
+    ];
+    if (pendingVersion) {
+      items.push({
         id: 'update',
-        label: 'Update',
+        label: `Update to ${pendingVersion}`,
         action: () => this.actions.onUpdate(target),
-      },
+      });
+    } else {
+      items.push({
+        id: 'check_update',
+        label: 'Check for update',
+        action: () => this.actions.onCheckUpdate(target),
+      });
+    }
+    items.push(
       {
         id: 'unload',
         label: 'Unload',
@@ -39,7 +50,7 @@ export class ModuleMenu {
         disabled: core,
         action: () => this.actions.onDisable(target),
       },
-    ];
+    );
     if (disabled) {
       items.push({
         id: 'enable',
