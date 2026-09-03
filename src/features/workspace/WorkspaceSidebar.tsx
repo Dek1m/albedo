@@ -13,6 +13,7 @@ import { PromptDialog } from '../../shared/ui/PromptDialog';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { folderToast, pathTail } from './folderToast';
+import { BusyDots } from '../../shared/ui/BusyDots';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { HomeTree } from './HomeTree';
 import { WorkspaceDiskTree } from './WorkspaceDiskTree';
@@ -203,6 +204,9 @@ export function WorkspaceSidebar(): ReactElement | null {
                           })();
                         }}
                       >
+                        <span className="albedo-session-icon">
+                          {session.agentBusy ? <BusyDots /> : <i className="bi bi-chat-dots" />}
+                        </span>
                         {session.title}
                       </button>
                     </li>
