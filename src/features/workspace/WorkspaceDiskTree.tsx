@@ -345,9 +345,6 @@ function DiskNode({
         ) : (
           <span className="albedo-tree-name">{item.name}</span>
         )}
-        {(item.linked || item.inherited) && !item.excluded ? (
-          <i className="bi bi-link-45deg albedo-share-grant" title="Shared" aria-label="Shared" />
-        ) : null}
         {git ? <GitBranch repo={git} compact /> : null}
         <span className="albedo-row-actions">
           {isOwnShareablePath(item.relPath, item) ? (

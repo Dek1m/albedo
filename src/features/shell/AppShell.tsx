@@ -126,11 +126,13 @@ export function AppShell(): ReactElement {
       </header>
       <div className="albedo-body">
         {active ? <WorkspaceSidebar onOpenSessions={() => setSessionsOpen(true)} /> : null}
-        <main className="albedo-workspace">
-          {active ? <ChatPane /> : <p className="albedo-workspace-ready">ready</p>}
-        </main>
+        <div className="albedo-main">
+          <main className="albedo-workspace">
+            {active ? <ChatPane /> : <p className="albedo-workspace-ready">ready</p>}
+          </main>
+          <Dock />
+        </div>
       </div>
-      <Dock />
       <AiWindows pane={aiPane} onClose={() => setAiPane(null)} />
       <SystemWindows pane={systemPane} onClose={() => setSystemPane(null)} />
       <WorkspaceModals

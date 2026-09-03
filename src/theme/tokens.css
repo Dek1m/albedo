@@ -37,6 +37,9 @@
   --grip-dots: #6a6a70;
 
   --font: Carlito, "Liberation Sans", "Segoe UI", system-ui, sans-serif;
+  --font-ui: 1rem;
+  --font-title: 1.2rem;
+  --font-menu: 11px;
 
   --danger: #f23f43;
   --success: #23a55a;
@@ -61,7 +64,7 @@
 }
 
 html {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 html,
@@ -357,7 +360,7 @@ body {
   align-items: center;
   gap: 0.45rem;
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-title);
 }
 
 .albedo-window-title .bi {
@@ -914,6 +917,14 @@ body {
   min-height: 0;
 }
 
+.albedo-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 .albedo-ws-menu {
   position: relative;
 }
@@ -954,7 +965,7 @@ body {
   color: var(--text-primary);
   text-align: left;
   padding: 0.35rem 0.7rem;
-  font-size: 0.8rem;
+  font-size: var(--font-menu);
   cursor: pointer;
 }
 
@@ -1007,7 +1018,7 @@ body {
   color: var(--text-primary);
   text-align: left;
   padding: 0.35rem 0.7rem;
-  font-size: 0.8rem;
+  font-size: var(--font-menu);
   cursor: pointer;
 }
 
@@ -1380,7 +1391,7 @@ body {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-3);
+  background: var(--bg-2);
   color: var(--text-primary);
   border-right: 1px solid var(--hairline);
   min-height: 0;
@@ -1588,7 +1599,7 @@ body {
 }
 
 .albedo-window.is-ask .albedo-window-title {
-  font-size: 0.92rem;
+  font-size: 1.05rem;
 }
 
 .albedo-tree-item.is-focused,
@@ -1802,7 +1813,7 @@ body {
   border: 0;
   background: transparent;
   color: var(--text-primary);
-  font-size: 0.92rem;
+  font-size: var(--font-ui);
   text-align: left;
   justify-content: flex-start;
   padding: 0.2rem 0.35rem;
@@ -1830,7 +1841,7 @@ body {
   border: 1px solid var(--border-focus);
   background: var(--bg-base);
   color: var(--text-primary);
-  font-size: 0.92rem;
+  font-size: var(--font-ui);
   padding: 0 0.3rem;
   border-radius: var(--radius);
   outline: none;
@@ -2196,7 +2207,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.82rem;
+  font-size: var(--font-ui);
 }
 
 .albedo-home-toggle,
@@ -2615,7 +2626,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--bg-2);
+  background: var(--bg-3);
   border-top: 1px solid var(--hairline);
 }
 
@@ -2631,7 +2642,7 @@ body {
   border: 0;
   background: transparent;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: var(--font-ui);
   padding: 0.15rem 0.45rem;
   cursor: pointer;
   border-radius: var(--radius) var(--radius) 0 0;
@@ -2748,7 +2759,7 @@ body {
 
 @media (max-width: 640px) {
   html {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .albedo-chip-email {
