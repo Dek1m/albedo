@@ -81,6 +81,13 @@ function looksTechnical(text: string): boolean {
 export function humanMessage(error: unknown): string {
   if (error instanceof ApiError) {
     const mapped = CODE_MESSAGES[error.code];
+    if (error.code === 'FORBIDDEN') {
+      const text = error.message.trim();
+      if (text && !looksTechnical(text)) {
+        return error.message;
+      }
+      return mapped ?? 'You do not have permission';
+    }
     if (mapped) {
       return mapped;
     }

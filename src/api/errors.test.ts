@@ -25,4 +25,14 @@ describe('humanMessage', () => {
   it('maps NOT_IMPLEMENTED', () => {
     expect(humanMessage(new ApiError('NOT_IMPLEMENTED', 'stub'))).toBe('Not implemented yet');
   });
+
+  it('shows server FORBIDDEN human unless technical or empty', () => {
+    expect(humanMessage(new ApiError('FORBIDDEN', 'Module has loaded dependents'))).toBe(
+      'Module has loaded dependents',
+    );
+    expect(humanMessage(new ApiError('FORBIDDEN', ''))).toBe('You do not have permission');
+    expect(humanMessage(new ApiError('FORBIDDEN', 'Internal error'))).toBe(
+      'You do not have permission',
+    );
+  });
 });
