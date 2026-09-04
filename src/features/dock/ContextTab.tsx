@@ -26,16 +26,13 @@ export function ContextTab(): ReactElement {
           if (cancelled) {
             return;
           }
-          // Залипший 'running' в БД (падение воркера) не должен включать Stop.
-          const nextStatus = row.status === 'running' && status !== 'running' ? status : row.status;
-          setMetrics({
-            status: nextStatus,
-            tokensIn: row.tokensIn,
-            tokensOut: row.tokensOut,
-            cacheTokens: row.cacheTokens,
-            cacheHits: row.cacheHits,
-            trace: row.trace,
-          });
+          // Статусом управляет MessageTab: полл только восстанавливает его после
+          // перезагрузки страницы и не сбивает 'running' в паузах между чанками.
+          const next: Parameters<typeof setMetrics>[0] = { trace: row.trace };
+          if (status === 'idle' && row.status && row.status !== 'idle') {
+            next.status = row.status;
+          }
+          setMetrics(next);
         })
         .catch(() => {
           /* idle */
