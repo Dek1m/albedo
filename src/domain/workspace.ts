@@ -50,6 +50,8 @@ export interface ChatMessage {
   agentName: string | null;
   modelName: string | null;
   parentId: string | null;
+  reasoning: string | null;
+  stages: { kind: string; name: string; args?: string; status: string }[];
 }
 
 export function asWorkspaceId(value: string): WorkspaceId {

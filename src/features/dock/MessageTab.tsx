@@ -131,7 +131,22 @@ export function MessageTab(): ReactElement {
         const ac = new AbortController();
         abortRef.current = ac;
         setRunning(true);
-        setMetrics({ status: 'running' });
+        setMetrics({ status: 'running', agentName: agent?.name || '', trace: { content: '', reasoning: '', stages: [] } });
+        const tick = window.setInterval(() => {
+          void llmApi
+            .runUsage(session.id)
+            .then((row) => {
+              setMetrics({
+                status: row.status === 'idle' ? 'running' : row.status,
+                tokensIn: row.tokensIn,
+                tokensOut: row.tokensOut,
+                cacheTokens: row.cacheTokens,
+                cacheHits: row.cacheHits,
+                trace: row.trace,
+              });
+            })
+            .catch(() => undefined);
+        }, 250);
         try {
           const usage = await llmApi.runPipeline({
             workspaceId: session.workspaceId,
@@ -146,12 +161,15 @@ export function MessageTab(): ReactElement {
             tokensOut: usage.tokensOut,
             cacheTokens: usage.cacheTokens,
             cacheHits: usage.cacheHits,
+            trace: usage.trace,
+            agentName: agent?.name || '',
           });
           bumpChatRev();
           if (usage.status === 'error' && usage.error) {
             toast(usage.error);
           }
         } finally {
+          window.clearInterval(tick);
           abortRef.current = null;
           setRunning(false);
         }

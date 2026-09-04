@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import type { LlmTrace } from '../../api/llmApi';
+
+const emptyTrace: LlmTrace = { content: '', reasoning: '', stages: [] };
 
 export interface LoopMetrics {
   status: string;
@@ -6,6 +9,8 @@ export interface LoopMetrics {
   tokensOut: number;
   cacheTokens: number;
   cacheHits: number;
+  agentName: string;
+  trace: LlmTrace;
 }
 
 const idle: LoopMetrics = {
@@ -14,6 +19,8 @@ const idle: LoopMetrics = {
   tokensOut: 0,
   cacheTokens: 0,
   cacheHits: 0,
+  agentName: '',
+  trace: emptyTrace,
 };
 
 interface LoopMetricsState extends LoopMetrics {

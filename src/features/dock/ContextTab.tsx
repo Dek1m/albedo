@@ -6,6 +6,7 @@ import { useLoopMetrics } from './loopMetrics';
 
 export function ContextTab(): ReactElement {
   const focused = useWorkspaceStore((s) => s.focusedSessionId);
+  const chatRev = useWorkspaceStore((s) => s.chatRev);
   const status = useLoopMetrics((s) => s.status);
   const tokensIn = useLoopMetrics((s) => s.tokensIn);
   const tokensOut = useLoopMetrics((s) => s.tokensOut);
@@ -18,26 +19,33 @@ export function ContextTab(): ReactElement {
       return;
     }
     let cancelled = false;
-    void llmApi
-      .runUsage(focused)
-      .then((row) => {
-        if (!cancelled) {
+    const pull = (): void => {
+      void llmApi
+        .runUsage(focused)
+        .then((row) => {
+          if (cancelled) {
+            return;
+          }
           setMetrics({
             status: row.status,
             tokensIn: row.tokensIn,
             tokensOut: row.tokensOut,
             cacheTokens: row.cacheTokens,
             cacheHits: row.cacheHits,
+            trace: row.trace,
           });
-        }
-      })
-      .catch(() => {
-        /* idle */
-      });
+        })
+        .catch(() => {
+          /* idle */
+        });
+    };
+    pull();
+    const timer = window.setInterval(pull, status === 'running' ? 400 : 2500);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
-  }, [focused, setMetrics]);
+  }, [focused, chatRev, status, setMetrics]);
 
   const rows = [
     { label: 'Status', value: status },

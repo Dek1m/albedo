@@ -46,6 +46,19 @@ export interface LlmPipeline {
   purpose: string;
 }
 
+export interface LlmStage {
+  kind: string;
+  name: string;
+  args?: string;
+  status: string;
+}
+
+export interface LlmTrace {
+  content: string;
+  reasoning: string;
+  stages: LlmStage[];
+}
+
 export interface LlmRunUsage {
   id: string | null;
   status: string;
@@ -55,6 +68,50 @@ export interface LlmRunUsage {
   cacheHits: number;
   content?: string | null;
   error?: string | null;
+  trace?: LlmTrace;
+}
+
+function asTrace(raw: unknown): LlmTrace {
+  const row = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const stages = Array.isArray(row.stages)
+    ? row.stages
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map((item) => ({
+          kind: String(item.kind ?? ''),
+          name: String(item.name ?? ''),
+          args: item.args ? String(item.args) : '',
+          status: String(item.status ?? ''),
+        }))
+    : [];
+  return {
+    content: String(row.content ?? ''),
+    reasoning: String(row.reasoning ?? ''),
+    stages,
+  };
+}
+
+function asRun(row: {
+  id?: string | null;
+  status?: string;
+  tokens_in?: number;
+  tokens_out?: number;
+  cache_tokens?: number;
+  cache_hits?: number;
+  content?: string | null;
+  error?: string | null;
+  trace?: unknown;
+}): LlmRunUsage {
+  return {
+    id: row.id ? String(row.id) : null,
+    status: String(row.status ?? 'idle'),
+    tokensIn: Number(row.tokens_in ?? 0),
+    tokensOut: Number(row.tokens_out ?? 0),
+    cacheTokens: Number(row.cache_tokens ?? 0),
+    cacheHits: Number(row.cache_hits ?? 0),
+    content: row.content ?? null,
+    error: row.error ?? null,
+    trace: asTrace(row.trace),
+  };
 }
 
 export interface LlmAgent {
@@ -480,22 +537,14 @@ export const llmApi = {
       cache_hits?: number;
       content?: string | null;
       error?: string | null;
+      trace?: unknown;
     }>('llm', 'run_pipeline', {
       workspace_id: input.workspaceId,
       session_id: input.sessionId,
       pipeline_id: input.pipelineId,
       agent_id: input.agentId,
     }, { signal: input.signal });
-    return {
-      id: row.id ? String(row.id) : null,
-      status: String(row.status ?? 'idle'),
-      tokensIn: Number(row.tokens_in ?? 0),
-      tokensOut: Number(row.tokens_out ?? 0),
-      cacheTokens: Number(row.cache_tokens ?? 0),
-      cacheHits: Number(row.cache_hits ?? 0),
-      content: row.content ?? null,
-      error: row.error ?? null,
-    };
+    return asRun(row);
   },
 
   async cancelRun(sessionId: string): Promise<LlmRunUsage> {
@@ -507,16 +556,9 @@ export const llmApi = {
       cache_tokens?: number;
       cache_hits?: number;
       error?: string | null;
+      trace?: unknown;
     }>('llm', 'cancel_run', { session_id: sessionId });
-    return {
-      id: row.id ? String(row.id) : null,
-      status: String(row.status ?? 'cancelled'),
-      tokensIn: Number(row.tokens_in ?? 0),
-      tokensOut: Number(row.tokens_out ?? 0),
-      cacheTokens: Number(row.cache_tokens ?? 0),
-      cacheHits: Number(row.cache_hits ?? 0),
-      error: row.error ?? null,
-    };
+    return asRun({ ...row, status: row.status ?? 'cancelled' });
   },
 
   async runUsage(sessionId: string): Promise<LlmRunUsage> {
@@ -528,16 +570,9 @@ export const llmApi = {
       cache_tokens?: number;
       cache_hits?: number;
       error?: string | null;
+      trace?: unknown;
     }>('llm', 'run_usage', { session_id: sessionId });
-    return {
-      id: row.id ? String(row.id) : null,
-      status: String(row.status ?? 'idle'),
-      tokensIn: Number(row.tokens_in ?? 0),
-      tokensOut: Number(row.tokens_out ?? 0),
-      cacheTokens: Number(row.cache_tokens ?? 0),
-      cacheHits: Number(row.cache_hits ?? 0),
-      error: row.error ?? null,
-    };
+    return asRun(row);
   },
 
   async probeProviderModels(providerId: string): Promise<ProbedModel[]> {

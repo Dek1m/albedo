@@ -14,6 +14,8 @@ function msg(id: string, createdAt: string, parentId: string | null = null): Cha
     agentName: null,
     modelName: null,
     parentId,
+    reasoning: null,
+    stages: [],
   };
 }
 

@@ -38,7 +38,13 @@ interface EventDto {
   role: string | null;
   content: string | null;
   created_at: string;
-  payload?: { agent_name?: string; model_name?: string; parent_id?: string } | null;
+  payload?: {
+    agent_name?: string;
+    model_name?: string;
+    parent_id?: string;
+    reasoning?: string;
+    stages?: { kind?: string; name?: string; args?: string; status?: string }[];
+  } | null;
 }
 
 function toWorkspace(dto: WorkspaceDto): Workspace {
@@ -86,6 +92,15 @@ function toMessage(dto: EventDto): ChatMessage {
     agentName: dto.payload?.agent_name ? String(dto.payload.agent_name) : null,
     modelName: dto.payload?.model_name ? String(dto.payload.model_name) : null,
     parentId: dto.payload?.parent_id ? String(dto.payload.parent_id) : null,
+    reasoning: dto.payload?.reasoning ? String(dto.payload.reasoning) : null,
+    stages: Array.isArray(dto.payload?.stages)
+      ? (dto.payload.stages as { kind?: string; name?: string; args?: string; status?: string }[]).map((item) => ({
+          kind: String(item.kind ?? ''),
+          name: String(item.name ?? ''),
+          args: item.args ? String(item.args) : '',
+          status: String(item.status ?? ''),
+        }))
+      : [],
   };
 }
 
