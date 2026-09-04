@@ -16,6 +16,8 @@ interface AgentBubbleProps {
   reasoning: string;
   stages: StageView[];
   live?: boolean;
+  reasoningOpen?: boolean;
+  onReasoningToggle?: () => void;
 }
 
 function toolRows(stages: StageView[], live: boolean, reasoning: string, content: string): StageView[] {
@@ -33,15 +35,28 @@ function toolRows(stages: StageView[], live: boolean, reasoning: string, content
   return rows;
 }
 
-export function AgentBubble({ name, content, reasoning, stages, live }: AgentBubbleProps): ReactElement {
-  const [open, setOpen] = useState(false);
+export function AgentBubble({
+  name,
+  content,
+  reasoning,
+  stages,
+  live,
+  reasoningOpen,
+  onReasoningToggle,
+}: AgentBubbleProps): ReactElement {
+  const [openState, setOpenState] = useState(false);
+  const open = reasoningOpen ?? openState;
   const paneRef = useRef<HTMLDivElement>(null);
   const text = useSmoothText(content, Boolean(live));
   const waiting = Boolean(live) && !text && !reasoning;
   const rows = waiting ? [] : toolRows(stages, Boolean(live), reasoning, text);
 
   const toggleReasoning = (): void => {
-    setOpen((value) => !value);
+    if (onReasoningToggle) {
+      onReasoningToggle();
+    } else {
+      setOpenState((value) => !value);
+    }
     // Раскрытая панель целиком на виду.
     requestAnimationFrame(() => {
       paneRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

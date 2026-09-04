@@ -80,6 +80,19 @@ export function ChatPane(): ReactElement | null {
   }, [visible, setThreadTailId, setThreadTailMeta]);
 
   const tailId = visible.at(-1)?.id;
+  const stickRef = useRef(true);
+  const [reasoningOpen, setReasoningOpen] = useState(false);
+
+  // Пока пользователь у дна — следуем за потоком. Прокрутил вверх — отпускаем.
+  const onLogScroll = (): void => {
+    const node = logRef.current;
+    if (!node) {
+      return;
+    }
+    stickRef.current = node.scrollHeight - node.scrollTop - node.clientHeight < 120;
+  };
+
+  // Отправка/новые сообщения — плавно вниз.
   useEffect(() => {
     const node = logRef.current;
     if (!node) {
@@ -87,6 +100,19 @@ export function ChatPane(): ReactElement | null {
     }
     node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
   }, [tailId, loopStatus, chatRev]);
+
+  // Поток ответа: reasoning скроллим только при раскрытой панели, текст — всегда у дна.
+  useEffect(() => {
+    const node = logRef.current;
+    if (!node || !stickRef.current) {
+      return;
+    }
+    const inReasoning = Boolean(liveTrace.reasoning) && !liveTrace.content;
+    if (inReasoning && !reasoningOpen) {
+      return;
+    }
+    node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
+  }, [liveTrace.content, liveTrace.reasoning, reasoningOpen]);
 
   if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;
@@ -116,7 +142,7 @@ export function ChatPane(): ReactElement | null {
 
   return (
     <section className="albedo-chat">
-      <div ref={logRef} className="albedo-chat-log">
+      <div ref={logRef} className="albedo-chat-log" onScroll={onLogScroll}>
         {history.map((msg) => {
           if (msg.role === 'assistant') {
             return (
@@ -247,6 +273,8 @@ export function ChatPane(): ReactElement | null {
               reasoning={liveTrace.reasoning}
               stages={liveTrace.stages}
               live
+              reasoningOpen={reasoningOpen}
+              onReasoningToggle={() => setReasoningOpen((value) => !value)}
             />
           </div>
         ) : null}

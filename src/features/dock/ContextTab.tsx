@@ -26,9 +26,12 @@ export function ContextTab(): ReactElement {
           if (cancelled) {
             return;
           }
-          // Статусом управляет MessageTab: полл только восстанавливает его после
-          // перезагрузки страницы и не сбивает 'running' в паузах между чанками.
-          const next: Parameters<typeof setMetrics>[0] = { trace: row.trace };
+          // Статусом управляет MessageTab; полл обновляет трассу и копилку токенов чата.
+          const next: Parameters<typeof setMetrics>[0] = {
+            trace: row.trace,
+            tokensIn: row.tokensIn,
+            tokensOut: row.tokensOut,
+          };
           if (status === 'idle' && row.status && row.status !== 'idle') {
             next.status = row.status;
           }

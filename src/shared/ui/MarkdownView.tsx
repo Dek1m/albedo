@@ -47,6 +47,23 @@ function isBlockStart(line: string, next: string | undefined): boolean {
   return false;
 }
 
+function renderCodeBlock(body: string[], lang: string): string {
+  const source = body.join('\n');
+  const lineCount = body.length;
+  const gutter = Array.from({ length: lineCount }, (_, index) => index + 1).join('\n');
+  const code = highlightCode(escapeHtml(source), lang);
+  return (
+    `<div class="albedo-code">` +
+    `<button type="button" class="albedo-code-copy" aria-label="Copy code">` +
+    `<i class="bi bi-clipboard albedo-code-copy-icon" />` +
+    `<i class="bi bi-check2 albedo-code-done-icon" />` +
+    `</button>` +
+    `<span class="albedo-code-gutter" aria-hidden>${gutter}</span>` +
+    `<pre class="albedo-md-code"><code>${code}</code></pre>` +
+    `</div>`
+  );
+}
+
 export function renderMarkdown(raw: string): string {
   const lines = raw.split('\n');
   const out: string[] = [];
@@ -63,7 +80,7 @@ export function renderMarkdown(raw: string): string {
         i += 1;
       }
       i += 1;
-      out.push(`<pre class="albedo-md-code"><code>${highlightCode(escapeHtml(body.join('\n')), lang)}</code></pre>`);
+      out.push(renderCodeBlock(body, lang));
       continue;
     }
 
@@ -118,6 +135,31 @@ export function renderMarkdown(raw: string): string {
   return out.join('');
 }
 
+async function copyFrom(target: HTMLElement): Promise<void> {
+  const code = target.closest('.albedo-code')?.querySelector('pre');
+  if (!code) {
+    return;
+  }
+  await navigator.clipboard.writeText(code.textContent ?? '');
+}
+
 export function MarkdownView({ text }: { text: string }): ReactElement {
-  return <div className="albedo-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />;
+  return (
+    <div
+      className="albedo-md"
+      dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
+      onClick={(event) => {
+        const btn = (event.target as HTMLElement).closest('.albedo-code-copy');
+        if (!(btn instanceof HTMLElement)) {
+          return;
+        }
+        void copyFrom(btn)
+          .then(() => {
+            btn.classList.add('is-copied');
+            window.setTimeout(() => btn.classList.remove('is-copied'), 1200);
+          })
+          .catch(() => undefined);
+      }}
+    />
+  );
 }
