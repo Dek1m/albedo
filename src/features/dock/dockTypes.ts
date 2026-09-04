@@ -1,1 +1,1 @@
-export type DockTab = 'message' | 'terminal';
+export type DockTab = 'message' | 'terminal' | 'context';

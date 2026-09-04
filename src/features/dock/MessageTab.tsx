@@ -8,6 +8,8 @@ import { MarkdownPrompt } from '../ai/MarkdownPrompt';
 import { toast } from '../../shared/toast/toastStore';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
+import { estimatePromptTokens } from './estimatePromptTokens';
+import { pickAgentId, readLastAgentId, writeLastAgentId } from './lastAgent';
 
 interface LocalAttach {
   name: string;
@@ -48,10 +50,12 @@ export function MessageTab(): ReactElement {
     let cancelled = false;
     void Promise.all([llmApi.listAgents(), llmApi.listProviders()])
       .then(([items, catalog]) => {
-        if (!cancelled) {
-          setAgents(items);
-          setProviders(catalog);
+        if (cancelled) {
+          return;
         }
+        setAgents(items);
+        setProviders(catalog);
+        setAgentId((current) => pickAgentId(items, current || readLastAgentId()));
       })
       .catch(() => {
         if (!cancelled) {
@@ -63,17 +67,6 @@ export function MessageTab(): ReactElement {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (agentId) {
-      return;
-    }
-    const visible = agents.filter((item) => item.enabled && item.visible);
-    const chosen = visible.find((item) => item.isDefault) ?? visible[0];
-    if (chosen) {
-      setAgentId(chosen.id);
-    }
-  }, [agentId, agents]);
 
   useEffect(() => {
     if (composerDraft == null) {
@@ -142,9 +135,15 @@ export function MessageTab(): ReactElement {
           className="form-select form-select-sm albedo-message-agent"
           aria-label="Agent"
           value={agentId}
-          onChange={(event) => setAgentId(event.target.value)}
+          disabled={picker.length === 0}
+          onChange={(event) => {
+            const id = event.target.value;
+            setAgentId(id);
+            if (id) {
+              writeLastAgentId(id);
+            }
+          }}
         >
-          <option value="">{picker.length ? 'Agent' : 'No agents'}</option>
           {picker.map((agent) => (
             <option key={agent.id} value={agent.id}>
               {agent.name}
@@ -177,7 +176,12 @@ export function MessageTab(): ReactElement {
           <i className="bi bi-trash" />
         </button>
       </div>
-      <MarkdownPrompt showToolbar={false} value={draft} onChange={setDraft} onKeyDown={onPromptKey} />
+      <div className="albedo-message-composer">
+        <div className="albedo-composer-tokens" aria-live="polite">
+          Tokens: {estimatePromptTokens(draft)}
+        </div>
+        <MarkdownPrompt showToolbar={false} value={draft} onChange={setDraft} onKeyDown={onPromptKey} />
+      </div>
       {attach ? (
         <div className="albedo-attach">
           <FileGlyph name={attach.name} kind="file" />

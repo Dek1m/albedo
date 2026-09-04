@@ -50,15 +50,34 @@ describe('Dock', () => {
     });
   });
 
-  it('shows Message and Terminal tabs', () => {
+  it('shows Message, Terminal and Context tabs', () => {
     render(<Dock />);
     expect(screen.getByRole('tab', { name: 'Message' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Terminal' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Context' })).toBeInTheDocument();
+  });
+
+  it('shows idle loop metrics on Context', () => {
+    render(<Dock />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Context' }));
+    expect(screen.getByText('Tokens in')).toBeInTheDocument();
+    expect(screen.getByText('Cache hits')).toBeInTheDocument();
+  });
+
+  it('shows composer token estimate', () => {
+    render(<Dock />);
+    expect(screen.getByText(/Tokens:/)).toBeInTheDocument();
   });
 
   it('has no Send button', () => {
     render(<Dock />);
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+  });
+
+  it('has no Agent placeholder option', () => {
+    render(<Dock />);
+    const select = screen.getByLabelText('Agent');
+    expect(select.querySelector('option[value=""]')).toBeNull();
   });
 
   it('keeps pipeline disabled and empty', () => {

@@ -418,7 +418,8 @@ settingsOpen: boolean
 | LoginForm | Testing Library + zod errors |
 | MemberOfTab | stub `canRemove` + disabled |
 | BrandMark | aria-label `albedo`, α в DOM |
-| Dock / Message | send disabled без focused session; pipeline disabled |
+| Dock / Message | pipeline disabled; Tokens над composer; агент без заглушки |
+| Dock / Context | idle usage 0, без RPC loop |
 | PanelGrip | clamp + клавиши |
 
 Новые экраны (чат, workspace) — `features/*` + Application use case. Domain/auth не раздувать. Админка чужих юзеров — не P0, отдельный permission `users:*`.

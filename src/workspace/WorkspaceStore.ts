@@ -43,7 +43,7 @@ interface WorkspaceState {
   focusedSessionId: SessionId | null;
   sidebarWidth: number;
   dockHeight: number;
-  dockTab: 'message' | 'terminal';
+  dockTab: 'message' | 'terminal' | 'context';
   chatRev: number;
   composerDraft: string | null;
   composerParentId: string | null;
@@ -58,7 +58,7 @@ interface WorkspaceState {
   setFocused: (id: SessionId | null) => void;
   setSidebarWidth: (width: number) => void;
   setDockHeight: (height: number) => void;
-  setDockTab: (tab: 'message' | 'terminal') => void;
+  setDockTab: (tab: 'message' | 'terminal' | 'context') => void;
   bumpChatRev: () => void;
   setComposerDraft: (draft: string | null) => void;
   setComposerParentId: (parentId: string | null) => void;
