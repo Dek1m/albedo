@@ -20,7 +20,7 @@ export function useSmoothText(target: string, active: boolean): string {
       let next = target;
       if (target.startsWith(prev)) {
         const left = target.length - prev.length;
-        const step = Math.max(1, Math.ceil(left / 6));
+        const step = Math.max(1, Math.ceil(left / 24));
         next = target.slice(0, prev.length + step);
       }
       shownRef.current = next;

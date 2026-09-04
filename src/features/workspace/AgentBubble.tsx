@@ -72,6 +72,13 @@ export function AgentBubble({ name, content, reasoning, stages, live }: AgentBub
           })}
         </div>
       ) : null}
+      {!text && !reasoning && rows.length === 0 && live ? (
+        <div className="albedo-skeleton" aria-hidden>
+          <div className="albedo-skeleton-line" />
+          <div className="albedo-skeleton-line" />
+          <div className="albedo-skeleton-line is-short" />
+        </div>
+      ) : null}
       {text ? <MarkdownView text={text} /> : null}
     </article>
   );

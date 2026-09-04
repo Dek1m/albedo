@@ -48,6 +48,8 @@ interface WorkspaceState {
   composerDraft: string | null;
   composerParentId: string | null;
   threadTailId: string | null;
+  threadTailRole: string | null;
+  threadTailParentId: string | null;
   branchPick: Record<string, string>;
   foldersOpen: boolean;
   expanded: string[];
@@ -63,6 +65,7 @@ interface WorkspaceState {
   setComposerDraft: (draft: string | null) => void;
   setComposerParentId: (parentId: string | null) => void;
   setThreadTailId: (id: string | null) => void;
+  setThreadTailMeta: (meta: { role: string | null; parentId: string | null }) => void;
   setBranchPick: (parentId: string, childId: string) => void;
   setFoldersOpen: (open: boolean) => void;
   setExpanded: (paths: string[]) => void;
@@ -83,6 +86,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   composerDraft: null,
   composerParentId: null,
   threadTailId: null,
+  threadTailRole: null,
+  threadTailParentId: null,
   branchPick: {},
   foldersOpen: true,
   expanded: [],
@@ -120,6 +125,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setComposerDraft: (composerDraft) => set({ composerDraft }),
   setComposerParentId: (composerParentId) => set({ composerParentId }),
   setThreadTailId: (threadTailId) => set({ threadTailId }),
+  setThreadTailMeta: ({ role, parentId }) => set({ threadTailRole: role, threadTailParentId: parentId }),
   setBranchPick: (parentId, childId) =>
     set((state) => ({ branchPick: { ...state.branchPick, [parentId]: childId } })),
   setFoldersOpen: (foldersOpen) => set({ foldersOpen }),

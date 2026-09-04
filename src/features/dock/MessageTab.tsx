@@ -39,6 +39,8 @@ export function MessageTab(): ReactElement {
   const composerParentId = useWorkspaceStore((s) => s.composerParentId);
   const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
   const threadTailId = useWorkspaceStore((s) => s.threadTailId);
+  const threadTailRole = useWorkspaceStore((s) => s.threadTailRole);
+  const threadTailParentId = useWorkspaceStore((s) => s.threadTailParentId);
   const setBranchPick = useWorkspaceStore((s) => s.setBranchPick);
   const session = tabs.find((item) => item.id === focused) ?? sessions.find((item) => item.id === focused);
   const [draft, setDraft] = useState('');
@@ -198,7 +200,12 @@ export function MessageTab(): ReactElement {
     }
     const agent = picker.find((item) => item.id === agentId);
     try {
-      const parentId = composerParentId ?? threadTailId;
+      // Хвост — user без ответа? Новая отправка — ветка того же уровня (DeepSeek-style), не продолжение цепочки.
+      const fallbackParent =
+        threadTailRole === 'user' && threadTailParentId !== undefined
+          ? threadTailParentId
+          : threadTailId;
+      const parentId = composerParentId ?? fallbackParent;
       const posted = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', text, {
         agentName: agent?.name,
         parentId: parentId || undefined,

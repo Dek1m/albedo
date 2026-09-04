@@ -35,6 +35,7 @@ export function ChatPane(): ReactElement | null {
   const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
   const setDockTab = useWorkspaceStore((s) => s.setDockTab);
   const setThreadTailId = useWorkspaceStore((s) => s.setThreadTailId);
+  const setThreadTailMeta = useWorkspaceStore((s) => s.setThreadTailMeta);
   const requestRegen = useChatRun((s) => s.requestRegen);
   const profile = useAuthStore((s) => s.profile);
   const session = tabs.find((s) => s.id === focused) ?? sessions.find((s) => s.id === focused);
@@ -75,8 +76,10 @@ export function ChatPane(): ReactElement | null {
   const streaming = loopStatus === 'running' || (!assistant && Boolean(liveTrace.content || liveTrace.reasoning));
 
   useEffect(() => {
-    setThreadTailId(visible.at(-1)?.id ?? null);
-  }, [visible, setThreadTailId]);
+    const tail = visible.at(-1) ?? null;
+    setThreadTailId(tail?.id ?? null);
+    setThreadTailMeta({ role: tail?.role ?? null, parentId: tail?.parentId ?? null });
+  }, [visible, setThreadTailId, setThreadTailMeta]);
 
   const tailId = visible.at(-1)?.id;
   useEffect(() => {
