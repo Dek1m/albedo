@@ -110,6 +110,26 @@ export function AgentsPane({ visible }: AgentsPaneProps): ReactElement {
           const locked = agent.agentType === 'system';
           return (
             <li key={agent.id} className="list-group-item albedo-session-row">
+              <input
+                type="checkbox"
+                className="albedo-check"
+                checked={agent.enabled}
+                aria-label={`${agent.name} enabled`}
+                onChange={() => {
+                  void (async () => {
+                    try {
+                      await llmApi.setAgentEnabled(agent.id, !agent.enabled);
+                      setItems((prev) =>
+                        prev.map((item) =>
+                          item.id === agent.id ? { ...item, enabled: !agent.enabled } : item,
+                        ),
+                      );
+                    } catch (err) {
+                      toast(humanMessage(err));
+                    }
+                  })();
+                }}
+              />
               <Avatar label={agent.name} src={agent.avatarUrl} size={28} />
               <i className={`bi ${kindIcon(agent.agentType)}`} />
               <button

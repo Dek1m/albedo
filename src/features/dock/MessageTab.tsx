@@ -35,7 +35,7 @@ export function MessageTab(): ReactElement {
   const [agents, setAgents] = useState<LlmAgent[]>([]);
   const [attach, setAttach] = useState<LocalAttach | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const canSend = Boolean(session) && Boolean(draft.trim());
+  const picker = agents.filter((agent) => agent.enabled);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,8 +99,8 @@ export function MessageTab(): ReactElement {
           value={agentId}
           onChange={(event) => setAgentId(event.target.value)}
         >
-          <option value="">{agents.length ? 'Agent' : 'No agents'}</option>
-          {agents.map((agent) => (
+          <option value="">{picker.length ? 'Agent' : 'No agents'}</option>
+          {picker.map((agent) => (
             <option key={agent.id} value={agent.id}>
               {agent.name}
             </option>
@@ -130,14 +130,6 @@ export function MessageTab(): ReactElement {
           onClick={clearComposer}
         >
           <i className="bi bi-trash" />
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm btn-albedo-primary"
-          disabled={!canSend}
-          onClick={() => void send()}
-        >
-          Send
         </button>
       </div>
       <MarkdownPrompt showToolbar={false} value={draft} onChange={setDraft} onKeyDown={onPromptKey} />

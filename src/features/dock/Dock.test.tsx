@@ -29,9 +29,9 @@ describe('Dock', () => {
     expect(screen.getByRole('tab', { name: 'Terminal' })).toBeInTheDocument();
   });
 
-  it('disables Send without a focused session', () => {
+  it('has no Send button', () => {
     render(<Dock />);
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
   });
 
   it('keeps pipeline disabled and empty', () => {

@@ -1830,6 +1830,27 @@ body {
   color: var(--text-secondary);
 }
 
+.albedo-md-highlight .md-kw {
+  color: #7aa2f7;
+}
+
+.albedo-md-highlight .md-str {
+  color: #9ece6a;
+}
+
+.albedo-md-highlight .md-cmt {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.albedo-md-highlight .md-num {
+  color: #ff9e64;
+}
+
+.albedo-md-highlight .md-tag {
+  color: var(--brand);
+}
+
 .albedo-admin-role-toolbar {
   display: flex;
   justify-content: flex-end;

@@ -47,6 +47,7 @@ export interface LlmAgent {
   systemPrompt: string;
   model: string;
   avatarUrl: string | null;
+  enabled: boolean;
 }
 
 interface ModelDto {
@@ -337,6 +338,7 @@ export const llmApi = {
         system_prompt?: string | null;
         model?: string | null;
         avatar_url?: string | null;
+        is_active?: boolean;
       }[];
     }>('llm', 'agents', {});
     return (result.items ?? []).map((row) => ({
@@ -347,6 +349,7 @@ export const llmApi = {
       systemPrompt: String(row.system_prompt ?? ''),
       model: String(row.model ?? ''),
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
+      enabled: row.is_active !== false,
     }));
   },
 
@@ -378,6 +381,7 @@ export const llmApi = {
       systemPrompt: String(row.system_prompt ?? input.systemPrompt),
       model: String(row.model ?? input.model),
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
+      enabled: true,
     };
   },
 
@@ -404,6 +408,10 @@ export const llmApi = {
       system_prompt: input.systemPrompt,
       model: input.model || null,
     });
+  },
+
+  async setAgentEnabled(agentId: string, enabled: boolean): Promise<void> {
+    await apiClient.call('llm', 'update_agent', { agent_id: agentId, is_active: enabled });
   },
 
   async deleteAgent(agentId: string): Promise<void> {
