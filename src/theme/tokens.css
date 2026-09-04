@@ -2382,17 +2382,21 @@ body {
 }
 
 .albedo-step {
+  margin: 0.12rem 0;
+}
+
+.albedo-step-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.45rem;
-  margin: 0.15rem 0 0.2rem -1.15rem;
+  margin-left: -1.15rem;
+  min-height: 1.05rem;
 }
 
 .albedo-step-dot {
   flex: 0 0 0.52rem;
   width: 0.52rem;
   height: 0.52rem;
-  margin-top: 0.18rem;
   border-radius: 50%;
   background: rgb(255 255 255 / 28%);
   box-shadow: 0 0 0 2px rgb(12 12 14 / 80%);
@@ -2437,6 +2441,13 @@ body {
   font-size: 0.75rem;
   line-height: 1.2;
   color: var(--text-muted);
+}
+
+.albedo-stream-text {
+  margin: 0.3rem 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .albedo-stage-args {

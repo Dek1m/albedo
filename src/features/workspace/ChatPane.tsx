@@ -66,7 +66,8 @@ export function ChatPane(): ReactElement | null {
 
   const tree = useMemo(() => withParents(messages), [messages]);
   const visible = useMemo(() => visiblePath(tree, branchPick), [tree, branchPick]);
-  const live = loopStatus === 'running';
+  const lastRole = visible.at(-1)?.role;
+  const live = lastRole !== 'assistant' && (loopStatus === 'running' || Boolean(liveTrace.content));
 
   useEffect(() => {
     setThreadTailId(visible.at(-1)?.id ?? null);
@@ -75,11 +76,11 @@ export function ChatPane(): ReactElement | null {
   const tailId = visible.at(-1)?.id;
   useEffect(() => {
     const node = logRef.current;
-    if (!node) {
+    if (!node || loopStatus === 'running') {
       return;
     }
     node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
-  }, [tailId, live, chatRev]);
+  }, [tailId, loopStatus, chatRev]);
 
   if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;

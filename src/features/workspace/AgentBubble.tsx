@@ -42,24 +42,17 @@ export function AgentBubble({ name, content, reasoning, stages, live }: AgentBub
             const reasoningRow = stage.kind === 'reasoning';
             return (
               <div key={`${stage.kind}-${stage.name}-${String(index)}`} className="albedo-step">
-                <span className={`albedo-step-dot${running ? ' is-running' : ''}`} aria-hidden />
-                <div className="albedo-step-body">
+                <div className="albedo-step-head">
+                  <span className={`albedo-step-dot${running ? ' is-running' : ''}`} aria-hidden />
                   {reasoningRow ? (
-                    <>
-                      <button
-                        type="button"
-                        className="albedo-reasoning-toggle"
-                        aria-expanded={open}
-                        onClick={() => setOpen((value) => !value)}
-                      >
-                        Reasoning <span aria-hidden>{open ? '▾' : '>'}</span>
-                      </button>
-                      {open ? (
-                        <div className="albedo-reasoning-pane">
-                          <p className="albedo-reasoning-text">{reasoning}</p>
-                        </div>
-                      ) : null}
-                    </>
+                    <button
+                      type="button"
+                      className="albedo-reasoning-toggle"
+                      aria-expanded={open}
+                      onClick={() => setOpen((value) => !value)}
+                    >
+                      Reasoning <span aria-hidden>{open ? '▾' : '>'}</span>
+                    </button>
                   ) : (
                     <p className="albedo-tool-line">
                       <span>{stage.name}</span>
@@ -67,12 +60,19 @@ export function AgentBubble({ name, content, reasoning, stages, live }: AgentBub
                     </p>
                   )}
                 </div>
+                {reasoningRow && open ? (
+                  <div className="albedo-reasoning-pane">
+                    <p className="albedo-reasoning-text">{reasoning}</p>
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </div>
       ) : null}
-      {content ? <MarkdownView text={content} /> : null}
+      {content ? (
+        live ? <div className="albedo-stream-text">{content}</div> : <MarkdownView text={content} />
+      ) : null}
     </article>
   );
 }
