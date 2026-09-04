@@ -18,26 +18,31 @@ interface AgentBubbleProps {
   live?: boolean;
 }
 
-function toolRows(stages: StageView[], live: boolean, reasoning: string): StageView[] {
+function toolRows(stages: StageView[], live: boolean, reasoning: string, content: string): StageView[] {
   const rows = stages.filter((stage) => stage.kind !== 'text');
-  if (rows.length > 0) {
+  if (rows.some((stage) => stage.kind === 'reasoning')) {
     return rows;
   }
-  if (live || reasoning) {
-    return [{ kind: 'reasoning', name: 'Reasoning', status: live && !reasoning ? 'running' : 'done' }];
+  if (reasoning) {
+    return [{ kind: 'reasoning', name: 'Reasoning', status: live ? 'running' : 'done' }, ...rows];
   }
-  return [];
+  if (live && !content) {
+    // Первый токен ещё не пришёл — рисуем скелетон вместо этапов.
+    return [];
+  }
+  return rows;
 }
 
 export function AgentBubble({ name, content, reasoning, stages, live }: AgentBubbleProps): ReactElement {
   const [open, setOpen] = useState(false);
-  const rows = toolRows(stages, Boolean(live), reasoning);
   const text = useSmoothText(content, Boolean(live));
+  const waiting = Boolean(live) && !text && !reasoning;
+  const rows = waiting ? [] : toolRows(stages, Boolean(live), reasoning, text);
 
   return (
     <article className={`albedo-bubble albedo-bubble--agent albedo-turn${live ? ' is-live' : ''}`}>
       {name ? <header>{name}</header> : null}
-      {rows.length > 0 ? (
+      {!waiting && rows.length > 0 ? (
         <div className="albedo-steps">
           {rows.map((stage, index) => {
             const running = stage.status === 'running';
@@ -72,7 +77,7 @@ export function AgentBubble({ name, content, reasoning, stages, live }: AgentBub
           })}
         </div>
       ) : null}
-      {!text && !reasoning && rows.length === 0 && live ? (
+      {waiting ? (
         <div className="albedo-skeleton" aria-hidden>
           <div className="albedo-skeleton-line" />
           <div className="albedo-skeleton-line" />

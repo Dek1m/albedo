@@ -2229,7 +2229,7 @@ body {
   border-radius: 8px 8px 0 0;
   background: var(--bg-elevated);
   color: var(--text-secondary);
-  font-size: 0.78rem;
+  font-size: var(--font-ui);
   padding: 0 0.55rem;
   min-height: calc(2rem + 8px);
   margin-bottom: -1px;
@@ -2358,10 +2358,11 @@ body {
   padding: 0.45rem 0.65rem 0.5rem;
   border-radius: var(--radius);
   animation: albedo-rise 200ms var(--ease);
+  font-size: var(--font-ui);
 }
 
 .albedo-bubble header {
-  font-size: 0.68rem;
+  font-size: var(--font-ui);
   color: var(--text-muted);
   margin-bottom: 0.2rem;
 }
@@ -2444,7 +2445,7 @@ body {
   border: 0;
   padding: 0;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: var(--font-ui);
   line-height: 1.2;
   cursor: pointer;
 }
@@ -2458,7 +2459,7 @@ body {
 .albedo-reasoning-text {
   margin: 0;
   color: rgb(255 255 255 / 48%);
-  font-size: 0.82rem;
+  font-size: var(--font-ui);
   line-height: 1.35;
   white-space: pre-wrap;
 }
