@@ -469,6 +469,7 @@ export const llmApi = {
     sessionId: string;
     pipelineId?: string;
     agentId?: string;
+    signal?: AbortSignal;
   }): Promise<LlmRunUsage> {
     const row = await apiClient.call<{
       id?: string | null;
@@ -484,7 +485,7 @@ export const llmApi = {
       session_id: input.sessionId,
       pipeline_id: input.pipelineId,
       agent_id: input.agentId,
-    });
+    }, { signal: input.signal });
     return {
       id: row.id ? String(row.id) : null,
       status: String(row.status ?? 'idle'),
@@ -493,6 +494,27 @@ export const llmApi = {
       cacheTokens: Number(row.cache_tokens ?? 0),
       cacheHits: Number(row.cache_hits ?? 0),
       content: row.content ?? null,
+      error: row.error ?? null,
+    };
+  },
+
+  async cancelRun(sessionId: string): Promise<LlmRunUsage> {
+    const row = await apiClient.call<{
+      id?: string | null;
+      status?: string;
+      tokens_in?: number;
+      tokens_out?: number;
+      cache_tokens?: number;
+      cache_hits?: number;
+      error?: string | null;
+    }>('llm', 'cancel_run', { session_id: sessionId });
+    return {
+      id: row.id ? String(row.id) : null,
+      status: String(row.status ?? 'cancelled'),
+      tokensIn: Number(row.tokens_in ?? 0),
+      tokensOut: Number(row.tokens_out ?? 0),
+      cacheTokens: Number(row.cache_tokens ?? 0),
+      cacheHits: Number(row.cache_hits ?? 0),
       error: row.error ?? null,
     };
   },

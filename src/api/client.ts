@@ -7,6 +7,7 @@ const REFRESH_LOCK = 'albedo-refresh';
 
 export interface CallOptions {
   skipRefresh?: boolean;
+  signal?: AbortSignal;
 }
 
 export class ApiClient {
@@ -19,13 +20,13 @@ export class ApiClient {
     options: CallOptions = {},
   ): Promise<T> {
     try {
-      return await this.request<T>(module, fn, kwargs);
+      return await this.request<T>(module, fn, kwargs, options.signal);
     } catch (error) {
       if (!this.shouldRefresh(error, fn, options.skipRefresh)) {
         throw error;
       }
       await this.refreshSingleFlight();
-      return await this.request<T>(module, fn, kwargs);
+      return await this.request<T>(module, fn, kwargs, options.signal);
     }
   }
 
@@ -57,20 +58,30 @@ export class ApiClient {
     module: string,
     fn: string,
     kwargs: object,
+    signal?: AbortSignal,
   ): Promise<T> {
     const started = performance.now();
     log.info('rpc_started', { module, fn });
-    const response = await fetch(`/api/v1/${module}/${fn}`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'X-Albedo-Client': 'spa',
-      },
-      // Токены придут cookie с бэка. Не Bearer. Не sessionStorage.
-      credentials: 'include',
-      body: JSON.stringify(kwargs),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`/api/v1/${module}/${fn}`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Albedo-Client': 'spa',
+        },
+        // Токены придут cookie с бэка. Не Bearer. Не sessionStorage.
+        credentials: 'include',
+        body: JSON.stringify(kwargs),
+        signal,
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new ApiError('ABORTED', 'Stopped');
+      }
+      throw error;
+    }
 
     let envelope: Envelope<T>;
     try {

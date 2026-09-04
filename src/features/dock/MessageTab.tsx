@@ -47,9 +47,13 @@ export function MessageTab(): ReactElement {
   const [pipelines, setPipelines] = useState<LlmPipeline[]>([]);
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const setMetrics = useLoopMetrics((s) => s.setMetrics);
+  const loopStatus = useLoopMetrics((s) => s.status);
   const [attach, setAttach] = useState<LocalAttach | null>(null);
+  const [running, setRunning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const picker = agents.filter((agent) => agent.enabled && agent.visible);
+  const canSend = Boolean(session) && Boolean(draft.trim()) && !running;
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +94,15 @@ export function MessageTab(): ReactElement {
   };
 
   const send = async (): Promise<void> => {
-    if (!session || !draft.trim()) {
+    const text = draft.trim();
+    if (running) {
+      return;
+    }
+    if (!session) {
+      toast('Open a session');
+      return;
+    }
+    if (!text) {
       return;
     }
     const agent = picker.find((item) => item.id === agentId);
@@ -106,7 +118,7 @@ export function MessageTab(): ReactElement {
     }
     try {
       const parentId = composerParentId ?? threadTailId;
-      const posted = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', draft.trim(), {
+      const posted = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', text, {
         agentName: agent?.name,
         modelName: modelName || undefined,
         parentId: parentId || undefined,
@@ -116,26 +128,63 @@ export function MessageTab(): ReactElement {
       clearComposer();
       bumpChatRev();
       if (pipelineId) {
-        const usage = await llmApi.runPipeline({
-          workspaceId: session.workspaceId,
-          sessionId: session.id,
-          pipelineId,
-          agentId: agentId || undefined,
-        });
+        const ac = new AbortController();
+        abortRef.current = ac;
+        setRunning(true);
+        setMetrics({ status: 'running' });
+        try {
+          const usage = await llmApi.runPipeline({
+            workspaceId: session.workspaceId,
+            sessionId: session.id,
+            pipelineId,
+            agentId: agentId || undefined,
+            signal: ac.signal,
+          });
+          setMetrics({
+            status: usage.status,
+            tokensIn: usage.tokensIn,
+            tokensOut: usage.tokensOut,
+            cacheTokens: usage.cacheTokens,
+            cacheHits: usage.cacheHits,
+          });
+          bumpChatRev();
+          if (usage.status === 'error' && usage.error) {
+            toast(usage.error);
+          }
+        } finally {
+          abortRef.current = null;
+          setRunning(false);
+        }
+      }
+    } catch (err) {
+      abortRef.current = null;
+      setRunning(false);
+      if (err instanceof Error && 'code' in err && (err as { code: string }).code === 'ABORTED') {
+        setMetrics({ status: 'cancelled' });
+        return;
+      }
+      toast(humanMessage(err));
+    }
+  };
+
+  const stop = async (): Promise<void> => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setRunning(false);
+    setMetrics({ status: 'cancelled' });
+    if (session) {
+      try {
+        const usage = await llmApi.cancelRun(session.id);
         setMetrics({
-          status: usage.status,
+          status: usage.status || 'cancelled',
           tokensIn: usage.tokensIn,
           tokensOut: usage.tokensOut,
           cacheTokens: usage.cacheTokens,
           cacheHits: usage.cacheHits,
         });
-        bumpChatRev();
-        if (usage.status === 'error' && usage.error) {
-          toast(usage.error);
-        }
+      } catch {
+        /* client already stopped */
       }
-    } catch (err) {
-      toast(humanMessage(err));
     }
   };
 
@@ -149,10 +198,12 @@ export function MessageTab(): ReactElement {
   };
 
   const onPromptKey = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      void send();
+    const enter = event.key === 'Enter' || event.code === 'Enter' || event.code === 'NumpadEnter';
+    if (!enter || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
     }
+    event.preventDefault();
+    void send();
   };
 
   return (
@@ -215,6 +266,28 @@ export function MessageTab(): ReactElement {
         >
           <i className="bi bi-trash" />
         </button>
+        {running || loopStatus === 'running' ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-albedo-primary"
+            title="Stop"
+            aria-label="Stop"
+            onClick={() => void stop()}
+          >
+            Stop
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-sm btn-albedo-primary"
+            disabled={!canSend}
+            title="Send"
+            aria-label="Send"
+            onClick={() => void send()}
+          >
+            Send
+          </button>
+        )}
       </div>
       <div className="albedo-message-composer">
         <div className="albedo-composer-tokens" aria-live="polite">

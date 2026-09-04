@@ -46,7 +46,9 @@ export function Dock(): ReactElement {
         </button>
       </div>
       <div className="albedo-dock-body">
-        {tab === 'message' ? <MessageTab /> : null}
+        <div className={`albedo-dock-pane${tab === 'message' ? '' : ' is-hidden'}`}>
+          <MessageTab />
+        </div>
         {tab === 'terminal' ? <TerminalTab /> : null}
         {tab === 'context' ? <ContextTab /> : null}
       </div>

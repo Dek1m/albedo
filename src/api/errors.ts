@@ -61,6 +61,8 @@ const CODE_MESSAGES: Record<string, string> = {
   OAUTH_UNSUPPORTED: 'This OAuth provider is not supported yet',
   TASK_FAILED: 'Request failed',
   LLM_ERROR: 'Request failed',
+  ABORTED: 'Stopped',
+  CANCELLED: 'Stopped',
   UPSTREAM: 'Wrong URL',
   NOT_IMPLEMENTED: 'Not implemented yet',
 };

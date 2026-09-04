@@ -8,6 +8,14 @@ vi.mock('../../api/llmApi', () => ({
     listAgents: vi.fn(async () => []),
     listProviders: vi.fn(async () => []),
     listPipelines: vi.fn(async () => []),
+    cancelRun: vi.fn(async () => ({
+      id: null,
+      status: 'cancelled',
+      tokensIn: 0,
+      tokensOut: 0,
+      cacheTokens: 0,
+      cacheHits: 0,
+    })),
     runUsage: vi.fn(async () => ({
       id: null,
       status: 'idle',
@@ -81,9 +89,18 @@ describe('Dock', () => {
     expect(screen.getByText(/Tokens:/)).toBeInTheDocument();
   });
 
-  it('has no Send button', () => {
+  it('keeps Send disabled without a session', () => {
     render(<Dock />);
-    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+  });
+
+  it('keeps Message draft when switching tabs', () => {
+    render(<Dock />);
+    const box = document.querySelector('.albedo-md-input') as HTMLTextAreaElement;
+    fireEvent.change(box, { target: { value: 'keep me' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Context' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Message' }));
+    expect((document.querySelector('.albedo-md-input') as HTMLTextAreaElement).value).toBe('keep me');
   });
 
   it('has no Agent placeholder option', () => {

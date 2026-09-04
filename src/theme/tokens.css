@@ -2982,6 +2982,17 @@ body {
   flex-direction: column;
 }
 
+.albedo-dock-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.albedo-dock-pane.is-hidden {
+  display: none;
+}
+
 .albedo-message-tab {
   display: flex;
   flex-direction: column;
