@@ -47,6 +47,18 @@ export function topCenterBox(): WindowBox {
   });
 }
 
+export function centerFrameBox(): WindowBox {
+  const { vw, vh } = viewport();
+  const w = vw * (1 - 2 * MARGIN);
+  const h = vh * (1 - 2 * MARGIN);
+  return clampBox({
+    x: (vw - w) / 2,
+    y: (vh - h) / 2,
+    w,
+    h,
+  });
+}
+
 export function cascadeBox(parent: WindowBox): WindowBox {
   return clampBox({
     x: parent.x + CASCADE,

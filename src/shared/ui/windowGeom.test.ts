@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cascadeBox, growHeightSnapY, topCenterBox } from './windowGeom';
+import { cascadeBox, centerFrameBox, growHeightSnapY, topCenterBox } from './windowGeom';
 
 function stubViewport(vw: number, vh: number): void {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: vw });
@@ -43,5 +43,12 @@ describe('windowGeom', () => {
     const box = topCenterBox();
     expect(box.y).toBeLessThan(16);
     expect(box.x).toBeCloseTo((1000 - box.w) / 2);
+  });
+
+  it('centerFrameBox: по центру viewport', () => {
+    stubViewport(1000, 800);
+    const box = centerFrameBox();
+    expect(box.x).toBeCloseTo((1000 - box.w) / 2);
+    expect(box.y).toBeCloseTo((800 - box.h) / 2);
   });
 });

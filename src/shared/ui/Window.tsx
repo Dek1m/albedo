@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react';
-import { askBox, cascadeBox, clampBox, fromRatio, growHeightSnapY, toRatio, topCenterBox } from './windowGeom';
+import { createPortal } from 'react-dom';
+import { askBox, cascadeBox, centerFrameBox, clampBox, growHeightSnapY, toRatio } from './windowGeom';
 import type { WindowBox } from './windowGeom';
-import { peekWindow, rememberWindow } from './windowLayout';
+import { rememberWindow } from './windowLayout';
+import { moveWindow, pullWindow, pushWindow, topmostWindow } from './windowStack';
 
 export type WindowSize = 'frame' | 'ask';
 
@@ -45,21 +47,15 @@ const WINDOW_ICONS: Record<string, string> = {
 
 const CLOSE_MS = 180;
 
-function initialBox(windowId: string, size: WindowSize, parentId?: string): WindowBox {
+function placeBox(windowId: string, size: WindowSize): WindowBox {
+  const top = topmostWindow(windowId);
+  if (top) {
+    return cascadeBox(top);
+  }
   if (size === 'ask') {
     return askBox();
   }
-  const saved = peekWindow(windowId);
-  if (saved) {
-    return fromRatio(saved);
-  }
-  if (parentId) {
-    const parent = peekWindow(parentId);
-    if (parent) {
-      return cascadeBox(fromRatio(parent));
-    }
-  }
-  return topCenterBox();
+  return centerFrameBox();
 }
 
 export function Window({
@@ -71,11 +67,10 @@ export function Window({
   className,
   size = 'frame',
   icon,
-  parentId,
 }: WindowProps): ReactElement | null {
   const [mounted, setMounted] = useState(open);
   const [leaving, setLeaving] = useState(false);
-  const [box, setBox] = useState<WindowBox>(() => initialBox(windowId, size, parentId));
+  const [box, setBox] = useState<WindowBox>(() => placeBox(windowId, size));
   const [dragging, setDragging] = useState(false);
   const [resizing, setResizing] = useState(false);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
@@ -86,11 +81,14 @@ export function Window({
 
   useEffect(() => {
     if (open) {
-      setBox(initialBox(windowId, size, parentId));
+      const next = placeBox(windowId, size);
+      setBox(next);
+      pushWindow(windowId, next);
       setMounted(true);
       setLeaving(false);
-      return;
+      return () => pullWindow(windowId);
     }
+    pullWindow(windowId);
     if (!mounted) {
       return;
     }
@@ -103,7 +101,7 @@ export function Window({
       setLeaving(false);
     }, CLOSE_MS);
     return () => window.clearTimeout(timer);
-  }, [open, mounted, windowId, size, parentId]);
+  }, [open, mounted, windowId, size]);
 
   useEffect(() => {
     const onResize = (): void => {
@@ -167,14 +165,16 @@ export function Window({
       return;
     }
     const grab = drag.current;
-    setBox((current) =>
-      clampBox({
+    setBox((current) => {
+      const next = clampBox({
         x: event.clientX - grab.dx,
         y: event.clientY - grab.dy,
         w: current.w,
         h: current.h,
-      }),
-    );
+      });
+      moveWindow(windowId, next);
+      return next;
+    });
   };
 
   const onHeaderUp = (): void => {
@@ -238,7 +238,7 @@ export function Window({
     .filter(Boolean)
     .join(' ');
 
-  return (
+  return createPortal(
     <div className={rootClass} role="dialog" aria-modal="true" aria-label={title}>
       <div className="albedo-window-backdrop" onClick={onClose} />
       <div className="albedo-window-frame" style={style}>
@@ -270,6 +270,7 @@ export function Window({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
