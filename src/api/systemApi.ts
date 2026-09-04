@@ -354,15 +354,126 @@ function normalizeDomainTree(raw: unknown): DomainOu[] {
   return [];
 }
 
-function mapPrefKey(raw: unknown): string | null {
-  if (typeof raw === 'string' && raw) {
+export type PrefKind = 'bool' | 'int' | 'float' | 'string' | 'enum';
+export type PrefTarget = 'runtime' | 'env' | 'compose';
+
+export interface PrefField {
+  key: string;
+  name: string;
+  label: string;
+  hint: string;
+  kind: PrefKind;
+  value: unknown;
+  default: unknown;
+  group: string;
+  env: string | null;
+  target: PrefTarget;
+  needsRestart: boolean;
+  min?: number;
+  max?: number;
+  options?: string[];
+}
+
+export interface PrefGroup {
+  id: string;
+  label: string;
+  fields: PrefField[];
+}
+
+export interface PrefModule {
+  name: string;
+  displayName: string;
+  groups: PrefGroup[];
+}
+
+export interface PrefCatalog {
+  modules: PrefModule[];
+}
+
+function asKind(raw: string): PrefKind {
+  if (raw === 'bool' || raw === 'int' || raw === 'float' || raw === 'enum') {
     return raw;
   }
+  return 'string';
+}
+
+function asTarget(raw: string): PrefTarget {
+  if (raw === 'env' || raw === 'compose') {
+    return raw;
+  }
+  return 'runtime';
+}
+
+function mapPrefField(raw: unknown): PrefField | null {
   const row = asRecord(raw);
   if (!row) {
     return null;
   }
-  return pickStr(row, 'key') || null;
+  const key = pickStr(row, 'key');
+  if (!key) {
+    return null;
+  }
+  const options = pickList(row, 'options').filter((item): item is string => typeof item === 'string');
+  const min = row.min ?? row.minimum;
+  const max = row.max ?? row.maximum;
+  return {
+    key,
+    name: pickStr(row, 'name') || key.split('.').pop() || key,
+    label: pickStr(row, 'label') || key,
+    hint: pickStr(row, 'hint'),
+    kind: asKind(pickStr(row, 'kind')),
+    value: row.value,
+    default: row.default,
+    group: pickStr(row, 'group') || 'General',
+    env: pickStr(row, 'env') || null,
+    target: asTarget(pickStr(row, 'target')),
+    needsRestart: pickBool(row, 'needs_restart', 'needsRestart'),
+    min: typeof min === 'number' ? min : undefined,
+    max: typeof max === 'number' ? max : undefined,
+    options: options.length ? options : undefined,
+  };
+}
+
+function mapPrefGroup(raw: unknown): PrefGroup | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const fields = pickList(row, 'fields').map(mapPrefField).filter((item): item is PrefField => item !== null);
+  const id = pickStr(row, 'id', 'label') || 'General';
+  return { id, label: pickStr(row, 'label') || id, fields };
+}
+
+function mapPrefModule(raw: unknown): PrefModule | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const name = pickStr(row, 'name');
+  if (!name) {
+    return null;
+  }
+  return {
+    name,
+    displayName: pickStr(row, 'display_name', 'displayName') || name,
+    groups: pickList(row, 'groups').map(mapPrefGroup).filter((item): item is PrefGroup => item !== null),
+  };
+}
+
+function mapPrefCatalog(raw: unknown): PrefCatalog {
+  if (Array.isArray(raw)) {
+    const modules = raw.map(mapPrefModule).filter((item): item is PrefModule => item !== null);
+    if (modules.length) {
+      return { modules };
+    }
+  }
+  const row = asRecord(raw);
+  if (!row) {
+    return { modules: [] };
+  }
+  return {
+    modules: pickList(row, 'modules').map(mapPrefModule).filter((item): item is PrefModule => item !== null),
+  };
 }
 
 function mapRole(raw: unknown): AdminRole | null {
@@ -527,13 +638,21 @@ export const systemApi = {
     await apiClient.call('system', 'remove_group_role', { group_id: groupId, role_id: roleId });
   },
 
-  async prefList(): Promise<string[]> {
+  async prefList(): Promise<PrefCatalog> {
     const raw = await apiClient.call<unknown>('system', 'pref_list', {});
-    const list = Array.isArray(raw) ? raw : pickList(asRecord(raw) ?? {}, 'items', 'prefs', 'keys');
-    return list.map(mapPrefKey).filter((key): key is string => key !== null);
+    return mapPrefCatalog(raw);
   },
 
-  async prefGet(key: string): Promise<unknown> {
-    return apiClient.call<unknown>('system', 'pref_get', { key });
+  async prefGet(key: string): Promise<PrefField | null> {
+    const raw = await apiClient.call<unknown>('system', 'pref_get', { key });
+    const row = asRecord(raw);
+    const item = row?.item ?? raw;
+    return mapPrefField(item);
+  },
+
+  async prefSet(key: string, value: unknown): Promise<{ needsRestart: boolean }> {
+    const raw = await apiClient.call<unknown>('system', 'pref_set', { key, value });
+    const row = asRecord(raw);
+    return { needsRestart: row ? pickBool(row, 'needs_restart', 'needsRestart') : false };
   },
 };

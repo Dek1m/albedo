@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { PanelGrip } from '../../shared/ui/PanelGrip';
 import { Window } from '../../shared/ui/Window';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
+import { DropdownPanel } from '../../shared/ui/DropdownMenu';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { folderToast, pathTail } from './folderToast';
@@ -156,7 +157,7 @@ export function WorkspaceSidebar(): ReactElement | null {
       style={{ width }}
       onClick={(event) => {
         const node = event.target as HTMLElement;
-        if (node.closest('.albedo-tree-item, .albedo-kebab, .albedo-ws-drop, .albedo-icon-btn, .albedo-sidebar-fold, .albedo-sidebar-session')) {
+        if (node.closest('.albedo-tree-item, .albedo-kebab, .albedo-ws-drop, .albedo-drop, .albedo-icon-btn, .albedo-sidebar-fold, .albedo-sidebar-session')) {
           return;
         }
         setSelectedRel(null);
@@ -252,14 +253,13 @@ export function WorkspaceSidebar(): ReactElement | null {
                   <button type="button" className="albedo-icon-btn" onClick={() => setMenuOpen((v) => !v)}>
                     <i className="bi bi-three-dots-vertical" />
                   </button>
-                  {menuOpen ? (
-                    <div className="albedo-ws-drop albedo-kebab-drop">
-                      <button type="button" className="albedo-ws-drop-item" onClick={addFolder}>
+                  <DropdownPanel open={menuOpen} align="right">
+                      <button type="button" className="albedo-drop-item" onClick={addFolder}>
                         New folder
                       </button>
                       <button
                         type="button"
-                        className="albedo-ws-drop-item"
+                        className="albedo-drop-item"
                         onClick={() => {
                           setMenuOpen(false);
                           setFilePrompt(true);
@@ -267,21 +267,21 @@ export function WorkspaceSidebar(): ReactElement | null {
                       >
                         New file
                       </button>
-                      <button type="button" className="albedo-ws-drop-item" disabled>
+                      <button type="button" className="albedo-drop-item" disabled>
                         Rename
                       </button>
-                      <button type="button" className="albedo-ws-drop-item" disabled>
+                      <button type="button" className="albedo-drop-item" disabled>
                         Move to…
                       </button>
-                      <button type="button" className="albedo-ws-drop-item" onClick={() => setFoldersOpen(false)}>
+                      <button type="button" className="albedo-drop-item" onClick={() => setFoldersOpen(false)}>
                         Collapse all
                       </button>
-                      <button type="button" className="albedo-ws-drop-item" onClick={() => setFoldersOpen(true)}>
+                      <button type="button" className="albedo-drop-item" onClick={() => setFoldersOpen(true)}>
                         Expand all
                       </button>
                       <button
                         type="button"
-                        className="albedo-ws-drop-item"
+                        className="albedo-drop-item"
                         disabled={!selectedRel}
                         onClick={() => void removeFromWorkspace()}
                       >
@@ -289,14 +289,13 @@ export function WorkspaceSidebar(): ReactElement | null {
                       </button>
                       <button
                         type="button"
-                        className="albedo-ws-drop-item"
+                        className="albedo-drop-item"
                         disabled={!selectedRel}
                         onClick={() => void askTrash()}
                       >
                         Delete from disk
                       </button>
-                    </div>
-                  ) : null}
+                  </DropdownPanel>
                 </div>
               </div>
               <div className="albedo-fold-well">
