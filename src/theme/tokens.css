@@ -2561,7 +2561,8 @@ body {
   content: "";
   position: absolute;
   left: -0.61rem;
-  bottom: 0.12rem;
+  /* центр последней строки: (line-height 1.35rem - 0.52rem) / 2 */
+  bottom: 0.4rem;
   width: 0.52rem;
   height: 0.52rem;
   border-radius: 50%;
