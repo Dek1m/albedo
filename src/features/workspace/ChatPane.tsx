@@ -82,7 +82,7 @@ export function ChatPane(): ReactElement | null {
   const tailId = visible.at(-1)?.id;
   useEffect(() => {
     const node = logRef.current;
-    if (!node || loopStatus === 'running') {
+    if (!node) {
       return;
     }
     node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });

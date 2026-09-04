@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { MarkdownView } from '../../shared/ui/MarkdownView';
 import { useSmoothText } from './useSmoothText';
@@ -35,9 +35,18 @@ function toolRows(stages: StageView[], live: boolean, reasoning: string, content
 
 export function AgentBubble({ name, content, reasoning, stages, live }: AgentBubbleProps): ReactElement {
   const [open, setOpen] = useState(false);
+  const paneRef = useRef<HTMLDivElement>(null);
   const text = useSmoothText(content, Boolean(live));
   const waiting = Boolean(live) && !text && !reasoning;
   const rows = waiting ? [] : toolRows(stages, Boolean(live), reasoning, text);
+
+  const toggleReasoning = (): void => {
+    setOpen((value) => !value);
+    // Раскрытая панель целиком на виду.
+    requestAnimationFrame(() => {
+      paneRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
 
   return (
     <article className={`albedo-bubble albedo-bubble--agent albedo-turn${live ? ' is-live' : ''}`}>
@@ -56,7 +65,7 @@ export function AgentBubble({ name, content, reasoning, stages, live }: AgentBub
                       type="button"
                       className="albedo-reasoning-toggle"
                       aria-expanded={open}
-                      onClick={() => setOpen((value) => !value)}
+                      onClick={toggleReasoning}
                     >
                       Reasoning <span aria-hidden>{open ? '▾' : '>'}</span>
                     </button>
@@ -68,7 +77,7 @@ export function AgentBubble({ name, content, reasoning, stages, live }: AgentBub
                   )}
                 </div>
                 {reasoningRow && open ? (
-                  <div className="albedo-reasoning-pane">
+                  <div className="albedo-reasoning-pane" ref={paneRef}>
                     <p className="albedo-reasoning-text">{reasoning}</p>
                   </div>
                 ) : null}

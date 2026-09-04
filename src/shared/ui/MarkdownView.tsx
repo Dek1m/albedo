@@ -9,7 +9,8 @@ function escapeHtml(text: string): string {
 }
 
 function inline(text: string): string {
-  let html = escapeHtml(text);
+  // Пустая строка между абзацами не должна удваивать разрыв — сокращаем вдвое.
+  let html = escapeHtml(text).replace(/\n{2,}/g, '\n');
   html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
   html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
   html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');

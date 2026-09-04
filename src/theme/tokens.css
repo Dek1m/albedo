@@ -2451,9 +2451,7 @@ body {
 }
 
 .albedo-reasoning-pane {
-  height: 6.5rem;
   margin-top: 0.3rem;
-  overflow: auto;
 }
 
 .albedo-reasoning-text {
