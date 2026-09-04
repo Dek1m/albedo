@@ -46,7 +46,6 @@ export function ChatPane(): ReactElement | null {
   const loopStatus = useLoopMetrics((s) => s.status);
   const liveTrace = useLoopMetrics((s) => s.trace);
   const liveAgent = useLoopMetrics((s) => s.agentName);
-  const liveModel = useLoopMetrics((s) => s.modelName);
 
   useEffect(() => {
     const workspaceId = session?.workspaceId ?? active?.id;
@@ -70,10 +69,9 @@ export function ChatPane(): ReactElement | null {
 
   const tree = useMemo(() => withParents(messages), [messages]);
   const visible = useMemo(() => visiblePath(tree, branchPick), [tree, branchPick]);
-  const last = visible.at(-1);
-  const history = last?.role === 'assistant' ? visible.slice(0, -1) : visible;
-  const assistant = last?.role === 'assistant' ? last : null;
-  const streaming = loopStatus === 'running' || (!assistant && Boolean(liveTrace.content || liveTrace.reasoning));
+  // История рисует всё; live-облачко — только текущий стрим, без подмены прошлых ответов.
+  const history = visible;
+  const streaming = loopStatus === 'running';
 
   useEffect(() => {
     const tail = visible.at(-1) ?? null;
@@ -241,46 +239,15 @@ export function ChatPane(): ReactElement | null {
             </div>
           );
         })}
-        {assistant || streaming ? (
+        {streaming ? (
           <div className="albedo-agent-wrap">
             <AgentBubble
-              name={streaming ? liveAgent || assistant?.agentName || 'Agent' : assistant?.agentName || 'Agent'}
-              content={streaming ? liveTrace.content || assistant?.content || '' : assistant?.content ?? ''}
-              reasoning={streaming ? liveTrace.reasoning : assistant?.reasoning ?? ''}
-              stages={streaming ? liveTrace.stages : assistant?.stages ?? []}
-              live={streaming}
+              name={liveAgent || 'Agent'}
+              content={liveTrace.content}
+              reasoning={liveTrace.reasoning}
+              stages={liveTrace.stages}
+              live
             />
-            <footer className="albedo-agent-meta">
-              <button
-                type="button"
-                className="albedo-icon-btn"
-                title="Copy"
-                aria-label="Copy"
-                disabled={streaming}
-                onClick={() => void onCopy(assistant?.content || liveTrace.content)}
-              >
-                <i className="bi bi-clipboard" />
-              </button>
-              <button
-                type="button"
-                className="albedo-icon-btn"
-                title="Regenerate"
-                aria-label="Regenerate"
-                disabled={streaming || !assistant}
-                onClick={() => {
-                  if (!assistant?.parentId) {
-                    return;
-                  }
-                  requestRegen({ assistantId: assistant.id, parentId: assistant.parentId });
-                }}
-              >
-                <i className="bi bi-arrow-repeat" />
-              </button>
-              {assistant?.createdAt && !streaming ? (
-                <time dateTime={assistant.createdAt}>{formatSentAt(assistant.createdAt)}</time>
-              ) : null}
-              <span>{streaming ? liveModel : assistant?.modelName || liveModel}</span>
-            </footer>
           </div>
         ) : null}
       </div>
