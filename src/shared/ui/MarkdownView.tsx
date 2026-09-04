@@ -55,10 +55,10 @@ function renderCodeBlock(body: string[], lang: string): string {
   return (
     `<div class="albedo-code">` +
     `<button type="button" class="albedo-code-copy" aria-label="Copy code">` +
-    `<i class="bi bi-clipboard albedo-code-copy-icon" />` +
-    `<i class="bi bi-check2 albedo-code-done-icon" />` +
+    `<i class="bi bi-clipboard albedo-code-copy-icon"></i>` +
+    `<i class="bi bi-check2 albedo-code-done-icon"></i>` +
     `</button>` +
-    `<span class="albedo-code-gutter" aria-hidden>${gutter}</span>` +
+    `<span class="albedo-code-gutter" aria-hidden="true">${gutter}</span>` +
     `<pre class="albedo-md-code"><code>${code}</code></pre>` +
     `</div>`
   );

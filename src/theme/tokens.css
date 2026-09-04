@@ -2041,6 +2041,7 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.78rem;
   line-height: 1.45;
+  white-space: pre;
   user-select: none;
   background: rgb(255 255 255 / 4%);
 }
@@ -2050,6 +2051,8 @@ body {
   flex: 1;
   border: 0;
   border-radius: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .albedo-code-copy {
@@ -2066,12 +2069,14 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
+  visibility: hidden;
   transition: opacity var(--dur, 150ms) var(--ease, ease);
 }
 
 .albedo-code:hover .albedo-code-copy,
 .albedo-code-copy:focus-visible {
   opacity: 1;
+  visibility: visible;
 }
 
 .albedo-code-copy:hover {
