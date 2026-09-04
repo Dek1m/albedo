@@ -101,7 +101,7 @@ export function ChatPane(): ReactElement | null {
           const forkIndex = forks.findIndex((item) => item.id === msg.id);
           return (
             <article key={msg.id} className={`albedo-bubble${mine ? ' albedo-bubble--user' : ' albedo-bubble--agent'}`}>
-              <header>{mine ? userName : 'Agent'}</header>
+              <header>{mine ? userName : (msg.agentName || 'Agent')}</header>
               <MarkdownView text={msg.content ?? ''} />
               {mine ? (
                 <footer className="albedo-bubble-meta">

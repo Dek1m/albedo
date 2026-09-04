@@ -26,6 +26,15 @@ describe('chatBranches', () => {
     expect(linked.find((item) => item.id === 'b')?.parentId).toBe('a');
   });
 
+  it('keeps assistant reply under the latest user', () => {
+    const u1 = msg('u1', '2026-01-01T00:00:00Z', null);
+    const a1 = { ...msg('a1', '2026-01-01T00:01:00Z', 'u1'), role: 'assistant' as const };
+    const u2 = msg('u2', '2026-01-01T00:02:00Z', 'a1');
+    const a2 = { ...msg('a2', '2026-01-01T00:03:00Z', 'u2'), role: 'assistant' as const };
+    const path = visiblePath([u1, a1, u2, a2], { '': 'u1', a1: 'u2' });
+    expect(path.map((item) => item.id)).toEqual(['u1', 'a1', 'u2', 'a2']);
+  });
+
   it('picks a sibling branch', () => {
     const root = msg('r', '2026-01-01T00:00:00Z', null);
     const left = msg('l', '2026-01-01T00:01:00Z', 'r');
