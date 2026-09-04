@@ -73,14 +73,13 @@ export function ChatPane(): ReactElement | null {
   }, [visible, setThreadTailId]);
 
   const tailId = visible.at(-1)?.id;
-  const hasLiveAnswer = Boolean(liveTrace.content);
   useEffect(() => {
     const node = logRef.current;
     if (!node) {
       return;
     }
-    node.scrollTo({ top: node.scrollHeight, behavior: live ? 'auto' : 'smooth' });
-  }, [tailId, live, hasLiveAnswer, chatRev]);
+    node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
+  }, [tailId, live, chatRev]);
 
   if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;

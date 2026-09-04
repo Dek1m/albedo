@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { MarkdownView } from '../../shared/ui/MarkdownView';
 
@@ -17,57 +17,62 @@ interface AgentBubbleProps {
   live?: boolean;
 }
 
+function toolRows(stages: StageView[], live: boolean, reasoning: string): StageView[] {
+  const rows = stages.filter((stage) => stage.kind !== 'text');
+  if (rows.length > 0) {
+    return rows;
+  }
+  if (live || reasoning) {
+    return [{ kind: 'reasoning', name: 'Reasoning', status: live && !reasoning ? 'running' : 'done' }];
+  }
+  return [];
+}
+
 export function AgentBubble({ name, content, reasoning, stages, live }: AgentBubbleProps): ReactElement {
   const [open, setOpen] = useState(false);
-  const rail = (stages.length > 0 ? stages : live ? [{ kind: 'reasoning', name: 'Reasoning', status: 'running' }] : [])
-    .filter((stage) => stage.kind !== 'text');
-  const tools = rail.filter((stage) => stage.kind === 'tool');
-  const reasoningStage = rail.find((stage) => stage.kind === 'reasoning');
-  const showReasoning = Boolean(reasoning || reasoningStage);
-
-  useEffect(() => {
-    if (!live) {
-      setOpen(false);
-    }
-  }, [live]);
+  const rows = toolRows(stages, Boolean(live), reasoning);
 
   return (
-    <div className={`albedo-turn${live ? ' is-live' : ''}`}>
-      {rail.length > 0 ? (
-        <ol className="albedo-stages" aria-hidden>
-          {rail.map((stage, index) => (
-            <li
-              key={`${stage.kind}-${stage.name}-${String(index)}`}
-              className={`albedo-stage${stage.status === 'running' ? ' is-running' : ''}`}
-            >
-              <span className="albedo-stage-dot" />
-            </li>
-          ))}
-        </ol>
+    <article className={`albedo-bubble albedo-bubble--agent albedo-turn${live ? ' is-live' : ''}`}>
+      <header>{name || 'Agent'}</header>
+      {rows.length > 0 ? (
+        <div className="albedo-steps">
+          {rows.map((stage, index) => {
+            const running = stage.status === 'running';
+            const reasoningRow = stage.kind === 'reasoning';
+            return (
+              <div key={`${stage.kind}-${stage.name}-${String(index)}`} className="albedo-step">
+                <span className={`albedo-step-dot${running ? ' is-running' : ''}`} aria-hidden />
+                <div className="albedo-step-body">
+                  {reasoningRow ? (
+                    <>
+                      <button
+                        type="button"
+                        className="albedo-reasoning-toggle"
+                        aria-expanded={open}
+                        onClick={() => setOpen((value) => !value)}
+                      >
+                        Reasoning <span aria-hidden>{open ? '▾' : '>'}</span>
+                      </button>
+                      {open ? (
+                        <div className="albedo-reasoning-pane">
+                          <p className="albedo-reasoning-text">{reasoning}</p>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="albedo-tool-line">
+                      <span>{stage.name}</span>
+                      {stage.args ? <span className="albedo-stage-args"> {stage.args}</span> : null}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : null}
-      <article className="albedo-bubble albedo-bubble--agent">
-        <header>{name || 'Agent'}</header>
-        {showReasoning ? (
-          <div className="albedo-reasoning">
-            <button
-              type="button"
-              className="albedo-reasoning-toggle"
-              aria-expanded={open}
-              onClick={() => setOpen((value) => !value)}
-            >
-              Reasoning <span aria-hidden>{open ? '▾' : '>'}</span>
-            </button>
-            {open && reasoning ? <p className="albedo-reasoning-text">{reasoning}</p> : null}
-          </div>
-        ) : null}
-        {tools.map((stage, index) => (
-          <p key={`${stage.name}-${String(index)}`} className="albedo-tool-line">
-            <span className={stage.status === 'running' ? 'is-running' : ''}>{stage.name}</span>
-            {stage.args ? <span className="albedo-stage-args"> {stage.args}</span> : null}
-          </p>
-        ))}
-        {content ? <MarkdownView text={content} /> : null}
-      </article>
-    </div>
+      {content ? <MarkdownView text={content} /> : null}
+    </article>
   );
 }

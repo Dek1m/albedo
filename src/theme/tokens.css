@@ -2350,6 +2350,7 @@ body {
 .albedo-bubble--agent {
   align-self: flex-start;
   background: rgb(255 255 255 / 3%);
+  overflow: visible;
 }
 
 .albedo-bubble--user {
@@ -2362,66 +2363,49 @@ body {
   padding-right: 0.2rem;
 }
 
-.albedo-turn {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  align-self: flex-start;
-  max-width: 78%;
-  animation: albedo-rise 220ms var(--ease);
-}
-
-.albedo-turn.is-live {
+.albedo-bubble.albedo-turn.is-live {
   animation: none;
 }
 
-.albedo-turn .albedo-bubble--agent {
-  max-width: none;
-  flex: 1;
-  min-width: 12rem;
-}
-
-.albedo-stages {
-  list-style: none;
-  margin: 0.55rem 0 0;
-  padding: 0;
+.albedo-steps {
   position: relative;
-  width: 0.72rem;
-  flex: 0 0 0.72rem;
+  margin: 0.15rem 0 0.25rem;
 }
 
-.albedo-stages::before {
+.albedo-steps::before {
   content: "";
   position: absolute;
-  left: 0.3rem;
-  top: 0.35rem;
-  bottom: 0.35rem;
+  left: -0.86rem;
+  top: 0.55rem;
+  bottom: 0.55rem;
   border-left: 1px dashed rgb(255 255 255 / 22%);
 }
 
-.albedo-stage {
-  position: relative;
-  height: 1.15rem;
+.albedo-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0.2rem -1.15rem;
 }
 
-.albedo-stage-dot {
-  position: absolute;
-  left: 0.08rem;
-  top: 0.22rem;
+.albedo-step-dot {
+  flex: 0 0 0.52rem;
   width: 0.52rem;
   height: 0.52rem;
+  margin-top: 0.18rem;
   border-radius: 50%;
   background: rgb(255 255 255 / 28%);
   box-shadow: 0 0 0 2px rgb(12 12 14 / 80%);
 }
 
-.albedo-stage.is-running .albedo-stage-dot {
+.albedo-step-dot.is-running {
   background: var(--brand, #7aa2ff);
-  animation: albedo-dot-pulse 1.15s ease-in-out infinite;
+  animation: albedo-dot-pulse 1.2s ease-in-out infinite;
 }
 
-.albedo-reasoning {
-  margin: 0.1rem 0 0.35rem;
+.albedo-step-body {
+  min-width: 0;
+  flex: 1;
 }
 
 .albedo-reasoning-toggle {
@@ -2430,21 +2414,28 @@ body {
   padding: 0;
   color: var(--text-muted);
   font-size: 0.72rem;
+  line-height: 1.2;
   cursor: pointer;
 }
 
-.albedo-reasoning-text {
-  margin: 0.35rem 0 0;
-  max-height: 7.5rem;
+.albedo-reasoning-pane {
+  height: 6.5rem;
+  margin-top: 0.3rem;
   overflow: auto;
+}
+
+.albedo-reasoning-text {
+  margin: 0;
   color: rgb(255 255 255 / 48%);
   font-size: 0.82rem;
+  line-height: 1.35;
   white-space: pre-wrap;
 }
 
 .albedo-tool-line {
-  margin: 0 0 0.3rem;
+  margin: 0;
   font-size: 0.75rem;
+  line-height: 1.2;
   color: var(--text-muted);
 }
 
@@ -2454,8 +2445,8 @@ body {
 }
 
 @keyframes albedo-dot-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.28); opacity: 0.55; }
+  0%, 100% { box-shadow: 0 0 0 2px rgb(12 12 14 / 80%), 0 0 0 0 rgb(122 162 255 / 0%); }
+  50% { box-shadow: 0 0 0 2px rgb(12 12 14 / 80%), 0 0 0 5px rgb(122 162 255 / 35%); }
 }
 
 .albedo-bubble-meta {
