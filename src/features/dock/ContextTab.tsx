@@ -26,8 +26,10 @@ export function ContextTab(): ReactElement {
           if (cancelled) {
             return;
           }
+          // Залипший 'running' в БД (падение воркера) не должен включать Stop.
+          const nextStatus = row.status === 'running' && status !== 'running' ? status : row.status;
           setMetrics({
-            status: row.status,
+            status: nextStatus,
             tokensIn: row.tokensIn,
             tokensOut: row.tokensOut,
             cacheTokens: row.cacheTokens,

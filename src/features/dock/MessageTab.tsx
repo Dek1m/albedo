@@ -181,6 +181,7 @@ export function MessageTab(): ReactElement {
         bumpChatRev();
         await runLoop();
       } catch (err) {
+        setMetrics({ status: 'error' });
         toast(humanMessage(err));
       }
     })();
@@ -222,6 +223,8 @@ export function MessageTab(): ReactElement {
         setMetrics({ status: 'cancelled' });
         return;
       }
+      // Без терминального статуса Stop залипает навсегда.
+      setMetrics({ status: 'error' });
       toast(humanMessage(err));
     }
   };
