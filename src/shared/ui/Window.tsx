@@ -28,6 +28,8 @@ const WINDOW_ICONS: Record<string, string> = {
   'albedo-system-install': 'bi-download',
   'albedo-confirm': 'bi-question-circle',
   'albedo-prompt': 'bi-input-cursor-text',
+  'albedo-add-file': 'bi-file-earmark-plus',
+  'albedo-upload': 'bi-upload',
   'albedo-settings': 'bi-gear',
   'albedo-ai-agents': 'bi-robot',
   'albedo-ai-agent-form': 'bi-robot',

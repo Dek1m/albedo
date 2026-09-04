@@ -9,7 +9,7 @@ import { toast } from '../../shared/toast/toastStore';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { PanelGrip } from '../../shared/ui/PanelGrip';
 import { Window } from '../../shared/ui/Window';
-import { PromptDialog } from '../../shared/ui/PromptDialog';
+import { AddFileDialog } from './AddFileDialog';
 import { DropdownPanel } from '../../shared/ui/DropdownMenu';
 import { useClickOutside } from '../../shared/ui/useClickOutside';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
@@ -92,16 +92,6 @@ export function WorkspaceSidebar(): ReactElement | null {
         await workspaceApi.linkHome(active.id, rel);
         setPicked((prev) => new Set(prev).add(rel));
       }
-      await reload();
-    } catch (err) {
-      toast(humanMessage(err));
-    }
-  };
-
-  const createFile = async (name: string): Promise<void> => {
-    const parent = selectedRel ?? '';
-    try {
-      await workspaceApi.createHome(name, parent, 'file');
       await reload();
     } catch (err) {
       toast(humanMessage(err));
@@ -351,12 +341,11 @@ export function WorkspaceSidebar(): ReactElement | null {
           }
         }}
       />
-      <PromptDialog
+      <AddFileDialog
         open={filePrompt}
-        title="New file"
-        label="File name"
+        parentRel={selectedRel ?? ''}
         onClose={() => setFilePrompt(false)}
-        onSubmit={(name) => void createFile(name)}
+        onDone={() => void reload()}
       />
     </aside>
   );

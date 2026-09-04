@@ -811,6 +811,87 @@ body {
   margin-top: 0.3rem;
 }
 
+.albedo-add-file-row {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.albedo-add-file-row .form-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.albedo-add-file-list {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0.2rem 0;
+  min-height: 7rem;
+  max-height: 14rem;
+  overflow: auto;
+  border: 1px solid var(--hairline);
+  background: var(--bg-2);
+}
+
+.albedo-add-file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.78rem;
+}
+
+.albedo-add-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.albedo-add-file-src {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.albedo-add-file-size {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.albedo-add-file-actions {
+  justify-content: flex-start;
+  margin-top: 0.55rem;
+}
+
+.albedo-upload-path {
+  margin: 0 0 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
+
+.albedo-upload-name {
+  margin: 0 0 0.45rem;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.albedo-upload-bar {
+  height: 0.35rem;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+
+.albedo-upload-bar span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  transition: width 0.2s ease;
+}
+
 @keyframes albedo-fade-in {
   from {
     opacity: 0;

@@ -9,6 +9,7 @@ import { ContextMenu } from '../../shared/ui/ContextMenu';
 import type { MenuItem } from '../../shared/ui/ContextMenu';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
+import { AddFileDialog } from './AddFileDialog';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { GitBranch } from './GitBranch';
 import { isOwnShareablePath } from '../share/shareable';
@@ -191,9 +192,15 @@ export function WorkspaceDiskTree({
         ))}
       </ul>
       {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
+      <AddFileDialog
+        open={prompt?.mode === 'file'}
+        parentRel={prompt?.mode === 'file' ? prompt.rel : ''}
+        onClose={() => setPrompt(null)}
+        onDone={onMoved}
+      />
       <PromptDialog
-        open={Boolean(prompt)}
-        title={prompt?.mode === 'file' ? 'New file' : 'New folder'}
+        open={prompt?.mode === 'folder'}
+        title="New folder"
         label="Name"
         onClose={() => setPrompt(null)}
         onSubmit={(name) => void runCreate(name)}

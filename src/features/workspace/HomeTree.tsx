@@ -9,6 +9,7 @@ import { ContextMenu } from '../../shared/ui/ContextMenu';
 import type { MenuItem } from '../../shared/ui/ContextMenu';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { PromptDialog } from '../../shared/ui/PromptDialog';
+import { AddFileDialog } from './AddFileDialog';
 import { isOwnShareablePath } from '../share/shareable';
 import { useShareStore } from '../share/shareStore';
 import { WorkspaceFolderMenu } from './context/WorkspaceFolderMenu';
@@ -92,6 +93,7 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   const [ask, setAsk] = useState<{ rel: string; body: string; detach: boolean } | null>(null);
   const [ctx, setCtx] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [renameRel, setRenameRel] = useState<string | null>(null);
+  const [addFileParent, setAddFileParent] = useState<string | null>(null);
 
   const reload = useCallback(async (): Promise<void> => {
     setRoot(await workspaceApi.listHome('', workspaceId, { hidden, size: showSize }));
@@ -128,7 +130,12 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
   };
 
   const startCreate = (kind: 'folder' | 'file', parentRel?: string): void => {
-    setDraft({ kind, parentRel: parentRel ?? parentOfFocus() });
+    const parent = parentRel ?? parentOfFocus();
+    if (kind === 'file') {
+      setAddFileParent(parent);
+      return;
+    }
+    setDraft({ kind, parentRel: parent });
   };
 
   const runRename = async (name: string): Promise<void> => {
@@ -397,6 +404,12 @@ export function HomeTree({ selected, onToggle, workspaceId, onTrashed }: HomeTre
         </ul>
       ) : null}
       {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
+      <AddFileDialog
+        open={addFileParent !== null}
+        parentRel={addFileParent ?? ''}
+        onClose={() => setAddFileParent(null)}
+        onDone={() => setTick((value) => value + 1)}
+      />
       <PromptDialog
         open={Boolean(renameRel)}
         title="Rename"

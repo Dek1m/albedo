@@ -107,6 +107,18 @@ function mapResolve(dto: ResolveDto): ResolveResult {
 }
 
 export const fsApi = {
+  async mkdir(relPath: string): Promise<void> {
+    await apiClient.call('fs', 'mkdir', { rel_path: relPath });
+  },
+
+  async touch(relPath: string): Promise<void> {
+    await apiClient.call('fs', 'touch', { rel_path: relPath });
+  },
+
+  async write(relPath: string, contentB64: string): Promise<void> {
+    await apiClient.call('fs', 'write', { rel_path: relPath, content_b64: contentB64 });
+  },
+
   async shareList(path: string): Promise<ShareGrantee[]> {
     const result = await apiClient.call<{ items?: GranteeDto[]; grantees?: GranteeDto[] }>(
       'fs',
