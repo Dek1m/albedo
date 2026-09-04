@@ -2970,20 +2970,27 @@ body {
   flex-direction: column;
 }
 
-.albedo-term-out {
+.albedo-term-xterm {
   flex: 1;
-  margin: 0;
-  padding: 0.6rem 0.75rem;
-  overflow: auto;
-  color: var(--text-primary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
-  white-space: pre-wrap;
+  min-height: 0;
+  padding: 0.35rem 0.45rem;
+  background: #0a0a0b;
 }
 
-.albedo-term-input {
-  padding: 0.35rem 0.45rem 0.45rem;
-  border-top: 1px solid var(--hairline);
+.albedo-term-xterm .xterm,
+.albedo-term-xterm .xterm-viewport,
+.albedo-term-xterm .xterm-screen {
+  height: 100%;
+}
+
+.albedo-term-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
 }
 
 .albedo-term-sessions {

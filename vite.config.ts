@@ -15,6 +15,7 @@ export default defineConfig({
       '/api': {
         target: albedo.apiUrl,
         changeOrigin: true,
+        ws: true,
         // запрет: cookieDomainRewrite, cookiePathRewrite — иначе __Host- умрёт
       },
     },

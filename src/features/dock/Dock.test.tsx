@@ -11,12 +11,30 @@ vi.mock('../../api/workspaceApi', () => ({
   workspaceApi: { postMessage: vi.fn() },
 }));
 
+vi.mock('@xterm/xterm', () => ({
+  Terminal: vi.fn().mockImplementation(() => ({
+    loadAddon: vi.fn(),
+    open: vi.fn(),
+    onData: vi.fn(() => ({ dispose: vi.fn() })),
+    onResize: vi.fn(() => ({ dispose: vi.fn() })),
+    write: vi.fn(),
+    dispose: vi.fn(),
+  })),
+}));
+
+vi.mock('@xterm/addon-fit', () => ({
+  FitAddon: vi.fn().mockImplementation(() => ({
+    fit: vi.fn(),
+    proposeDimensions: vi.fn(),
+  })),
+}));
+
 vi.mock('../../api/termApi', () => ({
+  termPtyUrl: vi.fn(() => 'ws://localhost/api/v1/term/pty?session_id=x'),
   termApi: {
     listSessions: vi.fn(async () => []),
     createSession: vi.fn(),
     deleteSession: vi.fn(),
-    exec: vi.fn(),
   },
 }));
 
