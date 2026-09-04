@@ -11,6 +11,15 @@ vi.mock('../../api/workspaceApi', () => ({
   workspaceApi: { postMessage: vi.fn() },
 }));
 
+vi.mock('../../api/termApi', () => ({
+  termApi: {
+    listSessions: vi.fn(async () => []),
+    createSession: vi.fn(),
+    deleteSession: vi.fn(),
+    exec: vi.fn(),
+  },
+}));
+
 describe('Dock', () => {
   afterEach(() => {
     cleanup();
@@ -42,11 +51,9 @@ describe('Dock', () => {
     expect(pipeline.querySelectorAll('option')).toHaveLength(0);
   });
 
-  it('disables terminal new/delete', () => {
+  it('enables terminal new session', () => {
     render(<Dock />);
     fireEvent.click(screen.getByRole('tab', { name: 'Terminal' }));
-    expect(screen.getByLabelText('New session')).toBeDisabled();
-    expect(screen.getByLabelText('Delete session')).toBeDisabled();
-    expect(screen.getByText('Terminal waits for ADR-006')).toBeInTheDocument();
+    expect(screen.getByLabelText('New session')).not.toBeDisabled();
   });
 });

@@ -89,10 +89,14 @@ export function DirectoryUserPane({ mode, canEdit, onSaved }: DirectoryUserPaneP
           password,
           email: draft.email || undefined,
           ouId: mode.ouId,
+          nickname: draft.nickname,
+          firstName: draft.firstName,
+          lastName: draft.lastName,
+          dateOfBirth: draft.dateOfBirth,
+          phone: draft.phone,
+          userPrompt: draft.userPrompt,
+          chipDisplayMode: draft.chipDisplayMode,
         });
-        if (created) {
-          await systemApi.updateDirectoryUser(created, { ...draft, username: draft.username.trim() });
-        }
         toast('Saved', 'ok');
         onSaved(created);
       } else {

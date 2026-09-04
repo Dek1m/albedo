@@ -280,10 +280,12 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
               mode={{ kind: 'create', ouId: selection.ouId }}
               canEdit={userAdmin}
               onSaved={(userId) => {
-                void load();
-                if (userId) {
-                  setSelection({ type: 'user', id: userId });
-                }
+                void (async () => {
+                  await load();
+                  if (userId) {
+                    setSelection({ type: 'user', id: userId });
+                  }
+                })();
               }}
             />
           ) : null}

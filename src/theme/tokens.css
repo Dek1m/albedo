@@ -2963,12 +2963,27 @@ body {
   min-height: 0;
 }
 
+.albedo-term-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .albedo-term-out {
   flex: 1;
+  margin: 0;
   padding: 0.6rem 0.75rem;
-  color: var(--text-muted);
+  overflow: auto;
+  color: var(--text-primary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.78rem;
+  white-space: pre-wrap;
+}
+
+.albedo-term-input {
+  padding: 0.35rem 0.45rem 0.45rem;
+  border-top: 1px solid var(--hairline);
 }
 
 .albedo-term-sessions {

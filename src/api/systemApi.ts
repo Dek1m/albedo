@@ -260,7 +260,12 @@ function createdId(raw: unknown): string | null {
   if (!row) {
     return null;
   }
-  return pickStr(row, 'id', 'user_id', 'userId') || null;
+  const nested = asRecord(row.data);
+  return (
+    pickStr(row, 'id', 'user_id', 'userId', 'uuid') ||
+    (nested ? pickStr(nested, 'id', 'user_id', 'userId', 'uuid') : null) ||
+    null
+  );
 }
 
 function mapGroup(raw: unknown): DomainGroup | null {
@@ -533,12 +538,26 @@ export const systemApi = {
     password: string;
     email?: string;
     ouId?: string;
+    nickname?: string;
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    phone?: string;
+    userPrompt?: string;
+    chipDisplayMode?: ChipDisplayMode;
   }): Promise<string | null> {
     const raw = await apiClient.call<unknown>('system', 'create_user_in_ou', {
       username: input.username,
       password: input.password,
-      email: input.email ?? null,
+      email: input.email || null,
       ou_id: input.ouId ?? null,
+      nickname: input.nickname || null,
+      first_name: input.firstName || null,
+      last_name: input.lastName || null,
+      date_of_birth: input.dateOfBirth || null,
+      phone: input.phone || null,
+      user_prompt: input.userPrompt || null,
+      chip_display_mode: input.chipDisplayMode || null,
     });
     return createdId(raw);
   },
