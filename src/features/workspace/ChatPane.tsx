@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { workspaceApi } from '../../api/workspaceApi';
 import { humanMessage } from '../../api/errors';
 import { useAuthStore } from '../../auth/AuthStore';
 import { chipLabel } from '../../domain/user';
 import type { ChatMessage } from '../../domain/workspace';
+import { copyText } from '../../shared/copyText';
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { MarkdownView } from '../../shared/ui/MarkdownView';
 import { toast } from '../../shared/toast/toastStore';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
+import { siblingsOf, visiblePath, withParents } from './chatBranches';
 
 function formatSentAt(value: string): string {
   const date = new Date(value);
@@ -23,11 +26,16 @@ export function ChatPane(): ReactElement | null {
   const sessions = useWorkspaceStore((s) => s.sessions);
   const tabs = useWorkspaceStore((s) => s.tabs);
   const chatRev = useWorkspaceStore((s) => s.chatRev);
+  const branchPick = useWorkspaceStore((s) => s.branchPick);
+  const setBranchPick = useWorkspaceStore((s) => s.setBranchPick);
   const setComposerDraft = useWorkspaceStore((s) => s.setComposerDraft);
+  const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
   const setDockTab = useWorkspaceStore((s) => s.setDockTab);
+  const setThreadTailId = useWorkspaceStore((s) => s.setThreadTailId);
   const profile = useAuthStore((s) => s.profile);
   const session = tabs.find((s) => s.id === focused) ?? sessions.find((s) => s.id === focused);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<ChatMessage | null>(null);
   const userName = profile ? chipLabel(profile) : 'You';
 
   useEffect(() => {
@@ -50,25 +58,47 @@ export function ChatPane(): ReactElement | null {
     };
   }, [active, focused, session?.workspaceId, chatRev]);
 
+  const tree = useMemo(() => withParents(messages), [messages]);
+  const visible = useMemo(() => visiblePath(tree, branchPick), [tree, branchPick]);
+
+  useEffect(() => {
+    setThreadTailId(visible.at(-1)?.id ?? null);
+  }, [visible, setThreadTailId]);
+
   if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;
   }
 
-  const copyText = async (text: string): Promise<void> => {
+  const onCopy = async (text: string): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(text);
+      await copyText(text);
       toast('Copied', 'ok');
     } catch {
       toast('Copy failed');
     }
   };
 
+  const dropBranch = async (): Promise<void> => {
+    if (!pendingDelete) {
+      return;
+    }
+    try {
+      await workspaceApi.deleteBranch(session.workspaceId, session.id, pendingDelete.id);
+      setPendingDelete(null);
+      useWorkspaceStore.getState().bumpChatRev();
+    } catch (err) {
+      toast(humanMessage(err));
+    }
+  };
+
   return (
     <section className="albedo-chat">
       <div className="albedo-chat-log">
-        {messages.map((msg) => {
+        {visible.map((msg) => {
           const mine = msg.role === 'user';
           const clock = formatSentAt(msg.createdAt);
+          const forks = mine ? siblingsOf(tree, msg) : [];
+          const forkIndex = forks.findIndex((item) => item.id === msg.id);
           return (
             <article key={msg.id} className={`albedo-bubble${mine ? ' albedo-bubble--user' : ' albedo-bubble--agent'}`}>
               <header>{mine ? userName : 'Agent'}</header>
@@ -94,15 +124,50 @@ export function ChatPane(): ReactElement | null {
                     ) : null}
                     {clock ? <time dateTime={msg.createdAt}>{clock}</time> : null}
                   </span>
+                  {forks.length > 1 ? (
+                    <span className="albedo-branch-nav">
+                      <button
+                        type="button"
+                        className="albedo-icon-btn"
+                        aria-label="Previous branch"
+                        disabled={forkIndex <= 0}
+                        onClick={() => {
+                          const prev = forks[forkIndex - 1];
+                          if (prev) {
+                            setBranchPick(msg.parentId ?? '', prev.id);
+                          }
+                        }}
+                      >
+                        <i className="bi bi-chevron-left" />
+                      </button>
+                      <span>
+                        {forkIndex + 1}/{forks.length}
+                      </span>
+                      <button
+                        type="button"
+                        className="albedo-icon-btn"
+                        aria-label="Next branch"
+                        disabled={forkIndex >= forks.length - 1}
+                        onClick={() => {
+                          const next = forks[forkIndex + 1];
+                          if (next) {
+                            setBranchPick(msg.parentId ?? '', next.id);
+                          }
+                        }}
+                      >
+                        <i className="bi bi-chevron-right" />
+                      </button>
+                    </span>
+                  ) : null}
                   <span className="albedo-bubble-meta-actions">
                     <button
                       type="button"
                       className="albedo-icon-btn"
                       title="Copy"
                       aria-label="Copy"
-                      onClick={() => void copyText(msg.content ?? '')}
+                      onClick={() => void onCopy(msg.content ?? '')}
                     >
-                      <i className="bi bi-copy" />
+                      <i className="bi bi-clipboard" />
                     </button>
                     <button
                       type="button"
@@ -111,10 +176,20 @@ export function ChatPane(): ReactElement | null {
                       aria-label="Edit"
                       onClick={() => {
                         setComposerDraft(msg.content ?? '');
+                        setComposerParentId(msg.parentId);
                         setDockTab('message');
                       }}
                     >
                       <i className="bi bi-pencil" />
+                    </button>
+                    <button
+                      type="button"
+                      className="albedo-icon-btn"
+                      title="Delete branch"
+                      aria-label="Delete branch"
+                      onClick={() => setPendingDelete(msg)}
+                    >
+                      <i className="bi bi-trash" />
                     </button>
                   </span>
                 </footer>
@@ -123,6 +198,15 @@ export function ChatPane(): ReactElement | null {
           );
         })}
       </div>
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete branch"
+        body="Delete this branch and all messages after it? This cannot be undone."
+        confirmLabel="Delete"
+        danger
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => void dropBranch()}
+      />
     </section>
   );
 }

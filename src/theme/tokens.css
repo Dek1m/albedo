@@ -2323,6 +2323,17 @@ body {
   color: var(--text-primary);
 }
 
+.albedo-branch-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.albedo-icon-btn.is-on {
+  color: var(--brand);
+}
+
 .albedo-md-code {
   margin: 0.35rem 0 0;
   padding: 0.45rem;

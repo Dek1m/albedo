@@ -46,6 +46,9 @@ interface WorkspaceState {
   dockTab: 'message' | 'terminal';
   chatRev: number;
   composerDraft: string | null;
+  composerParentId: string | null;
+  threadTailId: string | null;
+  branchPick: Record<string, string>;
   foldersOpen: boolean;
   expanded: string[];
   setCatalog: (items: Workspace[]) => void;
@@ -58,6 +61,9 @@ interface WorkspaceState {
   setDockTab: (tab: 'message' | 'terminal') => void;
   bumpChatRev: () => void;
   setComposerDraft: (draft: string | null) => void;
+  setComposerParentId: (parentId: string | null) => void;
+  setThreadTailId: (id: string | null) => void;
+  setBranchPick: (parentId: string, childId: string) => void;
   setFoldersOpen: (open: boolean) => void;
   setExpanded: (paths: string[]) => void;
   toggleExpanded: (path: string) => void;
@@ -75,6 +81,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   dockTab: 'message',
   chatRev: 0,
   composerDraft: null,
+  composerParentId: null,
+  threadTailId: null,
+  branchPick: {},
   foldersOpen: true,
   expanded: [],
   setCatalog: (catalog) => set({ catalog }),
@@ -89,7 +98,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       return { active, sessions, tabs, focusedSessionId: focused };
     }),
   closeDashboard: () =>
-    set({ active: null, sessions: [], tabs: [], focusedSessionId: null, expanded: [] }),
+    set({
+      active: null,
+      sessions: [],
+      tabs: [],
+      focusedSessionId: null,
+      expanded: [],
+      branchPick: {},
+      composerParentId: null,
+    }),
   setSessions: (sessions) =>
     set((state) => ({
       sessions,
@@ -101,6 +118,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setDockTab: (dockTab) => set({ dockTab }),
   bumpChatRev: () => set((state) => ({ chatRev: state.chatRev + 1 })),
   setComposerDraft: (composerDraft) => set({ composerDraft }),
+  setComposerParentId: (composerParentId) => set({ composerParentId }),
+  setThreadTailId: (threadTailId) => set({ threadTailId }),
+  setBranchPick: (parentId, childId) =>
+    set((state) => ({ branchPick: { ...state.branchPick, [parentId]: childId } })),
   setFoldersOpen: (foldersOpen) => set({ foldersOpen }),
   setExpanded: (expanded) => set({ expanded: withAncestors(expanded) }),
   toggleExpanded: (path) =>
@@ -123,6 +144,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       focusedSessionId: null,
       foldersOpen: true,
       composerDraft: null,
+      composerParentId: null,
+      branchPick: {},
       expanded: [],
     }),
 }));

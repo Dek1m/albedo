@@ -49,6 +49,7 @@ export interface ChatMessage {
   createdAt: string;
   agentName: string | null;
   modelName: string | null;
+  parentId: string | null;
 }
 
 export function asWorkspaceId(value: string): WorkspaceId {

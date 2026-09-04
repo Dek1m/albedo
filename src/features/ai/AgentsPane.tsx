@@ -147,6 +147,48 @@ export function AgentsPane({ visible }: AgentsPaneProps): ReactElement {
               <span className="albedo-ai-strip-actions">
                 <button
                   type="button"
+                  className={`albedo-icon-btn${agent.isDefault ? ' is-on' : ''}`}
+                  title="Default agent"
+                  aria-label="Default agent"
+                  onClick={() => {
+                    void (async () => {
+                      try {
+                        await llmApi.setAgentDefault(agent.id);
+                        setItems((prev) =>
+                          prev.map((item) => ({ ...item, isDefault: item.id === agent.id })),
+                        );
+                      } catch (err) {
+                        toast(humanMessage(err));
+                      }
+                    })();
+                  }}
+                >
+                  <i className={`bi ${agent.isDefault ? 'bi-star-fill' : 'bi-star'}`} />
+                </button>
+                <button
+                  type="button"
+                  className="albedo-icon-btn"
+                  title={agent.visible ? 'Hide from Message' : 'Show in Message'}
+                  aria-label="Visibility"
+                  onClick={() => {
+                    void (async () => {
+                      try {
+                        await llmApi.setAgentVisible(agent.id, !agent.visible);
+                        setItems((prev) =>
+                          prev.map((item) =>
+                            item.id === agent.id ? { ...item, visible: !agent.visible } : item,
+                          ),
+                        );
+                      } catch (err) {
+                        toast(humanMessage(err));
+                      }
+                    })();
+                  }}
+                >
+                  <i className={`bi ${agent.visible ? 'bi-eye' : 'bi-eye-slash'}`} />
+                </button>
+                <button
+                  type="button"
                   className="btn btn-sm albedo-ghost-btn"
                   disabled={locked}
                   onClick={() => setForm({ kind: 'edit', agent })}

@@ -48,6 +48,8 @@ export interface LlmAgent {
   model: string;
   avatarUrl: string | null;
   enabled: boolean;
+  visible: boolean;
+  isDefault: boolean;
 }
 
 interface ModelDto {
@@ -339,6 +341,8 @@ export const llmApi = {
         model?: string | null;
         avatar_url?: string | null;
         is_active?: boolean;
+        is_visible?: boolean;
+        is_default?: boolean;
       }[];
     }>('llm', 'agents', {});
     return (result.items ?? []).map((row) => ({
@@ -350,6 +354,8 @@ export const llmApi = {
       model: String(row.model ?? ''),
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
       enabled: row.is_active !== false,
+      visible: row.is_visible !== false,
+      isDefault: Boolean(row.is_default),
     }));
   },
 
@@ -382,6 +388,8 @@ export const llmApi = {
       model: String(row.model ?? input.model),
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
       enabled: true,
+      visible: true,
+      isDefault: false,
     };
   },
 
@@ -412,6 +420,14 @@ export const llmApi = {
 
   async setAgentEnabled(agentId: string, enabled: boolean): Promise<void> {
     await apiClient.call('llm', 'update_agent', { agent_id: agentId, is_active: enabled });
+  },
+
+  async setAgentVisible(agentId: string, visible: boolean): Promise<void> {
+    await apiClient.call('llm', 'update_agent', { agent_id: agentId, is_visible: visible });
+  },
+
+  async setAgentDefault(agentId: string): Promise<void> {
+    await apiClient.call('llm', 'update_agent', { agent_id: agentId, is_default: true });
   },
 
   async deleteAgent(agentId: string): Promise<void> {

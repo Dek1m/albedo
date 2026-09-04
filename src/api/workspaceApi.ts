@@ -38,7 +38,7 @@ interface EventDto {
   role: string | null;
   content: string | null;
   created_at: string;
-  payload?: { agent_name?: string; model_name?: string } | null;
+  payload?: { agent_name?: string; model_name?: string; parent_id?: string } | null;
 }
 
 function toWorkspace(dto: WorkspaceDto): Workspace {
@@ -85,6 +85,7 @@ function toMessage(dto: EventDto): ChatMessage {
     createdAt: dto.created_at,
     agentName: dto.payload?.agent_name ? String(dto.payload.agent_name) : null,
     modelName: dto.payload?.model_name ? String(dto.payload.model_name) : null,
+    parentId: dto.payload?.parent_id ? String(dto.payload.parent_id) : null,
   };
 }
 
@@ -402,7 +403,7 @@ export const workspaceApi = {
     sessionId: string,
     role: string,
     content: string,
-    meta?: { agentName?: string; modelName?: string },
+    meta?: { agentName?: string; modelName?: string; parentId?: string },
   ): Promise<ChatMessage> {
     const dto = await apiClient.call<EventDto>('workspace', 'post_message', {
       workspace_id: workspaceId,
@@ -411,7 +412,16 @@ export const workspaceApi = {
       content,
       agent_name: meta?.agentName || undefined,
       model_name: meta?.modelName || undefined,
+      parent_id: meta?.parentId || undefined,
     });
     return toMessage(dto);
+  },
+
+  async deleteBranch(workspaceId: string, sessionId: string, eventId: string): Promise<void> {
+    await apiClient.call('workspace', 'delete_branch', {
+      workspace_id: workspaceId,
+      session_id: sessionId,
+      event_id: eventId,
+    });
   },
 };

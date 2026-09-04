@@ -31,6 +31,10 @@ export function MessageTab(): ReactElement {
   const bumpChatRev = useWorkspaceStore((s) => s.bumpChatRev);
   const composerDraft = useWorkspaceStore((s) => s.composerDraft);
   const setComposerDraft = useWorkspaceStore((s) => s.setComposerDraft);
+  const composerParentId = useWorkspaceStore((s) => s.composerParentId);
+  const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
+  const threadTailId = useWorkspaceStore((s) => s.threadTailId);
+  const setBranchPick = useWorkspaceStore((s) => s.setBranchPick);
   const session = tabs.find((item) => item.id === focused) ?? sessions.find((item) => item.id === focused);
   const [draft, setDraft] = useState('');
   const [agentId, setAgentId] = useState('');
@@ -38,7 +42,7 @@ export function MessageTab(): ReactElement {
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const [attach, setAttach] = useState<LocalAttach | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const picker = agents.filter((agent) => agent.enabled);
+  const picker = agents.filter((agent) => agent.enabled && agent.visible);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +63,17 @@ export function MessageTab(): ReactElement {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (agentId) {
+      return;
+    }
+    const visible = agents.filter((item) => item.enabled && item.visible);
+    const chosen = visible.find((item) => item.isDefault) ?? visible[0];
+    if (chosen) {
+      setAgentId(chosen.id);
+    }
+  }, [agentId, agents]);
 
   useEffect(() => {
     if (composerDraft == null) {
@@ -89,10 +104,14 @@ export function MessageTab(): ReactElement {
       }
     }
     try {
-      await workspaceApi.postMessage(session.workspaceId, session.id, 'user', draft.trim(), {
+      const parentId = composerParentId ?? threadTailId;
+      const posted = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', draft.trim(), {
         agentName: agent?.name,
         modelName: modelName || undefined,
+        parentId: parentId || undefined,
       });
+      setBranchPick(parentId ?? '', posted.id);
+      setComposerParentId(null);
       clearComposer();
       bumpChatRev();
     } catch (err) {
