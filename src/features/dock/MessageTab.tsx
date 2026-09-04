@@ -13,6 +13,7 @@ import { pickAgentId, readLastAgentId, writeLastAgentId } from './lastAgent';
 import { pickPipelineId, readLastPipelineId, writeLastPipelineId } from './lastPipeline';
 import { useChatRun } from '../workspace/chatRun';
 import { useLoopMetrics } from './loopMetrics';
+import { visiblePath, withParents } from '../workspace/chatBranches';
 
 interface LocalAttach {
   name: string;
@@ -39,8 +40,8 @@ export function MessageTab(): ReactElement {
   const composerParentId = useWorkspaceStore((s) => s.composerParentId);
   const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
   const threadTailId = useWorkspaceStore((s) => s.threadTailId);
-  const threadTailRole = useWorkspaceStore((s) => s.threadTailRole);
-  const threadTailParentId = useWorkspaceStore((s) => s.threadTailParentId);
+  const setThreadTailId = useWorkspaceStore((s) => s.setThreadTailId);
+  const setThreadTailMeta = useWorkspaceStore((s) => s.setThreadTailMeta);
   const setBranchPick = useWorkspaceStore((s) => s.setBranchPick);
   const session = tabs.find((item) => item.id === focused) ?? sessions.find((item) => item.id === focused);
   const [draft, setDraft] = useState('');
@@ -187,6 +188,24 @@ export function MessageTab(): ReactElement {
     })();
   }, [regen]);
 
+  const resolveTailParent = async (): Promise<string | null> => {
+    if (composerParentId || !session) {
+      return composerParentId ?? threadTailId;
+    }
+    try {
+      // Стор может отставать от перечитки ленты — решаем по свежим данным.
+      const items = await workspaceApi.listMessages(session.workspaceId, session.id);
+      const tree = withParents(items);
+      const tail = visiblePath(tree, useWorkspaceStore.getState().branchPick).at(-1) ?? null;
+      if (tail) {
+        return tail.role === 'user' ? tail.parentId : tail.id;
+      }
+    } catch {
+      /* упадём на threadTailId */
+    }
+    return threadTailId;
+  };
+
   const send = async (): Promise<void> => {
     const text = draft.trim();
     if (running) {
@@ -202,16 +221,14 @@ export function MessageTab(): ReactElement {
     const agent = picker.find((item) => item.id === agentId);
     try {
       // Хвост — user без ответа? Новая отправка — ветка того же уровня (DeepSeek-style), не продолжение цепочки.
-      const fallbackParent =
-        threadTailRole === 'user' && threadTailParentId !== undefined
-          ? threadTailParentId
-          : threadTailId;
-      const parentId = composerParentId ?? fallbackParent;
+      const parentId = await resolveTailParent();
       const posted = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', text, {
         agentName: agent?.name,
         parentId: parentId || undefined,
       });
       setBranchPick(parentId ?? '', posted.id);
+      setThreadTailId(posted.id);
+      setThreadTailMeta({ role: 'user', parentId: parentId ?? null });
       setComposerParentId(null);
       clearComposer();
       bumpChatRev();
