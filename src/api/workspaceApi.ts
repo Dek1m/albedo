@@ -38,6 +38,7 @@ interface EventDto {
   role: string | null;
   content: string | null;
   created_at: string;
+  payload?: { agent_name?: string; model_name?: string } | null;
 }
 
 function toWorkspace(dto: WorkspaceDto): Workspace {
@@ -82,6 +83,8 @@ function toMessage(dto: EventDto): ChatMessage {
     role: dto.role,
     content: dto.content,
     createdAt: dto.created_at,
+    agentName: dto.payload?.agent_name ? String(dto.payload.agent_name) : null,
+    modelName: dto.payload?.model_name ? String(dto.payload.model_name) : null,
   };
 }
 
@@ -399,12 +402,15 @@ export const workspaceApi = {
     sessionId: string,
     role: string,
     content: string,
+    meta?: { agentName?: string; modelName?: string },
   ): Promise<ChatMessage> {
     const dto = await apiClient.call<EventDto>('workspace', 'post_message', {
       workspace_id: workspaceId,
       session_id: sessionId,
       role,
       content,
+      agent_name: meta?.agentName || undefined,
+      model_name: meta?.modelName || undefined,
     });
     return toMessage(dto);
   },

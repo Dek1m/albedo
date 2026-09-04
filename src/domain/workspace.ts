@@ -47,6 +47,8 @@ export interface ChatMessage {
   role: string | null;
   content: string | null;
   createdAt: string;
+  agentName: string | null;
+  modelName: string | null;
 }
 
 export function asWorkspaceId(value: string): WorkspaceId {

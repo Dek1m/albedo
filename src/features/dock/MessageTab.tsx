@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
 import { llmApi } from '../../api/llmApi';
-import type { LlmAgent } from '../../api/llmApi';
+import type { LlmAgent, LlmProvider } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { workspaceApi } from '../../api/workspaceApi';
 import { MarkdownPrompt } from '../ai/MarkdownPrompt';
@@ -29,32 +29,44 @@ export function MessageTab(): ReactElement {
   const tabs = useWorkspaceStore((s) => s.tabs);
   const sessions = useWorkspaceStore((s) => s.sessions);
   const bumpChatRev = useWorkspaceStore((s) => s.bumpChatRev);
+  const composerDraft = useWorkspaceStore((s) => s.composerDraft);
+  const setComposerDraft = useWorkspaceStore((s) => s.setComposerDraft);
   const session = tabs.find((item) => item.id === focused) ?? sessions.find((item) => item.id === focused);
   const [draft, setDraft] = useState('');
   const [agentId, setAgentId] = useState('');
   const [agents, setAgents] = useState<LlmAgent[]>([]);
+  const [providers, setProviders] = useState<LlmProvider[]>([]);
   const [attach, setAttach] = useState<LocalAttach | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const picker = agents.filter((agent) => agent.enabled);
 
   useEffect(() => {
     let cancelled = false;
-    llmApi
-      .listAgents()
-      .then((items) => {
+    void Promise.all([llmApi.listAgents(), llmApi.listProviders()])
+      .then(([items, catalog]) => {
         if (!cancelled) {
           setAgents(items);
+          setProviders(catalog);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setAgents([]);
+          setProviders([]);
         }
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (composerDraft == null) {
+      return;
+    }
+    setDraft(composerDraft);
+    setComposerDraft(null);
+  }, [composerDraft, setComposerDraft]);
 
   const clearComposer = (): void => {
     setDraft('');
@@ -65,8 +77,22 @@ export function MessageTab(): ReactElement {
     if (!session || !draft.trim()) {
       return;
     }
+    const agent = picker.find((item) => item.id === agentId);
+    let modelName = '';
+    if (agent?.model) {
+      for (const provider of providers) {
+        const model = provider.models.find((item) => item.id === agent.model);
+        if (model) {
+          modelName = model.displayName;
+          break;
+        }
+      }
+    }
     try {
-      await workspaceApi.postMessage(session.workspaceId, session.id, 'user', draft.trim());
+      await workspaceApi.postMessage(session.workspaceId, session.id, 'user', draft.trim(), {
+        agentName: agent?.name,
+        modelName: modelName || undefined,
+      });
       clearComposer();
       bumpChatRev();
     } catch (err) {

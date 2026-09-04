@@ -4,7 +4,7 @@ import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { Dock } from './Dock';
 
 vi.mock('../../api/llmApi', () => ({
-  llmApi: { listAgents: vi.fn(async () => []) },
+  llmApi: { listAgents: vi.fn(async () => []), listProviders: vi.fn(async () => []) },
 }));
 
 vi.mock('../../api/workspaceApi', () => ({

@@ -45,6 +45,7 @@ interface WorkspaceState {
   dockHeight: number;
   dockTab: 'message' | 'terminal';
   chatRev: number;
+  composerDraft: string | null;
   foldersOpen: boolean;
   expanded: string[];
   setCatalog: (items: Workspace[]) => void;
@@ -56,6 +57,7 @@ interface WorkspaceState {
   setDockHeight: (height: number) => void;
   setDockTab: (tab: 'message' | 'terminal') => void;
   bumpChatRev: () => void;
+  setComposerDraft: (draft: string | null) => void;
   setFoldersOpen: (open: boolean) => void;
   setExpanded: (paths: string[]) => void;
   toggleExpanded: (path: string) => void;
@@ -72,6 +74,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   dockHeight: 200,
   dockTab: 'message',
   chatRev: 0,
+  composerDraft: null,
   foldersOpen: true,
   expanded: [],
   setCatalog: (catalog) => set({ catalog }),
@@ -97,6 +100,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setDockHeight: (height) => set({ dockHeight: clampDockHeight(height) }),
   setDockTab: (dockTab) => set({ dockTab }),
   bumpChatRev: () => set((state) => ({ chatRev: state.chatRev + 1 })),
+  setComposerDraft: (composerDraft) => set({ composerDraft }),
   setFoldersOpen: (foldersOpen) => set({ foldersOpen }),
   setExpanded: (expanded) => set({ expanded: withAncestors(expanded) }),
   toggleExpanded: (path) =>
@@ -118,6 +122,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       tabs: [],
       focusedSessionId: null,
       foldersOpen: true,
+      composerDraft: null,
       expanded: [],
     }),
 }));
