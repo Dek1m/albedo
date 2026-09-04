@@ -50,6 +50,12 @@ export function AgentBubble({
   const text = useSmoothText(content, Boolean(live));
   const waiting = Boolean(live) && !text && !reasoning;
   const rows = waiting ? [] : toolRows(stages, Boolean(live), reasoning, text);
+  // Пунктир заканчиваем точкой, если после reasoning тулов нет — дальше ответ.
+  const reasoningIndex = rows.findIndex((stage) => stage.kind === 'reasoning');
+  const hasToolAfter = rows
+    .slice(reasoningIndex + 1)
+    .some((stage) => stage.kind === 'tool');
+  const reasoningIsTail = reasoningIndex >= 0 && !hasToolAfter;
 
   const toggleReasoning = (): void => {
     if (onReasoningToggle) {
@@ -92,7 +98,7 @@ export function AgentBubble({
                   )}
                 </div>
                 {reasoningRow && open ? (
-                  <div className="albedo-reasoning-pane" ref={paneRef}>
+                  <div className={`albedo-reasoning-pane${reasoningIsTail ? ' is-tail' : ''}`} ref={paneRef}>
                     <p className="albedo-reasoning-text">{reasoning}</p>
                   </div>
                 ) : null}

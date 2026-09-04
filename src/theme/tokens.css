@@ -2552,7 +2552,21 @@ body {
 }
 
 .albedo-reasoning-pane {
+  position: relative;
   margin-top: 0.3rem;
+}
+
+/* Пунктир от точки Reasoning заканчивается точкой напротив последней строки. */
+.albedo-reasoning-pane.is-tail::after {
+  content: "";
+  position: absolute;
+  left: -0.61rem;
+  bottom: 0.12rem;
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 28%);
+  box-shadow: 0 0 0 2px rgb(12 12 14 / 80%);
 }
 
 .albedo-reasoning-text {
