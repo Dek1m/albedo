@@ -561,7 +561,7 @@ export const llmApi = {
     return asRun({ ...row, status: row.status ?? 'cancelled' });
   },
 
-  async runUsage(sessionId: string): Promise<LlmRunUsage> {
+  async runUsage(sessionId: string, options?: { reset?: boolean }): Promise<LlmRunUsage> {
     const row = await apiClient.call<{
       id?: string | null;
       status?: string;
@@ -571,7 +571,7 @@ export const llmApi = {
       cache_hits?: number;
       error?: string | null;
       trace?: unknown;
-    }>('llm', 'run_usage', { session_id: sessionId });
+    }>('llm', 'run_usage', { session_id: sessionId, reset: options?.reset || undefined });
     return asRun(row);
   },
 

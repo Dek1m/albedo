@@ -142,6 +142,8 @@ export function MessageTab(): ReactElement {
         .catch(() => undefined);
     }, 120);
     try {
+      // Сбрасываем след прошлого ответа в Redis, чтобы тик не принёс его вместо скелетона.
+      await llmApi.runUsage(session.id, { reset: true }).catch(() => undefined);
       const usage = await llmApi.runPipeline({
         workspaceId: session.workspaceId,
         sessionId: session.id,

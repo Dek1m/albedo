@@ -1995,6 +1995,28 @@ body {
   margin: 0.25rem 0;
   padding-left: 1.1rem;
 }
+.albedo-md p {
+  margin: 0.3rem 0 0;
+}
+.albedo-md p:first-child {
+  margin-top: 0;
+}
+.albedo-md-table {
+  border-collapse: collapse;
+  margin: 0.35rem 0;
+  font-size: inherit;
+}
+.albedo-md-table th,
+.albedo-md-table td {
+  border: 1px solid rgb(255 255 255 / 14%);
+  padding: 0.3rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+.albedo-md-table th {
+  background: rgb(255 255 255 / 6%);
+  font-weight: 600;
+}
 
 .albedo-admin-role-toolbar {
   display: flex;
