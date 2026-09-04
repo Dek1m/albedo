@@ -2560,7 +2560,8 @@ body {
 .albedo-reasoning-pane.is-tail::after {
   content: "";
   position: absolute;
-  left: -0.61rem;
+  /* та же колонка и отступ до текста, что у точки перед Reasoning */
+  left: -1.15rem;
   /* центр последней строки: (line-height 1.35rem - 0.52rem) / 2 */
   bottom: 0.4rem;
   width: 0.52rem;
