@@ -4,7 +4,19 @@ import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { Dock } from './Dock';
 
 vi.mock('../../api/llmApi', () => ({
-  llmApi: { listAgents: vi.fn(async () => []), listProviders: vi.fn(async () => []) },
+  llmApi: {
+    listAgents: vi.fn(async () => []),
+    listProviders: vi.fn(async () => []),
+    listPipelines: vi.fn(async () => []),
+    runUsage: vi.fn(async () => ({
+      id: null,
+      status: 'idle',
+      tokensIn: 0,
+      tokensOut: 0,
+      cacheTokens: 0,
+      cacheHits: 0,
+    })),
+  },
 }));
 
 vi.mock('../../api/workspaceApi', () => ({
@@ -80,11 +92,10 @@ describe('Dock', () => {
     expect(select.querySelector('option[value=""]')).toBeNull();
   });
 
-  it('keeps pipeline disabled and empty', () => {
+  it('keeps pipeline empty when catalog is empty', () => {
     render(<Dock />);
     const pipeline = screen.getByLabelText('Pipeline');
     expect(pipeline).toBeDisabled();
-    expect(pipeline).toHaveAttribute('title', 'Pipelines: no RPC yet');
     expect(pipeline.querySelectorAll('option')).toHaveLength(0);
   });
 

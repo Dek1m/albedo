@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
 import { llmApi } from '../../api/llmApi';
-import type { LlmAgent, LlmProvider } from '../../api/llmApi';
+import type { LlmAgent, LlmPipeline, LlmProvider } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { workspaceApi } from '../../api/workspaceApi';
 import { MarkdownPrompt } from '../ai/MarkdownPrompt';
@@ -10,6 +10,8 @@ import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { estimatePromptTokens } from './estimatePromptTokens';
 import { pickAgentId, readLastAgentId, writeLastAgentId } from './lastAgent';
+import { pickPipelineId, readLastPipelineId, writeLastPipelineId } from './lastPipeline';
+import { useLoopMetrics } from './loopMetrics';
 
 interface LocalAttach {
   name: string;
@@ -40,27 +42,33 @@ export function MessageTab(): ReactElement {
   const session = tabs.find((item) => item.id === focused) ?? sessions.find((item) => item.id === focused);
   const [draft, setDraft] = useState('');
   const [agentId, setAgentId] = useState('');
+  const [pipelineId, setPipelineId] = useState('');
   const [agents, setAgents] = useState<LlmAgent[]>([]);
+  const [pipelines, setPipelines] = useState<LlmPipeline[]>([]);
   const [providers, setProviders] = useState<LlmProvider[]>([]);
+  const setMetrics = useLoopMetrics((s) => s.setMetrics);
   const [attach, setAttach] = useState<LocalAttach | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const picker = agents.filter((agent) => agent.enabled && agent.visible);
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([llmApi.listAgents(), llmApi.listProviders()])
-      .then(([items, catalog]) => {
+    void Promise.all([llmApi.listAgents(), llmApi.listProviders(), llmApi.listPipelines()])
+      .then(([items, catalog, pipes]) => {
         if (cancelled) {
           return;
         }
         setAgents(items);
         setProviders(catalog);
+        setPipelines(pipes);
         setAgentId((current) => pickAgentId(items, current || readLastAgentId()));
+        setPipelineId((current) => pickPipelineId(pipes, current || readLastPipelineId()));
       })
       .catch(() => {
         if (!cancelled) {
           setAgents([]);
           setProviders([]);
+          setPipelines([]);
         }
       });
     return () => {
@@ -107,6 +115,25 @@ export function MessageTab(): ReactElement {
       setComposerParentId(null);
       clearComposer();
       bumpChatRev();
+      if (pipelineId) {
+        const usage = await llmApi.runPipeline({
+          workspaceId: session.workspaceId,
+          sessionId: session.id,
+          pipelineId,
+          agentId: agentId || undefined,
+        });
+        setMetrics({
+          status: usage.status,
+          tokensIn: usage.tokensIn,
+          tokensOut: usage.tokensOut,
+          cacheTokens: usage.cacheTokens,
+          cacheHits: usage.cacheHits,
+        });
+        bumpChatRev();
+        if (usage.status === 'error' && usage.error) {
+          toast(usage.error);
+        }
+      }
     } catch (err) {
       toast(humanMessage(err));
     }
@@ -163,9 +190,22 @@ export function MessageTab(): ReactElement {
         <select
           className="form-select form-select-sm albedo-message-pipeline"
           aria-label="Pipeline"
-          disabled
-          title="Pipelines: no RPC yet"
-        />
+          value={pipelineId}
+          disabled={pipelines.length === 0}
+          onChange={(event) => {
+            const id = event.target.value;
+            setPipelineId(id);
+            if (id) {
+              writeLastPipelineId(id);
+            }
+          }}
+        >
+          {pipelines.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           className="albedo-icon-btn"

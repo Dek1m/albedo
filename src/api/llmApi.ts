@@ -39,6 +39,24 @@ export interface ProbedModel {
 
 export type AgentKind = 'agent' | 'subagent' | 'cronagent' | 'system' | 'user';
 
+export interface LlmPipeline {
+  id: string;
+  name: string;
+  slug: string;
+  purpose: string;
+}
+
+export interface LlmRunUsage {
+  id: string | null;
+  status: string;
+  tokensIn: number;
+  tokensOut: number;
+  cacheTokens: number;
+  cacheHits: number;
+  content?: string | null;
+  error?: string | null;
+}
+
 export interface LlmAgent {
   id: string;
   name: string;
@@ -432,6 +450,72 @@ export const llmApi = {
 
   async deleteAgent(agentId: string): Promise<void> {
     await apiClient.call('llm', 'delete_agent', { agent_id: agentId });
+  },
+
+  async listPipelines(): Promise<LlmPipeline[]> {
+    const result = await apiClient.call<{
+      items?: { id?: string; name?: string; slug?: string; purpose?: string | null }[];
+    }>('llm', 'list_pipelines', {});
+    return (result.items ?? []).map((row) => ({
+      id: String(row.id ?? ''),
+      name: String(row.name ?? ''),
+      slug: String(row.slug ?? ''),
+      purpose: String(row.purpose ?? ''),
+    }));
+  },
+
+  async runPipeline(input: {
+    workspaceId: string;
+    sessionId: string;
+    pipelineId?: string;
+    agentId?: string;
+  }): Promise<LlmRunUsage> {
+    const row = await apiClient.call<{
+      id?: string | null;
+      status?: string;
+      tokens_in?: number;
+      tokens_out?: number;
+      cache_tokens?: number;
+      cache_hits?: number;
+      content?: string | null;
+      error?: string | null;
+    }>('llm', 'run_pipeline', {
+      workspace_id: input.workspaceId,
+      session_id: input.sessionId,
+      pipeline_id: input.pipelineId,
+      agent_id: input.agentId,
+    });
+    return {
+      id: row.id ? String(row.id) : null,
+      status: String(row.status ?? 'idle'),
+      tokensIn: Number(row.tokens_in ?? 0),
+      tokensOut: Number(row.tokens_out ?? 0),
+      cacheTokens: Number(row.cache_tokens ?? 0),
+      cacheHits: Number(row.cache_hits ?? 0),
+      content: row.content ?? null,
+      error: row.error ?? null,
+    };
+  },
+
+  async runUsage(sessionId: string): Promise<LlmRunUsage> {
+    const row = await apiClient.call<{
+      id?: string | null;
+      status?: string;
+      tokens_in?: number;
+      tokens_out?: number;
+      cache_tokens?: number;
+      cache_hits?: number;
+      error?: string | null;
+    }>('llm', 'run_usage', { session_id: sessionId });
+    return {
+      id: row.id ? String(row.id) : null,
+      status: String(row.status ?? 'idle'),
+      tokensIn: Number(row.tokens_in ?? 0),
+      tokensOut: Number(row.tokens_out ?? 0),
+      cacheTokens: Number(row.cache_tokens ?? 0),
+      cacheHits: Number(row.cache_hits ?? 0),
+      error: row.error ?? null,
+    };
   },
 
   async probeProviderModels(providerId: string): Promise<ProbedModel[]> {
