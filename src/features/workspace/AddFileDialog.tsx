@@ -4,6 +4,7 @@ import { fsApi } from '../../api/fsApi';
 import { humanMessage } from '../../api/errors';
 import { log } from '../../shared/log';
 import { toast } from '../../shared/toast/toastStore';
+import { DropdownPanel } from '../../shared/ui/DropdownMenu';
 import { FileGlyph } from '../../shared/ui/FileGlyph';
 import { Window } from '../../shared/ui/Window';
 import { bytesLabel, homeDisplay, joinHomeRel } from './addFilePath';
@@ -58,6 +59,7 @@ export function AddFileDialog({ open, parentRel, onClose, onDone }: AddFileDialo
   const [progress, setProgress] = useState<Progress | null>(null);
   const filesRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
+  const fromRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -208,20 +210,18 @@ export function AddFileDialog({ open, parentRel, onClose, onDone }: AddFileDialo
           <button type="button" className="btn btn-sm btn-albedo-primary" disabled={!items.length || Boolean(progress)} onClick={() => void run()}>
             Add
           </button>
-          <div className="albedo-kebab">
+          <div className="albedo-kebab" ref={fromRef}>
             <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={() => setFromOpen((value) => !value)}>
               From Local
             </button>
-            {fromOpen ? (
-              <div className="albedo-drop is-right" role="menu">
-                <button type="button" className="albedo-drop-item" onClick={() => filesRef.current?.click()}>
-                  Files
-                </button>
-                <button type="button" className="albedo-drop-item" onClick={() => dirRef.current?.click()}>
-                  Folder
-                </button>
-              </div>
-            ) : null}
+            <DropdownPanel open={fromOpen} align="right" anchor={fromRef} onClose={() => setFromOpen(false)}>
+              <button type="button" className="albedo-drop-item" onClick={() => filesRef.current?.click()}>
+                Files
+              </button>
+              <button type="button" className="albedo-drop-item" onClick={() => dirRef.current?.click()}>
+                Folder
+              </button>
+            </DropdownPanel>
           </div>
           <button type="button" className="btn btn-sm albedo-ghost-btn" onClick={onClose}>
             Cancel

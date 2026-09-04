@@ -1722,10 +1722,13 @@ body {
 
 /* ПКМ: fixed поверх окна, палитра та же что у hover-drop */
 .albedo-drop.albedo-drop-ctx,
+.albedo-drop.albedo-drop-float,
 .albedo-ws-drop.albedo-ctx {
   position: fixed;
-  z-index: var(--z-5);
+  z-index: calc(var(--z-5) + 4);
   top: auto;
+  right: auto;
+  left: auto;
   transform-origin: top left;
 }
 

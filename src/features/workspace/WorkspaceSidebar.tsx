@@ -11,7 +11,7 @@ import { PanelGrip } from '../../shared/ui/PanelGrip';
 import { Window } from '../../shared/ui/Window';
 import { AddFileDialog } from './AddFileDialog';
 import { DropdownPanel } from '../../shared/ui/DropdownMenu';
-import { useClickOutside } from '../../shared/ui/useClickOutside';
+
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { folderToast, pathTail } from './folderToast';
 import { BusyDots } from '../../shared/ui/BusyDots';
@@ -42,7 +42,6 @@ export function WorkspaceSidebar(): ReactElement | null {
   const [busy, setBusy] = useState(true);
   const kebab = useRef<HTMLDivElement>(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  useClickOutside(menuOpen, kebab, closeMenu);
 
   const reload = useCallback(async (): Promise<void> => {
     if (!active) {
@@ -243,7 +242,7 @@ export function WorkspaceSidebar(): ReactElement | null {
                   <button type="button" className="albedo-icon-btn" onClick={() => setMenuOpen((v) => !v)}>
                     <i className="bi bi-three-dots-vertical" />
                   </button>
-                  <DropdownPanel open={menuOpen} align="right">
+                  <DropdownPanel open={menuOpen} align="right" anchor={kebab} onClose={closeMenu}>
                       <button type="button" className="albedo-drop-item" onClick={addFolder}>
                         New folder
                       </button>
