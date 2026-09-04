@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { MarkdownView } from '../../shared/ui/MarkdownView';
+import { useSmoothText } from './useSmoothText';
 
 export interface StageView {
   kind: string;
@@ -31,10 +32,11 @@ function toolRows(stages: StageView[], live: boolean, reasoning: string): StageV
 export function AgentBubble({ name, content, reasoning, stages, live }: AgentBubbleProps): ReactElement {
   const [open, setOpen] = useState(false);
   const rows = toolRows(stages, Boolean(live), reasoning);
+  const text = useSmoothText(content, Boolean(live));
 
   return (
     <article className={`albedo-bubble albedo-bubble--agent albedo-turn${live ? ' is-live' : ''}`}>
-      <header>{name || 'Agent'}</header>
+      {name ? <header>{name}</header> : null}
       {rows.length > 0 ? (
         <div className="albedo-steps">
           {rows.map((stage, index) => {
@@ -70,9 +72,7 @@ export function AgentBubble({ name, content, reasoning, stages, live }: AgentBub
           })}
         </div>
       ) : null}
-      {content ? (
-        live ? <div className="albedo-stream-text">{content}</div> : <MarkdownView text={content} />
-      ) : null}
+      {text ? <MarkdownView text={text} /> : null}
     </article>
   );
 }

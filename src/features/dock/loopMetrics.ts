@@ -10,6 +10,7 @@ export interface LoopMetrics {
   cacheTokens: number;
   cacheHits: number;
   agentName: string;
+  modelName: string;
   trace: LlmTrace;
 }
 
@@ -20,6 +21,7 @@ const idle: LoopMetrics = {
   cacheTokens: 0,
   cacheHits: 0,
   agentName: '',
+  modelName: '',
   trace: emptyTrace,
 };
 

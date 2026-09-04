@@ -1973,8 +1973,27 @@ body {
   color: #ff9e64;
 }
 
-.albedo-md-highlight .md-tag {
+.albedo-md-highlight .md-tag,
+.albedo-md .md-tag {
   color: var(--brand);
+}
+
+.albedo-md .md-kw { color: #7aa2f7; }
+.albedo-md .md-str { color: #9ece6a; }
+.albedo-md .md-cmt { color: var(--text-muted); font-style: italic; }
+.albedo-md .md-num { color: #ff9e64; }
+.albedo-md h2,
+.albedo-md h3,
+.albedo-md h4,
+.albedo-md h5,
+.albedo-md h6 {
+  margin: 0.4rem 0 0.25rem;
+  font-size: 1em;
+  color: var(--brand);
+}
+.albedo-md ul {
+  margin: 0.25rem 0;
+  padding-left: 1.1rem;
 }
 
 .albedo-admin-role-toolbar {
@@ -2328,10 +2347,10 @@ body {
 .albedo-chat-log {
   flex: 1;
   overflow: auto;
-  padding: 1rem;
+  padding: 1.6rem 16%;
   display: flex;
   flex-direction: column;
-  gap: 1.35rem;
+  gap: 1.5rem;
 }
 
 .albedo-bubble {
@@ -2348,14 +2367,22 @@ body {
 }
 
 .albedo-bubble--agent {
-  align-self: flex-start;
-  background: rgb(255 255 255 / 3%);
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  background: transparent;
   overflow: visible;
+  animation: none;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .albedo-bubble--user {
   align-self: flex-end;
+  max-width: 70%;
   background: rgb(255 255 255 / 10%);
+  border-radius: 1.25rem;
+  animation: albedo-rise 200ms var(--ease);
 }
 
 .albedo-bubble--user header {
@@ -2460,6 +2487,40 @@ body {
   50% { box-shadow: 0 0 0 2px rgb(12 12 14 / 80%), 0 0 0 5px rgb(122 162 255 / 35%); }
 }
 
+.albedo-user-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  align-self: stretch;
+  gap: 0.28rem;
+}
+
+.albedo-agent-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 0.35rem;
+}
+
+.albedo-user-meta,
+.albedo-agent-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.albedo-user-meta {
+  justify-content: flex-end;
+}
+
+.albedo-agent-meta {
+  justify-content: flex-start;
+}
+
 .albedo-bubble-meta {
   display: flex;
   align-items: center;
@@ -2467,17 +2528,8 @@ body {
   gap: 0.55rem;
   margin-top: 0.4rem;
   min-height: 1.2rem;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur) var(--ease);
   color: var(--text-muted);
   font-size: 0.72rem;
-}
-
-.albedo-bubble--user:hover .albedo-bubble-meta,
-.albedo-bubble--user:focus-within .albedo-bubble-meta {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .albedo-bubble-meta-facts {

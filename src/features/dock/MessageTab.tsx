@@ -11,6 +11,7 @@ import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { estimatePromptTokens } from './estimatePromptTokens';
 import { pickAgentId, readLastAgentId, writeLastAgentId } from './lastAgent';
 import { pickPipelineId, readLastPipelineId, writeLastPipelineId } from './lastPipeline';
+import { useChatRun } from '../workspace/chatRun';
 import { useLoopMetrics } from './loopMetrics';
 
 interface LocalAttach {
@@ -48,6 +49,8 @@ export function MessageTab(): ReactElement {
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const setMetrics = useLoopMetrics((s) => s.setMetrics);
   const loopStatus = useLoopMetrics((s) => s.status);
+  const regen = useChatRun((s) => s.regen);
+  const clearRegen = useChatRun((s) => s.clearRegen);
   const [attach, setAttach] = useState<LocalAttach | null>(null);
   const [running, setRunning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,6 +96,94 @@ export function MessageTab(): ReactElement {
     setAttach(null);
   };
 
+  const modelLabel = (): string => {
+    const agent = picker.find((item) => item.id === agentId);
+    if (!agent?.model) {
+      return '';
+    }
+    for (const provider of providers) {
+      const model = provider.models.find((item) => item.id === agent.model);
+      if (model) {
+        return model.displayName;
+      }
+    }
+    return '';
+  };
+
+  const runLoop = async (): Promise<void> => {
+    if (!session || !pipelineId) {
+      return;
+    }
+    const agent = picker.find((item) => item.id === agentId);
+    const ac = new AbortController();
+    abortRef.current = ac;
+    setRunning(true);
+    setMetrics({
+      status: 'running',
+      agentName: agent?.name || '',
+      modelName: modelLabel(),
+      trace: { content: '', reasoning: '', stages: [] },
+    });
+    const tick = window.setInterval(() => {
+      void llmApi
+        .runUsage(session.id)
+        .then((row) => {
+          setMetrics({
+            tokensIn: row.tokensIn,
+            tokensOut: row.tokensOut,
+            cacheTokens: row.cacheTokens,
+            cacheHits: row.cacheHits,
+            trace: row.trace,
+          });
+        })
+        .catch(() => undefined);
+    }, 120);
+    try {
+      const usage = await llmApi.runPipeline({
+        workspaceId: session.workspaceId,
+        sessionId: session.id,
+        pipelineId,
+        agentId: agentId || undefined,
+        signal: ac.signal,
+      });
+      setMetrics({
+        status: usage.status,
+        tokensIn: usage.tokensIn,
+        tokensOut: usage.tokensOut,
+        cacheTokens: usage.cacheTokens,
+        cacheHits: usage.cacheHits,
+        trace: usage.trace,
+        agentName: agent?.name || '',
+        modelName: modelLabel(),
+      });
+      bumpChatRev();
+      if (usage.status === 'error' && usage.error) {
+        toast(usage.error);
+      }
+    } finally {
+      window.clearInterval(tick);
+      abortRef.current = null;
+      setRunning(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!regen || !session || running) {
+      return;
+    }
+    const { assistantId } = regen;
+    clearRegen();
+    void (async () => {
+      try {
+        await workspaceApi.deleteBranch(session.workspaceId, session.id, assistantId);
+        bumpChatRev();
+        await runLoop();
+      } catch (err) {
+        toast(humanMessage(err));
+      }
+    })();
+  }, [regen]);
+
   const send = async (): Promise<void> => {
     const text = draft.trim();
     if (running) {
@@ -106,74 +197,17 @@ export function MessageTab(): ReactElement {
       return;
     }
     const agent = picker.find((item) => item.id === agentId);
-    let modelName = '';
-    if (agent?.model) {
-      for (const provider of providers) {
-        const model = provider.models.find((item) => item.id === agent.model);
-        if (model) {
-          modelName = model.displayName;
-          break;
-        }
-      }
-    }
     try {
       const parentId = composerParentId ?? threadTailId;
       const posted = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', text, {
         agentName: agent?.name,
-        modelName: modelName || undefined,
         parentId: parentId || undefined,
       });
       setBranchPick(parentId ?? '', posted.id);
       setComposerParentId(null);
       clearComposer();
       bumpChatRev();
-      if (pipelineId) {
-        const ac = new AbortController();
-        abortRef.current = ac;
-        setRunning(true);
-        setMetrics({ status: 'running', agentName: agent?.name || '', trace: { content: '', reasoning: '', stages: [] } });
-        const tick = window.setInterval(() => {
-          void llmApi
-            .runUsage(session.id)
-            .then((row) => {
-              setMetrics({
-                status: row.status === 'idle' ? 'running' : row.status,
-                tokensIn: row.tokensIn,
-                tokensOut: row.tokensOut,
-                cacheTokens: row.cacheTokens,
-                cacheHits: row.cacheHits,
-                trace: row.trace,
-              });
-            })
-            .catch(() => undefined);
-        }, 250);
-        try {
-          const usage = await llmApi.runPipeline({
-            workspaceId: session.workspaceId,
-            sessionId: session.id,
-            pipelineId,
-            agentId: agentId || undefined,
-            signal: ac.signal,
-          });
-          setMetrics({
-            status: usage.status,
-            tokensIn: usage.tokensIn,
-            tokensOut: usage.tokensOut,
-            cacheTokens: usage.cacheTokens,
-            cacheHits: usage.cacheHits,
-            trace: usage.trace,
-            agentName: agent?.name || '',
-          });
-          bumpChatRev();
-          if (usage.status === 'error' && usage.error) {
-            toast(usage.error);
-          }
-        } finally {
-          window.clearInterval(tick);
-          abortRef.current = null;
-          setRunning(false);
-        }
-      }
+      await runLoop();
     } catch (err) {
       abortRef.current = null;
       setRunning(false);

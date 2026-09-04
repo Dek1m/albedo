@@ -86,7 +86,7 @@ function wrap(cls: string, text: string): string {
   return `<span class="${cls}">${text}</span>`;
 }
 
-function highlightCode(source: string, lang: string): string {
+export function highlightCode(source: string, lang: string): string {
   const id = langId(lang);
   const words = keywordsFor(id);
   const hashComment = id === 'py' || id === 'sh' || id === 'yaml' || id === 'sql';

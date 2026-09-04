@@ -12,6 +12,7 @@ import { toast } from '../../shared/toast/toastStore';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { useLoopMetrics } from '../dock/loopMetrics';
 import { AgentBubble } from './AgentBubble';
+import { useChatRun } from './chatRun';
 import { siblingsOf, visiblePath, withParents } from './chatBranches';
 
 function formatSentAt(value: string): string {
@@ -34,6 +35,7 @@ export function ChatPane(): ReactElement | null {
   const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
   const setDockTab = useWorkspaceStore((s) => s.setDockTab);
   const setThreadTailId = useWorkspaceStore((s) => s.setThreadTailId);
+  const requestRegen = useChatRun((s) => s.requestRegen);
   const profile = useAuthStore((s) => s.profile);
   const session = tabs.find((s) => s.id === focused) ?? sessions.find((s) => s.id === focused);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -43,6 +45,7 @@ export function ChatPane(): ReactElement | null {
   const loopStatus = useLoopMetrics((s) => s.status);
   const liveTrace = useLoopMetrics((s) => s.trace);
   const liveAgent = useLoopMetrics((s) => s.agentName);
+  const liveModel = useLoopMetrics((s) => s.modelName);
 
   useEffect(() => {
     const workspaceId = session?.workspaceId ?? active?.id;
@@ -66,8 +69,10 @@ export function ChatPane(): ReactElement | null {
 
   const tree = useMemo(() => withParents(messages), [messages]);
   const visible = useMemo(() => visiblePath(tree, branchPick), [tree, branchPick]);
-  const lastRole = visible.at(-1)?.role;
-  const live = lastRole !== 'assistant' && (loopStatus === 'running' || Boolean(liveTrace.content));
+  const last = visible.at(-1);
+  const history = last?.role === 'assistant' ? visible.slice(0, -1) : visible;
+  const assistant = last?.role === 'assistant' ? last : null;
+  const streaming = loopStatus === 'running' || (!assistant && Boolean(liveTrace.content || liveTrace.reasoning));
 
   useEffect(() => {
     setThreadTailId(visible.at(-1)?.id ?? null);
@@ -111,46 +116,57 @@ export function ChatPane(): ReactElement | null {
   return (
     <section className="albedo-chat">
       <div ref={logRef} className="albedo-chat-log">
-        {visible.map((msg) => {
-          const mine = msg.role === 'user';
-          const clock = formatSentAt(msg.createdAt);
-          const forks = mine ? siblingsOf(tree, msg) : [];
-          const forkIndex = forks.findIndex((item) => item.id === msg.id);
-          if (!mine) {
+        {history.map((msg) => {
+          if (msg.role === 'assistant') {
             return (
-              <AgentBubble
-                key={msg.id}
-                name={msg.agentName || 'Agent'}
-                content={msg.content ?? ''}
-                reasoning={msg.reasoning ?? ''}
-                stages={msg.stages}
-              />
+              <div key={msg.id} className="albedo-agent-wrap">
+                <AgentBubble
+                  name={msg.agentName || 'Agent'}
+                  content={msg.content ?? ''}
+                  reasoning={msg.reasoning ?? ''}
+                  stages={msg.stages}
+                />
+                <footer className="albedo-agent-meta">
+                  <button
+                    type="button"
+                    className="albedo-icon-btn"
+                    title="Copy"
+                    aria-label="Copy"
+                    onClick={() => void onCopy(msg.content ?? '')}
+                  >
+                    <i className="bi bi-clipboard" />
+                  </button>
+                  <button
+                    type="button"
+                    className="albedo-icon-btn"
+                    title="Regenerate"
+                    aria-label="Regenerate"
+                    disabled={!msg.parentId}
+                    onClick={() => {
+                      if (!msg.parentId) {
+                        return;
+                      }
+                      requestRegen({ assistantId: msg.id, parentId: msg.parentId });
+                    }}
+                  >
+                    <i className="bi bi-arrow-repeat" />
+                  </button>
+                  {msg.createdAt ? <time dateTime={msg.createdAt}>{formatSentAt(msg.createdAt)}</time> : null}
+                  {msg.modelName ? <span>{msg.modelName}</span> : null}
+                </footer>
+              </div>
             );
           }
+          const clock = formatSentAt(msg.createdAt);
+          const forks = siblingsOf(tree, msg);
+          const forkIndex = forks.findIndex((item) => item.id === msg.id);
           return (
-            <article key={msg.id} className="albedo-bubble albedo-bubble--user">
-              <header>{userName}</header>
-              <MarkdownView text={msg.content ?? ''} />
-              <footer className="albedo-bubble-meta">
-                <span className="albedo-bubble-meta-facts">
-                  {msg.agentName ? (
-                    <>
-                      <span>{msg.agentName}</span>
-                      <span className="albedo-meta-dot" aria-hidden>
-                        ·
-                      </span>
-                    </>
-                  ) : null}
-                  {msg.modelName ? (
-                    <>
-                      <span>{msg.modelName}</span>
-                      <span className="albedo-meta-dot" aria-hidden>
-                        ·
-                      </span>
-                    </>
-                  ) : null}
-                  {clock ? <time dateTime={msg.createdAt}>{clock}</time> : null}
-                </span>
+            <div key={msg.id} className="albedo-user-wrap">
+              <article className="albedo-bubble albedo-bubble--user">
+                <header>{userName}</header>
+                <MarkdownView text={msg.content ?? ''} />
+              </article>
+              <footer className="albedo-user-meta">
                 {forks.length > 1 ? (
                   <span className="albedo-branch-nav">
                     <button
@@ -186,51 +202,83 @@ export function ChatPane(): ReactElement | null {
                     </button>
                   </span>
                 ) : null}
-                <span className="albedo-bubble-meta-actions">
-                  <button
-                    type="button"
-                    className="albedo-icon-btn"
-                    title="Copy"
-                    aria-label="Copy"
-                    onClick={() => void onCopy(msg.content ?? '')}
-                  >
-                    <i className="bi bi-clipboard" />
-                  </button>
-                  <button
-                    type="button"
-                    className="albedo-icon-btn"
-                    title="Edit"
-                    aria-label="Edit"
-                    onClick={() => {
-                      setComposerDraft(msg.content ?? '');
-                      setComposerParentId(msg.parentId);
-                      setDockTab('message');
-                    }}
-                  >
-                    <i className="bi bi-pencil" />
-                  </button>
-                  <button
-                    type="button"
-                    className="albedo-icon-btn"
-                    title="Delete branch"
-                    aria-label="Delete branch"
-                    onClick={() => setPendingDelete(msg)}
-                  >
-                    <i className="bi bi-trash" />
-                  </button>
-                </span>
+                <button
+                  type="button"
+                  className="albedo-icon-btn"
+                  title="Copy"
+                  aria-label="Copy"
+                  onClick={() => void onCopy(msg.content ?? '')}
+                >
+                  <i className="bi bi-clipboard" />
+                </button>
+                <button
+                  type="button"
+                  className="albedo-icon-btn"
+                  title="Edit"
+                  aria-label="Edit"
+                  onClick={() => {
+                    setComposerDraft(msg.content ?? '');
+                    setComposerParentId(msg.parentId);
+                    setDockTab('message');
+                  }}
+                >
+                  <i className="bi bi-pencil" />
+                </button>
+                <button
+                  type="button"
+                  className="albedo-icon-btn"
+                  title="Delete branch"
+                  aria-label="Delete branch"
+                  onClick={() => setPendingDelete(msg)}
+                >
+                  <i className="bi bi-trash" />
+                </button>
+                {clock ? <time dateTime={msg.createdAt}>{clock}</time> : null}
               </footer>
-            </article>
+            </div>
           );
         })}
-        {live ? (
-          <AgentBubble
-            name={liveAgent || 'Agent'}
-            content={liveTrace.content}
-            reasoning={liveTrace.reasoning}
-            stages={liveTrace.stages}
-            live
-          />
+        {assistant || streaming ? (
+          <div className="albedo-agent-wrap">
+            <AgentBubble
+              name={streaming ? liveAgent || assistant?.agentName || 'Agent' : assistant?.agentName || 'Agent'}
+              content={streaming ? liveTrace.content || assistant?.content || '' : assistant?.content ?? ''}
+              reasoning={streaming ? liveTrace.reasoning : assistant?.reasoning ?? ''}
+              stages={streaming ? liveTrace.stages : assistant?.stages ?? []}
+              live={streaming}
+            />
+            <footer className="albedo-agent-meta">
+              <button
+                type="button"
+                className="albedo-icon-btn"
+                title="Copy"
+                aria-label="Copy"
+                disabled={streaming}
+                onClick={() => void onCopy(assistant?.content || liveTrace.content)}
+              >
+                <i className="bi bi-clipboard" />
+              </button>
+              <button
+                type="button"
+                className="albedo-icon-btn"
+                title="Regenerate"
+                aria-label="Regenerate"
+                disabled={streaming || !assistant}
+                onClick={() => {
+                  if (!assistant?.parentId) {
+                    return;
+                  }
+                  requestRegen({ assistantId: assistant.id, parentId: assistant.parentId });
+                }}
+              >
+                <i className="bi bi-arrow-repeat" />
+              </button>
+              {assistant?.createdAt && !streaming ? (
+                <time dateTime={assistant.createdAt}>{formatSentAt(assistant.createdAt)}</time>
+              ) : null}
+              <span>{streaming ? liveModel : assistant?.modelName || liveModel}</span>
+            </footer>
+          </div>
         ) : null}
       </div>
       <ConfirmDialog
