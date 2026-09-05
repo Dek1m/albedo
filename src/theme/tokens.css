@@ -2644,6 +2644,9 @@ body {
   min-height: 1.25rem;
   color: var(--text-muted);
   font-size: 0.72rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur, 150ms) var(--ease, ease);
 }
 
 .albedo-user-meta {
@@ -2652,6 +2655,28 @@ body {
 
 .albedo-agent-meta {
   justify-content: flex-start;
+}
+
+.albedo-user-wrap:hover .albedo-user-meta,
+.albedo-user-wrap:focus-within .albedo-user-meta,
+.albedo-agent-wrap:hover .albedo-agent-meta,
+.albedo-agent-wrap:focus-within .albedo-agent-meta {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Смена ветки: старый хвост растворяется, новый приходит rise-анимацией. */
+.albedo-user-wrap.is-exit,
+.albedo-agent-wrap.is-exit {
+  animation: albedo-branch-exit 170ms var(--ease) forwards;
+}
+
+@keyframes albedo-branch-exit {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+    filter: blur(3px);
+  }
 }
 
 .albedo-bubble-meta {

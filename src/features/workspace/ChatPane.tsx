@@ -73,7 +73,32 @@ export function ChatPane(): ReactElement | null {
   }, [active, focused, session?.workspaceId, chatRev]);
 
   const tree = useMemo(() => withParents(messages), [messages]);
-  const visible = useMemo(() => visiblePath(tree, branchPick), [tree, branchPick]);
+  // Смена ветки — в два такта: старый хвост «растворяется», потом показываем новый.
+  const [shownPick, setShownPick] = useState(branchPick);
+  const [exiting, setExiting] = useState(false);
+  useEffect(() => {
+    if (branchPick === shownPick) {
+      return;
+    }
+    setExiting(true);
+    const timer = window.setTimeout(() => {
+      setShownPick(branchPick);
+      setExiting(false);
+    }, 170);
+    return () => window.clearTimeout(timer);
+  }, [branchPick, shownPick]);
+  const visible = useMemo(() => visiblePath(tree, shownPick), [tree, shownPick]);
+  const futureVisible = useMemo(() => visiblePath(tree, branchPick), [tree, branchPick]);
+  const exitFrom = useMemo(() => {
+    if (!exiting) {
+      return Number.POSITIVE_INFINITY;
+    }
+    let i = 0;
+    while (i < visible.length && i < futureVisible.length && visible[i]?.id === futureVisible[i]?.id) {
+      i += 1;
+    }
+    return i;
+  }, [exiting, visible, futureVisible]);
   // История рисует всё; live-облачко — только стрим своей сессии, без фантомов при переключении вкладок.
   const history = visible;
   const streaming = loopStatus === 'running' && shouldShowLive(loopSessionId, focused);
@@ -173,10 +198,11 @@ export function ChatPane(): ReactElement | null {
   return (
     <section className="albedo-chat">
       <div ref={logRef} className="albedo-chat-log" onScroll={onLogScroll}>
-        {history.map((msg) => {
+        {history.map((msg, index) => {
+          const leaving = exiting && index >= exitFrom;
           if (msg.role === 'assistant') {
             return (
-              <div key={msg.id} className="albedo-agent-wrap">
+              <div key={msg.id} className={`albedo-agent-wrap${leaving ? ' is-exit' : ''}`}>
                 <AgentBubble
                   name={msg.agentName || 'Agent'}
                   content={msg.content ?? ''}
@@ -218,7 +244,7 @@ export function ChatPane(): ReactElement | null {
           const forks = siblingsOf(tree, msg);
           const forkIndex = forks.findIndex((item) => item.id === msg.id);
           return (
-            <div key={msg.id} className="albedo-user-wrap">
+            <div key={msg.id} className={`albedo-user-wrap${leaving ? ' is-exit' : ''}`}>
               <article className="albedo-bubble albedo-bubble--user">
                 <header>{userName}</header>
                 <MarkdownView text={msg.content ?? ''} />
