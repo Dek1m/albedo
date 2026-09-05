@@ -45,8 +45,12 @@ export function ChatPane(): ReactElement | null {
   const logRef = useRef<HTMLDivElement>(null);
   const loopStatus = useLoopMetrics((s) => s.status);
   const loopSessionId = useLoopMetrics((s) => s.sessionId);
-  const liveTrace = useLoopMetrics((s) => s.trace);
   const liveAgent = useLoopMetrics((s) => s.agentName);
+  // Примитивные селекторы: идентичный тик не меняет ссылки — панель не рендерится.
+  const liveContent = useLoopMetrics((s) => s.trace.content);
+  const liveReasoning = useLoopMetrics((s) => s.trace.reasoning);
+  const liveStages = useLoopMetrics((s) => s.trace.stages);
+  const scrollRequest = useWorkspaceStore((s) => s.scrollRequest);
 
   useEffect(() => {
     const workspaceId = session?.workspaceId ?? active?.id;
@@ -82,7 +86,10 @@ export function ChatPane(): ReactElement | null {
 
   const tailId = visible.at(-1)?.id;
   const stickRef = useRef(true);
+  const scrollRafRef = useRef(0);
   const [reasoningOpen, setReasoningOpen] = useState(false);
+
+  useEffect(() => () => cancelAnimationFrame(scrollRafRef.current), []);
 
   // Пока пользователь у дна — следуем за потоком. Прокрутил вверх — отпускаем.
   const onLogScroll = (): void => {
@@ -93,27 +100,40 @@ export function ChatPane(): ReactElement | null {
     stickRef.current = node.scrollHeight - node.scrollTop - node.clientHeight < 120;
   };
 
-  // Отправка/новые сообщения — плавно вниз.
+  // Собственная отправка/реген — вниз всегда, даже если лента была прокручена вверх.
   useEffect(() => {
     const node = logRef.current;
-    if (!node) {
+    if (!scrollRequest || !node) {
+      return;
+    }
+    stickRef.current = true;
+    node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
+  }, [scrollRequest]);
+
+  // Новые сообщения и смена статуса — следуем вниз, только когда пользователь у дна.
+  useEffect(() => {
+    const node = logRef.current;
+    if (!node || !stickRef.current) {
       return;
     }
     node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
   }, [tailId, loopStatus, chatRev]);
 
-  // Поток ответа: reasoning скроллим только при раскрытой панели, текст — всегда у дна.
+  // Поток ответа: reasoning скроллим только при раскрытой панели, текст — у дна; не чаще кадра.
   useEffect(() => {
     const node = logRef.current;
-    if (!node || !streaming || !stickRef.current) {
+    if (!node || !streaming || !stickRef.current || scrollRafRef.current) {
       return;
     }
-    const inReasoning = Boolean(liveTrace.reasoning) && !liveTrace.content;
+    const inReasoning = Boolean(liveReasoning) && !liveContent;
     if (inReasoning && !reasoningOpen) {
       return;
     }
-    node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
-  }, [streaming, liveTrace.content, liveTrace.reasoning, reasoningOpen]);
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = 0;
+      node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
+    });
+  }, [streaming, liveContent, liveReasoning, reasoningOpen]);
 
   if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;
@@ -271,9 +291,9 @@ export function ChatPane(): ReactElement | null {
           <div className="albedo-agent-wrap">
             <AgentBubble
               name={liveAgent || 'Agent'}
-              content={liveTrace.content}
-              reasoning={liveTrace.reasoning}
-              stages={liveTrace.stages}
+              content={liveContent}
+              reasoning={liveReasoning}
+              stages={liveStages}
               live
               reasoningOpen={reasoningOpen}
               onReasoningToggle={() => setReasoningOpen((value) => !value)}

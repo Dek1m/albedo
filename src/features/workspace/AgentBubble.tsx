@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { MarkdownView } from '../../shared/ui/MarkdownView';
+import { sameStages } from '../dock/loopMetrics';
 import { useSmoothText } from './useSmoothText';
 
 function reasoningParagraphs(text: string): string[] {
@@ -39,7 +40,8 @@ function toolRows(stages: StageView[], live: boolean, reasoning: string, content
   return rows;
 }
 
-export function AgentBubble({
+// Полл каждые 120 мс приносит новый массив stages — сравниваем по содержимому, иначе memo бесполезен.
+export const AgentBubble = memo(function AgentBubble({
   name,
   content,
   reasoning,
@@ -123,4 +125,12 @@ export function AgentBubble({
       {text ? <MarkdownView text={text} /> : null}
     </article>
   );
-}
+}, (prev, next) =>
+  prev.name === next.name &&
+  prev.content === next.content &&
+  prev.reasoning === next.reasoning &&
+  prev.live === next.live &&
+  prev.reasoningOpen === next.reasoningOpen &&
+  prev.onReasoningToggle === next.onReasoningToggle &&
+  sameStages(prev.stages, next.stages),
+);

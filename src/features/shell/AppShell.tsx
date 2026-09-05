@@ -90,7 +90,16 @@ export function AppShell(): ReactElement {
   }, []);
 
   useEffect(() => {
-    return useWorkspaceStore.subscribe(() => persistCurrentLayout());
+    // Drag сайдбара/дока даёт шквал событий стора — в localStorage пишем один раз за паузу.
+    let timer = 0;
+    const unsubscribe = useWorkspaceStore.subscribe(() => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(persistCurrentLayout, 300);
+    });
+    return () => {
+      window.clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
 
   const onLogout = async (): Promise<void> => {

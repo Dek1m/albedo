@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { ReactElement } from 'react';
 import { copyText } from '../copyText';
 import { highlightCode } from '../../features/ai/markdownPrompt';
@@ -145,7 +146,7 @@ async function copyFrom(target: HTMLElement): Promise<void> {
   await copyText(code.textContent ?? '');
 }
 
-export function MarkdownView({ text }: { text: string }): ReactElement {
+export const MarkdownView = memo(function MarkdownView({ text }: { text: string }): ReactElement {
   return (
     <div
       className="albedo-md"
@@ -168,4 +169,4 @@ export function MarkdownView({ text }: { text: string }): ReactElement {
       }}
     />
   );
-}
+});

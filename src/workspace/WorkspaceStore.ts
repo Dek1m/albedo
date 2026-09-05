@@ -50,6 +50,7 @@ interface WorkspaceState {
   dockHeight: number;
   dockTab: 'message' | 'terminal' | 'context';
   chatRev: number;
+  scrollRequest: number;
   composerDraft: string | null;
   composerParent: ComposerParent | null;
   threadTailId: string | null;
@@ -67,6 +68,7 @@ interface WorkspaceState {
   setDockHeight: (height: number) => void;
   setDockTab: (tab: 'message' | 'terminal' | 'context') => void;
   bumpChatRev: () => void;
+  requestScroll: () => void;
   setComposerDraft: (draft: string | null) => void;
   setComposerParent: (parent: ComposerParent | null) => void;
   setThreadTailId: (id: string | null) => void;
@@ -88,6 +90,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   dockHeight: 200,
   dockTab: 'message',
   chatRev: 0,
+  scrollRequest: 0,
   composerDraft: null,
   composerParent: null,
   threadTailId: null,
@@ -127,6 +130,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setDockHeight: (height) => set({ dockHeight: clampDockHeight(height) }),
   setDockTab: (dockTab) => set({ dockTab }),
   bumpChatRev: () => set((state) => ({ chatRev: state.chatRev + 1 })),
+  requestScroll: () => set((state) => ({ scrollRequest: state.scrollRequest + 1 })),
   setComposerDraft: (composerDraft) => set({ composerDraft }),
   setComposerParent: (composerParent) => set({ composerParent }),
   setThreadTailId: (threadTailId) => set({ threadTailId }),

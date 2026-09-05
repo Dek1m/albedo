@@ -35,6 +35,7 @@ export function MessageTab(): ReactElement {
   const tabs = useWorkspaceStore((s) => s.tabs);
   const sessions = useWorkspaceStore((s) => s.sessions);
   const bumpChatRev = useWorkspaceStore((s) => s.bumpChatRev);
+  const requestScroll = useWorkspaceStore((s) => s.requestScroll);
   const composerDraft = useWorkspaceStore((s) => s.composerDraft);
   const setComposerDraft = useWorkspaceStore((s) => s.setComposerDraft);
   const composerParent = useWorkspaceStore((s) => s.composerParent);
@@ -191,6 +192,7 @@ export function MessageTab(): ReactElement {
       try {
         await workspaceApi.deleteBranch(session.workspaceId, session.id, assistantId);
         bumpChatRev();
+        requestScroll();
         // Stop нажат, пока удалялась ветка — цикл не стартует.
         if (stopRef.current) {
           return;
@@ -247,6 +249,7 @@ export function MessageTab(): ReactElement {
       setThreadTailMeta({ role: 'user', parentId: parentId ?? null });
       clearComposer();
       bumpChatRev();
+      requestScroll();
       await runLoop();
     } catch (err) {
       abortRef.current = null;
