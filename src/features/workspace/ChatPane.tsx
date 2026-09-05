@@ -10,7 +10,7 @@ import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { MarkdownView } from '../../shared/ui/MarkdownView';
 import { toast } from '../../shared/toast/toastStore';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
-import { useLoopMetrics } from '../dock/loopMetrics';
+import { shouldShowLive, useLoopMetrics } from '../dock/loopMetrics';
 import { AgentBubble } from './AgentBubble';
 import { useChatRun } from './chatRun';
 import { siblingsOf, visiblePath, withParents } from './chatBranches';
@@ -32,7 +32,7 @@ export function ChatPane(): ReactElement | null {
   const branchPick = useWorkspaceStore((s) => s.branchPick);
   const setBranchPick = useWorkspaceStore((s) => s.setBranchPick);
   const setComposerDraft = useWorkspaceStore((s) => s.setComposerDraft);
-  const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
+  const setComposerParent = useWorkspaceStore((s) => s.setComposerParent);
   const setDockTab = useWorkspaceStore((s) => s.setDockTab);
   const setThreadTailId = useWorkspaceStore((s) => s.setThreadTailId);
   const setThreadTailMeta = useWorkspaceStore((s) => s.setThreadTailMeta);
@@ -44,6 +44,7 @@ export function ChatPane(): ReactElement | null {
   const userName = profile ? chipLabel(profile) : 'You';
   const logRef = useRef<HTMLDivElement>(null);
   const loopStatus = useLoopMetrics((s) => s.status);
+  const loopSessionId = useLoopMetrics((s) => s.sessionId);
   const liveTrace = useLoopMetrics((s) => s.trace);
   const liveAgent = useLoopMetrics((s) => s.agentName);
 
@@ -69,9 +70,9 @@ export function ChatPane(): ReactElement | null {
 
   const tree = useMemo(() => withParents(messages), [messages]);
   const visible = useMemo(() => visiblePath(tree, branchPick), [tree, branchPick]);
-  // История рисует всё; live-облачко — только текущий стрим, без подмены прошлых ответов.
+  // История рисует всё; live-облачко — только стрим своей сессии, без фантомов при переключении вкладок.
   const history = visible;
-  const streaming = loopStatus === 'running';
+  const streaming = loopStatus === 'running' && shouldShowLive(loopSessionId, focused);
 
   useEffect(() => {
     const tail = visible.at(-1) ?? null;
@@ -104,7 +105,7 @@ export function ChatPane(): ReactElement | null {
   // Поток ответа: reasoning скроллим только при раскрытой панели, текст — всегда у дна.
   useEffect(() => {
     const node = logRef.current;
-    if (!node || !stickRef.current) {
+    if (!node || !streaming || !stickRef.current) {
       return;
     }
     const inReasoning = Boolean(liveTrace.reasoning) && !liveTrace.content;
@@ -112,7 +113,7 @@ export function ChatPane(): ReactElement | null {
       return;
     }
     node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
-  }, [liveTrace.content, liveTrace.reasoning, reasoningOpen]);
+  }, [streaming, liveTrace.content, liveTrace.reasoning, reasoningOpen]);
 
   if (!session) {
     return <p className="albedo-workspace-ready">ready</p>;
@@ -168,7 +169,7 @@ export function ChatPane(): ReactElement | null {
                     className="albedo-icon-btn"
                     title="Regenerate"
                     aria-label="Regenerate"
-                    disabled={!msg.parentId}
+                    disabled={!msg.parentId || streaming}
                     onClick={() => {
                       if (!msg.parentId) {
                         return;
@@ -245,7 +246,8 @@ export function ChatPane(): ReactElement | null {
                   aria-label="Edit"
                   onClick={() => {
                     setComposerDraft(msg.content ?? '');
-                    setComposerParentId(msg.parentId);
+                    // id null — явное намерение ответить в корень, а не «цель не задана».
+                    setComposerParent({ id: msg.parentId });
                     setDockTab('message');
                   }}
                 >

@@ -37,8 +37,8 @@ export function MessageTab(): ReactElement {
   const bumpChatRev = useWorkspaceStore((s) => s.bumpChatRev);
   const composerDraft = useWorkspaceStore((s) => s.composerDraft);
   const setComposerDraft = useWorkspaceStore((s) => s.setComposerDraft);
-  const composerParentId = useWorkspaceStore((s) => s.composerParentId);
-  const setComposerParentId = useWorkspaceStore((s) => s.setComposerParentId);
+  const composerParent = useWorkspaceStore((s) => s.composerParent);
+  const setComposerParent = useWorkspaceStore((s) => s.setComposerParent);
   const threadTailId = useWorkspaceStore((s) => s.threadTailId);
   const setThreadTailId = useWorkspaceStore((s) => s.setThreadTailId);
   const setThreadTailMeta = useWorkspaceStore((s) => s.setThreadTailMeta);
@@ -52,12 +52,15 @@ export function MessageTab(): ReactElement {
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const setMetrics = useLoopMetrics((s) => s.setMetrics);
   const loopStatus = useLoopMetrics((s) => s.status);
+  const loopSessionId = useLoopMetrics((s) => s.sessionId);
   const regen = useChatRun((s) => s.regen);
   const clearRegen = useChatRun((s) => s.clearRegen);
   const [attach, setAttach] = useState<LocalAttach | null>(null);
   const [running, setRunning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Stop между deleteBranch и runLoop не должен начинать новый цикл.
+  const stopRef = useRef(false);
   const picker = agents.filter((agent) => agent.enabled && agent.visible);
   const canSend = Boolean(session) && Boolean(draft.trim()) && !running;
 
@@ -97,6 +100,7 @@ export function MessageTab(): ReactElement {
   const clearComposer = (): void => {
     setDraft('');
     setAttach(null);
+    setComposerParent(null);
   };
 
   const modelLabel = (): string => {
@@ -114,7 +118,7 @@ export function MessageTab(): ReactElement {
   };
 
   const runLoop = async (): Promise<void> => {
-    if (!session || !pipelineId) {
+    if (!session || !pipelineId || stopRef.current) {
       return;
     }
     const agent = picker.find((item) => item.id === agentId);
@@ -122,28 +126,30 @@ export function MessageTab(): ReactElement {
     abortRef.current = ac;
     setRunning(true);
     setMetrics({
+      sessionId: session.id,
       status: 'running',
       agentName: agent?.name || '',
       modelName: modelLabel(),
       trace: { content: '', reasoning: '', stages: [] },
     });
-    const tick = window.setInterval(() => {
-      void llmApi
-        .runUsage(session.id)
-        .then((row) => {
-          setMetrics({
-            tokensIn: row.tokensIn,
-            tokensOut: row.tokensOut,
-            cacheTokens: row.cacheTokens,
-            cacheHits: row.cacheHits,
-            trace: row.trace,
-          });
-        })
-        .catch(() => undefined);
-    }, 120);
+    let tick = 0;
     try {
-      // Сбрасываем след прошлого ответа в Redis, чтобы тик не принёс его вместо скелетона.
+      // Сбрасываем след прошлого ответа в Redis до запуска тика — иначе тик принесёт его вместо скелетона.
       await llmApi.runUsage(session.id, { reset: true }).catch(() => undefined);
+      tick = window.setInterval(() => {
+        void llmApi
+          .runUsage(session.id)
+          .then((row) => {
+            setMetrics({
+              tokensIn: row.tokensIn,
+              tokensOut: row.tokensOut,
+              cacheTokens: row.cacheTokens,
+              cacheHits: row.cacheHits,
+              trace: row.trace,
+            });
+          })
+          .catch(() => undefined);
+      }, 120);
       const usage = await llmApi.runPipeline({
         workspaceId: session.workspaceId,
         sessionId: session.id,
@@ -152,6 +158,7 @@ export function MessageTab(): ReactElement {
         signal: ac.signal,
       });
       setMetrics({
+        sessionId: session.id,
         status: usage.status,
         tokensIn: usage.tokensIn,
         tokensOut: usage.tokensOut,
@@ -173,26 +180,32 @@ export function MessageTab(): ReactElement {
   };
 
   useEffect(() => {
+    // Запрос во время running не глотаем — deps включают running, эффект повторит попытку после завершения.
     if (!regen || !session || running) {
       return;
     }
     const { assistantId } = regen;
     clearRegen();
+    stopRef.current = false;
     void (async () => {
       try {
         await workspaceApi.deleteBranch(session.workspaceId, session.id, assistantId);
         bumpChatRev();
+        // Stop нажат, пока удалялась ветка — цикл не стартует.
+        if (stopRef.current) {
+          return;
+        }
         await runLoop();
       } catch (err) {
         setMetrics({ status: 'error' });
         toast(humanMessage(err));
       }
     })();
-  }, [regen]);
+  }, [regen, running]);
 
   const resolveTailParent = async (): Promise<string | null> => {
-    if (composerParentId || !session) {
-      return composerParentId ?? threadTailId;
+    if (!session) {
+      return threadTailId;
     }
     try {
       // Стор может отставать от перечитки ленты — решаем по свежим данным.
@@ -220,10 +233,11 @@ export function MessageTab(): ReactElement {
     if (!text) {
       return;
     }
+    stopRef.current = false;
     const agent = picker.find((item) => item.id === agentId);
     try {
-      // Хвост — user без ответа? Новая отправка — ветка того же уровня (DeepSeek-style), не продолжение цепочки.
-      const parentId = await resolveTailParent();
+      // Edit задал цель явно (id null = корень). Иначе хвост — user без ответа? Тогда ветка того же уровня (DeepSeek-style).
+      const parentId = composerParent !== null ? composerParent.id : await resolveTailParent();
       const posted = await workspaceApi.postMessage(session.workspaceId, session.id, 'user', text, {
         agentName: agent?.name,
         parentId: parentId || undefined,
@@ -231,7 +245,6 @@ export function MessageTab(): ReactElement {
       setBranchPick(parentId ?? '', posted.id);
       setThreadTailId(posted.id);
       setThreadTailMeta({ role: 'user', parentId: parentId ?? null });
-      setComposerParentId(null);
       clearComposer();
       bumpChatRev();
       await runLoop();
@@ -249,15 +262,19 @@ export function MessageTab(): ReactElement {
   };
 
   const stop = async (): Promise<void> => {
+    stopRef.current = true;
     abortRef.current?.abort();
     abortRef.current = null;
     setRunning(false);
     setMetrics({ status: 'cancelled' });
-    if (session) {
+    // Отменяем цикл в его сессии — фокус к моменту Stop мог уже уйти.
+    const target = loopSessionId ?? session?.id;
+    if (target) {
       try {
-        const usage = await llmApi.cancelRun(session.id);
+        const usage = await llmApi.cancelRun(target);
         setMetrics({
-          status: usage.status || 'cancelled',
+          // Бэкенд не остановился сразу — не оставляем 'running' залипшим на клиенте.
+          status: !usage.status || usage.status === 'running' ? 'cancelled' : usage.status,
           tokensIn: usage.tokensIn,
           tokensOut: usage.tokensOut,
           cacheTokens: usage.cacheTokens,

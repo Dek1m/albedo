@@ -12,10 +12,12 @@ export function ContextTab(): ReactElement {
   const tokensOut = useLoopMetrics((s) => s.tokensOut);
   const cacheTokens = useLoopMetrics((s) => s.cacheTokens);
   const cacheHits = useLoopMetrics((s) => s.cacheHits);
+  const loopSessionId = useLoopMetrics((s) => s.sessionId);
   const setMetrics = useLoopMetrics((s) => s.setMetrics);
 
   useEffect(() => {
-    if (!focused) {
+    // Стор глобальный: чужой run_usage подменит live-трассу идущего цикла.
+    if (!focused || (loopSessionId !== null && loopSessionId !== focused)) {
       return;
     }
     let cancelled = false;
@@ -47,7 +49,7 @@ export function ContextTab(): ReactElement {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [focused, chatRev, status, setMetrics]);
+  }, [focused, chatRev, status, setMetrics, loopSessionId]);
 
   const rows = [
     { label: 'Status', value: status },

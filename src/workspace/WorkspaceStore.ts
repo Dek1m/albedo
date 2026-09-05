@@ -35,6 +35,11 @@ function withAncestors(paths: string[]): string[] {
   return [...out];
 }
 
+/** Цель ответа композитора: объект — намерение задано (id null = корневое сообщение), null — не задано. */
+export interface ComposerParent {
+  id: string | null;
+}
+
 interface WorkspaceState {
   catalog: Workspace[];
   active: Workspace | null;
@@ -46,7 +51,7 @@ interface WorkspaceState {
   dockTab: 'message' | 'terminal' | 'context';
   chatRev: number;
   composerDraft: string | null;
-  composerParentId: string | null;
+  composerParent: ComposerParent | null;
   threadTailId: string | null;
   threadTailRole: string | null;
   threadTailParentId: string | null;
@@ -63,7 +68,7 @@ interface WorkspaceState {
   setDockTab: (tab: 'message' | 'terminal' | 'context') => void;
   bumpChatRev: () => void;
   setComposerDraft: (draft: string | null) => void;
-  setComposerParentId: (parentId: string | null) => void;
+  setComposerParent: (parent: ComposerParent | null) => void;
   setThreadTailId: (id: string | null) => void;
   setThreadTailMeta: (meta: { role: string | null; parentId: string | null }) => void;
   setBranchPick: (parentId: string, childId: string) => void;
@@ -84,7 +89,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   dockTab: 'message',
   chatRev: 0,
   composerDraft: null,
-  composerParentId: null,
+  composerParent: null,
   threadTailId: null,
   threadTailRole: null,
   threadTailParentId: null,
@@ -110,7 +115,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       focusedSessionId: null,
       expanded: [],
       branchPick: {},
-      composerParentId: null,
+      composerParent: null,
     }),
   setSessions: (sessions) =>
     set((state) => ({
@@ -123,7 +128,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setDockTab: (dockTab) => set({ dockTab }),
   bumpChatRev: () => set((state) => ({ chatRev: state.chatRev + 1 })),
   setComposerDraft: (composerDraft) => set({ composerDraft }),
-  setComposerParentId: (composerParentId) => set({ composerParentId }),
+  setComposerParent: (composerParent) => set({ composerParent }),
   setThreadTailId: (threadTailId) => set({ threadTailId }),
   setThreadTailMeta: ({ role, parentId }) => set({ threadTailRole: role, threadTailParentId: parentId }),
   setBranchPick: (parentId, childId) =>
@@ -150,7 +155,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       focusedSessionId: null,
       foldersOpen: true,
       composerDraft: null,
-      composerParentId: null,
+      composerParent: null,
       branchPick: {},
       expanded: [],
     }),

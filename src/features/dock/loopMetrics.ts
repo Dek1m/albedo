@@ -4,6 +4,7 @@ import type { LlmTrace } from '../../api/llmApi';
 const emptyTrace: LlmTrace = { content: '', reasoning: '', stages: [] };
 
 export interface LoopMetrics {
+  sessionId: string | null;
   status: string;
   tokensIn: number;
   tokensOut: number;
@@ -15,6 +16,7 @@ export interface LoopMetrics {
 }
 
 const idle: LoopMetrics = {
+  sessionId: null,
   status: 'idle',
   tokensIn: 0,
   tokensOut: 0,
@@ -24,6 +26,11 @@ const idle: LoopMetrics = {
   modelName: '',
   trace: emptyTrace,
 };
+
+/** Live-трасса принадлежит сессии, только если цикл запущен в ней — иначе при переключении возникает фантомный стрим. */
+export function shouldShowLive(loopSessionId: string | null, focused: string | null): boolean {
+  return loopSessionId !== null && loopSessionId === focused;
+}
 
 interface LoopMetricsState extends LoopMetrics {
   setMetrics: (next: Partial<LoopMetrics>) => void;

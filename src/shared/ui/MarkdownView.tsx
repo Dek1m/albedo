@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { copyText } from '../copyText';
 import { highlightCode } from '../../features/ai/markdownPrompt';
 
 function escapeHtml(text: string): string {
@@ -140,7 +141,8 @@ async function copyFrom(target: HTMLElement): Promise<void> {
   if (!code) {
     return;
   }
-  await navigator.clipboard.writeText(code.textContent ?? '');
+  // Прод работает по HTTP без TLS — navigator.clipboard там undefined, copyText уходит в execCommand-фолбэк.
+  await copyText(code.textContent ?? '');
 }
 
 export function MarkdownView({ text }: { text: string }): ReactElement {
@@ -153,12 +155,16 @@ export function MarkdownView({ text }: { text: string }): ReactElement {
         if (!(btn instanceof HTMLElement)) {
           return;
         }
-        void copyFrom(btn)
-          .then(() => {
+        void copyFrom(btn).then(
+          () => {
             btn.classList.add('is-copied');
             window.setTimeout(() => btn.classList.remove('is-copied'), 1200);
-          })
-          .catch(() => undefined);
+          },
+          () => {
+            btn.classList.add('is-failed');
+            window.setTimeout(() => btn.classList.remove('is-failed'), 1000);
+          },
+        );
       }}
     />
   );

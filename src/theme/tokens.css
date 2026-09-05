@@ -2097,6 +2097,12 @@ body {
   display: inline-block;
 }
 
+.albedo-code-copy.is-failed {
+  opacity: 1;
+  visibility: visible;
+  color: var(--danger);
+}
+
 .albedo-admin-role-toolbar {
   display: flex;
   justify-content: flex-end;
