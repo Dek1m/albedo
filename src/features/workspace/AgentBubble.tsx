@@ -3,6 +3,10 @@ import type { ReactElement } from 'react';
 import { MarkdownView } from '../../shared/ui/MarkdownView';
 import { useSmoothText } from './useSmoothText';
 
+function reasoningParagraphs(text: string): string[] {
+  return text.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+}
+
 export interface StageView {
   kind: string;
   name: string;
@@ -99,7 +103,9 @@ export function AgentBubble({
                 </div>
                 {reasoningRow && open ? (
                   <div className={`albedo-reasoning-pane${reasoningIsTail ? ' is-tail' : ''}`} ref={paneRef}>
-                    <p className="albedo-reasoning-text">{reasoning}</p>
+                    {reasoningParagraphs(reasoning).map((block, index) => (
+                      <p key={String(index)} className="albedo-reasoning-text">{block}</p>
+                    ))}
                   </div>
                 ) : null}
               </div>

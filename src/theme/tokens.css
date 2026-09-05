@@ -2572,11 +2572,14 @@ body {
 }
 
 .albedo-reasoning-text {
-  margin: 0;
+  margin: 0 0 0.35rem;
   color: rgb(255 255 255 / 48%);
   font-size: var(--font-ui);
   line-height: 1.35;
   white-space: pre-wrap;
+}
+.albedo-reasoning-text:last-child {
+  margin-bottom: 0;
 }
 
 .albedo-tool-line {
