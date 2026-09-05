@@ -391,7 +391,7 @@ export function MessageTab(): ReactElement {
         )}
       </div>
       <div className="albedo-message-composer">
-        <div className="albedo-composer-tokens" aria-live="polite">
+        <div className="albedo-composer-tokens">
           Tokens: {estimatePromptTokens(draft)}
         </div>
         <MarkdownPrompt showToolbar={false} value={draft} onChange={setDraft} onKeyDown={onPromptKey} />

@@ -25,7 +25,7 @@
 
   --text-primary: #e8e8ea;
   --text-secondary: #a8a8ae;
-  --text-muted: #7a7a80;
+  --text-muted: #8a8a90;
 
   --accent: #dbdee1;
   --accent-hover: #f2f3f5;
@@ -1708,6 +1708,11 @@ body {
   color: var(--text-secondary);
   cursor: pointer;
   padding: 0.15rem;
+}
+
+.albedo-icon-btn:focus-visible {
+  outline: 1px solid var(--brand);
+  outline-offset: 1px;
 }
 
 .albedo-kebab {

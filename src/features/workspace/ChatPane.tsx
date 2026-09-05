@@ -91,6 +91,13 @@ export function ChatPane(): ReactElement | null {
 
   useEffect(() => () => cancelAnimationFrame(scrollRafRef.current), []);
 
+  // Новый цикл — панель reasoning прошлого ответа закрыта (rising edge).
+  useEffect(() => {
+    if (streaming) {
+      setReasoningOpen(false);
+    }
+  }, [streaming]);
+
   // Пока пользователь у дна — следуем за потоком. Прокрутил вверх — отпускаем.
   const onLogScroll = (): void => {
     const node = logRef.current;

@@ -116,9 +116,10 @@ describe('Dock', () => {
     expect(pipeline.querySelectorAll('option')).toHaveLength(0);
   });
 
-  it('enables terminal new session', () => {
+  it('enables terminal new session', async () => {
     render(<Dock />);
     fireEvent.click(screen.getByRole('tab', { name: 'Terminal' }));
-    expect(screen.getByLabelText('New session')).not.toBeDisabled();
+    // TerminalTab — lazy-чанк, кнопка появляется после резолва импорта.
+    expect(await screen.findByLabelText('New session')).not.toBeDisabled();
   });
 });

@@ -1,10 +1,15 @@
+import { Suspense, lazy } from 'react';
 import type { ReactElement } from 'react';
 import { PanelGrip } from '../../shared/ui/PanelGrip';
 import { dockHeightMax, useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { ContextTab } from './ContextTab';
 import { MessageTab } from './MessageTab';
-import { TerminalTab } from './TerminalTab';
 import type { DockTab } from './dockTypes';
+
+// xterm тяжёлый — грузим вкладку терминала только по открытию.
+const TerminalTab = lazy(() =>
+  import('./TerminalTab').then((module) => ({ default: module.TerminalTab })),
+);
 
 export function Dock(): ReactElement {
   const height = useWorkspaceStore((s) => s.dockHeight);
@@ -49,7 +54,11 @@ export function Dock(): ReactElement {
         <div className={`albedo-dock-pane${tab === 'message' ? '' : ' is-hidden'}`}>
           <MessageTab />
         </div>
-        {tab === 'terminal' ? <TerminalTab /> : null}
+        {tab === 'terminal' ? (
+          <Suspense fallback={<div className="albedo-term-tab" />}>
+            <TerminalTab />
+          </Suspense>
+        ) : null}
         <div className={`albedo-dock-pane${tab === 'context' ? '' : ' is-hidden'}`}>
           <ContextTab />
         </div>
