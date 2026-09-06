@@ -114,6 +114,8 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
         await llmApi.setAgentAvatar(agentId, packed.imageB64, packed.contentType);
       }
       toast('Saved', 'ok');
+      // Док зеркалит уровень reasoning — сообщаем о смене конфига агента.
+      window.dispatchEvent(new CustomEvent('albedo:agents-changed'));
       onSaved();
       onClose();
     } catch (err) {

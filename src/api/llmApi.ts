@@ -1,7 +1,8 @@
 import { apiClient } from './client';
 
 export type ProviderKind = 'api_key' | 'oauth';
-export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high';
+/** Полная шкала усилий: вендоры с более грубой шкалой маппятся на бэке. */
+export type ReasoningEffort = 'min' | 'low' | 'medium' | 'high' | 'max';
 
 export interface LlmModel {
   id: string;
@@ -45,7 +46,7 @@ export interface ProbedModel {
 
 /** CSV режимов из каталога бэка → валидный массив усилий. */
 export function parseReasoningModes(raw: string | null | undefined): ReasoningEffort[] {
-  const allowed: ReasoningEffort[] = ['none', 'low', 'medium', 'high'];
+  const allowed: ReasoningEffort[] = ['min', 'low', 'medium', 'high', 'max'];
   return (raw ?? '')
     .split(',')
     .map((item) => item.trim().toLowerCase())
@@ -175,8 +176,9 @@ interface ProviderDto {
 }
 
 function mapEffort(value: string | null | undefined): ReasoningEffort | null {
-  if (value === 'none' || value === 'low' || value === 'medium' || value === 'high') {
-    return value;
+  const effort = (value ?? '').trim().toLowerCase();
+  if (['min', 'low', 'medium', 'high', 'max'].includes(effort)) {
+    return effort as ReasoningEffort;
   }
   return null;
 }

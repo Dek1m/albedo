@@ -26,7 +26,7 @@ interface DraftModel {
   reasoningModes: ReasoningEffort[];
 }
 
-const EFFORTS: ReasoningEffort[] = ['none', 'low', 'medium', 'high'];
+const EFFORTS: ReasoningEffort[] = ['min', 'low', 'medium', 'high', 'max'];
 
 function fromSaved(saved: LlmProvider['models']): DraftModel[] {
   return saved.map((known) => ({

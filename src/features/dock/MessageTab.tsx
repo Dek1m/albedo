@@ -30,8 +30,8 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Выбор режима в доке: 'default' — конфиг агента, иначе конкретное усилие. */
-type EffortPick = ReasoningEffort | 'default';
+/** Режим в доке — конкретное усилие, зеркалит конфиг агента. */
+type EffortPick = ReasoningEffort;
 
 export function MessageTab(): ReactElement {
   const focused = useWorkspaceStore((s) => s.focusedSessionId);
@@ -51,8 +51,7 @@ export function MessageTab(): ReactElement {
   const [draft, setDraft] = useState('');
   const [agentId, setAgentId] = useState('');
   const [effort, setEffort] = useState<EffortPick>('medium');
-  const [pipelineId, setPipelineId] = useState('');
-  const [agents, setAgents] = useState<LlmAgent[]>([]);
+  const [pipelineId, setPipelineId] = useState('');  const [agents, setAgents] = useState<LlmAgent[]>([]);
   const [pipelines, setPipelines] = useState<LlmPipeline[]>([]);
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const setMetrics = useLoopMetrics((s) => s.setMetrics);
@@ -73,20 +72,26 @@ export function MessageTab(): ReactElement {
     .flatMap((provider) => provider.models)
     .find((item) => item.id === agent?.model);
   const reasoningSupported = agentModel?.supportsReasoning === true;
-  // Default = режим из конфига агента; доступен, только если он там сохранён.
-  const hasDefault = reasoningSupported && Boolean(agent?.reasoningEffort);
+  // Опции — из каталога модели (вендорские шкалы: grok-4 → min/low/high/max), иначе канон.
+  const effortOptions = reasoningSupported && agentModel?.reasoningModes.length
+    ? agentModel.reasoningModes
+    : (['low', 'medium', 'high'] as ReasoningEffort[]);
+  const effortAllowed = (value: string): value is EffortPick =>
+    effortOptions.includes(value as EffortPick);
+  // Стартовый режим — конкретный уровень агента (зеркало конфига), без него — medium.
+  const agentEffort = reasoningSupported && agent?.reasoningEffort ? agent.reasoningEffort : 'medium';
 
-  // Смена агента (rising-edge, без effect) — перезагружаем выбор режима из его конфига.
+  // Смена агента (rising-edge, без effect) — зеркало его сохранённого уровня.
   const [effortAgentId, setEffortAgentId] = useState(agentId);
   if (agentId !== effortAgentId) {
     setEffortAgentId(agentId);
-    setEffort(agent?.reasoningEffort && reasoningSupported ? 'default' : 'medium');
+    setEffort(agentEffort);
   }
 
   const pickEffort = (value: EffortPick): void => {
     setEffort(value);
-    // Явный выбор в доке — это и правка конфига агента: форма настроек видит то же.
-    if (value === 'default' || !agent || !reasoningSupported) {
+    // Выбор в доке — это и правка конфига агента: форма настроек видит то же.
+    if (!agent || !reasoningSupported) {
       return;
     }
     void llmApi
@@ -123,6 +128,27 @@ export function MessageTab(): ReactElement {
       cancelled = true;
     };
   }, []);
+
+  // Форма агента сохранила конфиг — перечитываем, чтобы док зеркалил уровень.
+  useEffect(() => {
+    const onAgentsChanged = (): void => {
+      void llmApi
+        .listAgents()
+        .then((items) => {
+          setAgents(items);
+          const current = items.find((item) => item.id === agentId);
+          const model = providers
+            .flatMap((provider) => provider.models)
+            .find((item) => item.id === current?.model);
+          if (current && model?.supportsReasoning) {
+            setEffort(current.reasoningEffort ?? 'medium');
+          }
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener('albedo:agents-changed', onAgentsChanged);
+    return () => window.removeEventListener('albedo:agents-changed', onAgentsChanged);
+  }, [agentId, providers]);
 
   useEffect(() => {
     if (composerDraft == null) {
@@ -190,7 +216,7 @@ export function MessageTab(): ReactElement {
         sessionId: session.id,
         pipelineId,
         agentId: agentId || undefined,
-        reasoningEffort: effort === 'default' ? undefined : effort,
+        reasoningEffort: effort,
         signal: ac.signal,
       });
       setMetrics({
@@ -367,15 +393,16 @@ export function MessageTab(): ReactElement {
         <select
           className="form-select form-select-sm albedo-message-effort"
           aria-label="Reasoning"
-          title={agent?.reasoningEffort ? `Agent default: ${agent.reasoningEffort}` : 'Reasoning effort'}
+          title={agent?.reasoningEffort ? `Saved on agent: ${agent.reasoningEffort}` : 'Reasoning effort'}
           disabled={!reasoningSupported}
-          value={effort}
+          value={effortAllowed(effort) ? effort : effortOptions[0]}
           onChange={(event) => pickEffort(event.target.value as EffortPick)}
         >
-          {hasDefault ? <option value="default">Default</option> : null}
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
+          {effortOptions.map((item) => (
+            <option key={item} value={item}>
+              {item.charAt(0).toUpperCase() + item.slice(1)}
+            </option>
+          ))}
         </select>
         <button
           type="button"
