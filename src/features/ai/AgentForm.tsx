@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement } from 'react';
-import type { AgentKind, LlmAgent, LlmProvider } from '../../api/llmApi';
+import type { AgentKind, LlmAgent, LlmProvider, ReasoningEffort } from '../../api/llmApi';
 import { llmApi } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
@@ -35,11 +35,29 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
   const [name, setName] = useState('');
   const [kind, setKind] = useState<Exclude<AgentKind, 'system' | 'user'>>('agent');
   const [model, setModel] = useState('');
+  const [effort, setEffort] = useState<ReasoningEffort | ''>('');
   const [prompt, setPrompt] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const editing = mode?.kind === 'edit';
+  const modelRow = providers
+    .flatMap((provider) => provider.models)
+    .find((item) => item.id === model);
+  // Режим имеет смысл только у reasoning-модели; иначе селект выключен.
+  const reasoningSupported = modelRow?.supportsReasoning === true;
+  const effortOptions = modelRow?.reasoningModes.length
+    ? modelRow.reasoningModes
+    : (['low', 'medium', 'high'] as ReasoningEffort[]);
+
+  // Смена модели на не-reasoning сбрасывает сохраняемый режим (rising-edge, без effect).
+  const [prevSupported, setPrevSupported] = useState(reasoningSupported);
+  if (reasoningSupported !== prevSupported) {
+    setPrevSupported(reasoningSupported);
+    if (!reasoningSupported) {
+      setEffort('');
+    }
+  }
 
   useEffect(() => {
     if (!mode) {
@@ -49,6 +67,7 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
       setName(mode.agent.name);
       setKind(asKind(mode.agent.agentType));
       setModel(mode.agent.model);
+      setEffort(mode.agent.reasoningEffort ?? '');
       setPrompt(mode.agent.systemPrompt);
       setAvatarUrl(mode.agent.avatarUrl);
       setAvatarFile(null);
@@ -57,6 +76,7 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
     setName('');
     setKind('agent');
     setModel('');
+    setEffort('');
     setPrompt('');
     setAvatarUrl(null);
     setAvatarFile(null);
@@ -77,6 +97,7 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
           agentType: kind,
           systemPrompt: prompt,
           model,
+          reasoningEffort: effort || undefined,
         });
       } else {
         const created = await llmApi.createAgent({
@@ -84,6 +105,7 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
           agentType: kind,
           systemPrompt: prompt,
           model,
+          reasoningEffort: effort || null,
         });
         agentId = created.id;
       }
@@ -185,6 +207,30 @@ export function AgentForm({ mode, providers, onClose, onSaved }: AgentFormProps)
               </optgroup>
             );
           })}
+        </select>
+        <label
+          className="form-label"
+          htmlFor="albedo-agent-effort"
+            title={reasoningSupported ? undefined : 'Selected model does not support reasoning'}
+        >
+          Reasoning
+        </label>
+        <select
+          id="albedo-agent-effort"
+          className="form-select form-select-sm"
+          disabled={saving || !reasoningSupported}
+          value={effort}
+          onChange={(event) => {
+            const next = event.target.value as ReasoningEffort | '';
+            setEffort(next);
+          }}
+        >
+          {!effort ? <option value="">Model default</option> : null}
+          {effortOptions.map((item) => (
+            <option key={item} value={item}>
+              {item.charAt(0).toUpperCase() + item.slice(1)}
+            </option>
+          ))}
         </select>
         <label className="form-label">System prompt</label>
         <MarkdownPrompt value={prompt} disabled={saving} onChange={setPrompt} />

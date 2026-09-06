@@ -3330,6 +3330,12 @@ body {
   max-width: 12rem;
 }
 
+.albedo-message-effort {
+  width: auto;
+  min-width: 4.6rem;
+  max-width: 7rem;
+}
+
 .albedo-message-composer {
   position: relative;
   flex: 1;

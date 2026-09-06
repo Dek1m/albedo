@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { llmApi } from '../../api/llmApi';
-import type { LlmAgent } from '../../api/llmApi';
+import type { LlmAgent, LlmProvider } from '../../api/llmApi';
 import { workspaceApi } from '../../api/workspaceApi';
 import type { ChatMessage } from '../../domain/workspace';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
@@ -31,6 +31,7 @@ export function ContextPanel(): ReactElement {
   const liveModel = useLoopMetrics((s) => s.modelName);
   const setMetrics = useLoopMetrics((s) => s.setMetrics);
   const [agents, setAgents] = useState<LlmAgent[]>([]);
+  const [providers, setProviders] = useState<LlmProvider[]>([]);
   // Данные принадлежат сессии загрузки: при переключении вкладки чата лента не «мигает» чужим.
   const [loaded, setLoaded] = useState<{ session: string | null; items: ChatMessage[] }>({
     session: null,
@@ -77,16 +78,17 @@ export function ContextPanel(): ReactElement {
   // System prompt нужен для реконструкции промпта — каталог агентов статичен, грузим один раз.
   useEffect(() => {
     let cancelled = false;
-    void llmApi
-      .listAgents()
-      .then((items) => {
+    void Promise.all([llmApi.listAgents(), llmApi.listProviders()])
+      .then(([items, catalog]) => {
         if (!cancelled) {
           setAgents(items);
+          setProviders(catalog);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setAgents([]);
+          setProviders([]);
         }
       });
     return () => {
@@ -146,7 +148,25 @@ export function ContextPanel(): ReactElement {
   );
 
   const cacheRate = tokensIn > 0 ? `${Math.round((cacheTokens / tokensIn) * 100)}%` : '—';
-  const contextWindow = modelName ? matchContextWindow(modelName) : matchContextWindow(agentName);
+  // Окно модели: сначала фактическое из каталога (провайдер отдал), затем локальная эвристика.
+  const catalogWindow = useMemo(() => {
+    if (!modelName) {
+      return null;
+    }
+    const needle = modelName.toLowerCase();
+    for (const provider of providers) {
+      for (const item of provider.models) {
+        if (
+          item.displayName.toLowerCase() === needle ||
+          item.modelId.toLowerCase() === needle
+        ) {
+          return item.contextLength;
+        }
+      }
+    }
+    return null;
+  }, [providers, modelName]);
+  const contextWindow = catalogWindow ?? (modelName ? matchContextWindow(modelName) : null);
   const windowLabel = contextWindow ? formatCount(contextWindow) : '—';
   const usedPct =
     contextWindow && contextWindow > 0 ? Math.min(100, Math.round((tokensIn / contextWindow) * 100)) : null;

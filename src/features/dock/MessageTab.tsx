@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
 import { llmApi } from '../../api/llmApi';
-import type { LlmAgent, LlmPipeline, LlmProvider } from '../../api/llmApi';
+import type { LlmAgent, LlmPipeline, LlmProvider, ReasoningEffort } from '../../api/llmApi';
 import { humanMessage } from '../../api/errors';
 import { workspaceApi } from '../../api/workspaceApi';
 import { MarkdownPrompt } from '../ai/MarkdownPrompt';
@@ -30,6 +30,9 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Выбор режима в доке: 'default' — конфиг агента, иначе конкретное усилие. */
+type EffortPick = ReasoningEffort | 'default';
+
 export function MessageTab(): ReactElement {
   const focused = useWorkspaceStore((s) => s.focusedSessionId);
   const tabs = useWorkspaceStore((s) => s.tabs);
@@ -47,6 +50,7 @@ export function MessageTab(): ReactElement {
   const session = tabs.find((item) => item.id === focused) ?? sessions.find((item) => item.id === focused);
   const [draft, setDraft] = useState('');
   const [agentId, setAgentId] = useState('');
+  const [effort, setEffort] = useState<EffortPick>('medium');
   const [pipelineId, setPipelineId] = useState('');
   const [agents, setAgents] = useState<LlmAgent[]>([]);
   const [pipelines, setPipelines] = useState<LlmPipeline[]>([]);
@@ -64,6 +68,36 @@ export function MessageTab(): ReactElement {
   const stopRef = useRef(false);
   const picker = agents.filter((agent) => agent.enabled && agent.visible);
   const canSend = Boolean(session) && Boolean(draft.trim()) && !running;
+  const agent = picker.find((item) => item.id === agentId);
+  const agentModel = providers
+    .flatMap((provider) => provider.models)
+    .find((item) => item.id === agent?.model);
+  const reasoningSupported = agentModel?.supportsReasoning === true;
+  // Default = режим из конфига агента; доступен, только если он там сохранён.
+  const hasDefault = reasoningSupported && Boolean(agent?.reasoningEffort);
+
+  // Смена агента (rising-edge, без effect) — перезагружаем выбор режима из его конфига.
+  const [effortAgentId, setEffortAgentId] = useState(agentId);
+  if (agentId !== effortAgentId) {
+    setEffortAgentId(agentId);
+    setEffort(agent?.reasoningEffort && reasoningSupported ? 'default' : 'medium');
+  }
+
+  const pickEffort = (value: EffortPick): void => {
+    setEffort(value);
+    // Явный выбор в доке — это и правка конфига агента: форма настроек видит то же.
+    if (value === 'default' || !agent || !reasoningSupported) {
+      return;
+    }
+    void llmApi
+      .updateAgent({ agentId: agent.id, reasoningEffort: value })
+      .then(() => {
+        setAgents((current) =>
+          current.map((item) => (item.id === agent.id ? { ...item, reasoningEffort: value } : item)),
+        );
+      })
+      .catch((err) => toast(humanMessage(err)));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -156,6 +190,7 @@ export function MessageTab(): ReactElement {
         sessionId: session.id,
         pipelineId,
         agentId: agentId || undefined,
+        reasoningEffort: effort === 'default' ? undefined : effort,
         signal: ac.signal,
       });
       setMetrics({
@@ -328,6 +363,19 @@ export function MessageTab(): ReactElement {
               {agent.name}
             </option>
           ))}
+        </select>
+        <select
+          className="form-select form-select-sm albedo-message-effort"
+          aria-label="Reasoning"
+          title={agent?.reasoningEffort ? `Agent default: ${agent.reasoningEffort}` : 'Reasoning effort'}
+          disabled={!reasoningSupported}
+          value={effort}
+          onChange={(event) => pickEffort(event.target.value as EffortPick)}
+        >
+          {hasDefault ? <option value="default">Default</option> : null}
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
         </select>
         <button
           type="button"

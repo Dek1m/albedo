@@ -9,6 +9,7 @@ vi.mock('../../api/llmApi', () => ({
     listAgents: vi.fn(async () => [
       { id: 'a1', name: 'Bot', systemPrompt: 'be brief', model: 'm1' },
     ]),
+    listProviders: vi.fn(async () => []),
     runUsage: vi.fn(async () => ({
       id: null,
       status: 'idle',

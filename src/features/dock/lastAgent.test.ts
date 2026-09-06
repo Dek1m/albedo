@@ -8,6 +8,7 @@ function agent(partial: Partial<LlmAgent> & Pick<LlmAgent, 'id' | 'name'>): LlmA
     description: '',
     systemPrompt: '',
     model: '',
+    reasoningEffort: null,
     avatarUrl: null,
     enabled: true,
     visible: true,

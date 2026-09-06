@@ -13,6 +13,10 @@ export interface LlmModel {
   supportsReasoning: boolean;
   reasoningEnabled: boolean;
   reasoningEffort: ReasoningEffort | null;
+  /** Окно контекста от провайдера (OpenRouter/vLLM/LM Studio); null — не отдал. */
+  contextLength: number | null;
+  /** Режимы reasoning от провайдера, напр. ['low','medium','high']. */
+  reasoningModes: ReasoningEffort[];
 }
 
 export interface LlmProvider {
@@ -35,6 +39,17 @@ export interface ProbedModel {
   id: string;
   name: string;
   supportsReasoning: boolean;
+  contextLength: number | null;
+  reasoningModes: ReasoningEffort[];
+}
+
+/** CSV режимов из каталога бэка → валидный массив усилий. */
+export function parseReasoningModes(raw: string | null | undefined): ReasoningEffort[] {
+  const allowed: ReasoningEffort[] = ['none', 'low', 'medium', 'high'];
+  return (raw ?? '')
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter((item): item is ReasoningEffort => allowed.includes(item as ReasoningEffort));
 }
 
 export type AgentKind = 'agent' | 'subagent' | 'cronagent' | 'system' | 'user';
@@ -121,6 +136,8 @@ export interface LlmAgent {
   description: string;
   systemPrompt: string;
   model: string;
+  /** Режим reasoning агента; null — наследовать у модели каталога. */
+  reasoningEffort: ReasoningEffort | null;
   avatarUrl: string | null;
   enabled: boolean;
   visible: boolean;
@@ -137,6 +154,8 @@ interface ModelDto {
   supports_reasoning?: boolean;
   reasoning_enabled?: boolean;
   reasoning_effort?: string | null;
+  context_length?: number | null;
+  reasoning_modes?: string | null;
 }
 
 interface ProviderDto {
@@ -173,6 +192,9 @@ function mapModel(item: ModelDto): LlmModel {
     supportsReasoning: Boolean(item.supports_reasoning),
     reasoningEnabled: Boolean(item.reasoning_enabled),
     reasoningEffort: mapEffort(item.reasoning_effort),
+    contextLength:
+      typeof item.context_length === 'number' && item.context_length > 0 ? item.context_length : null,
+    reasoningModes: parseReasoningModes(item.reasoning_modes),
   };
 }
 
@@ -191,6 +213,23 @@ function mapProvider(item: ProviderDto): LlmProvider {
     shared: Boolean(item.shared),
     common: Boolean(item.common),
     models: (item.models ?? []).map(mapModel),
+  };
+}
+
+function mapProbed(item: {
+  id: string;
+  name: string;
+  supports_reasoning?: boolean;
+  context_length?: number | null;
+  reasoning_modes?: string | null;
+}): ProbedModel {
+  return {
+    id: item.id,
+    name: item.name,
+    supportsReasoning: Boolean(item.supports_reasoning),
+    contextLength:
+      typeof item.context_length === 'number' && item.context_length > 0 ? item.context_length : null,
+    reasoningModes: parseReasoningModes(item.reasoning_modes),
   };
 }
 
@@ -235,6 +274,8 @@ export const llmApi = {
       supports_reasoning?: boolean;
       reasoning_enabled?: boolean;
       reasoning_effort?: string | null;
+      context_length?: number | null;
+      reasoning_modes?: string | null;
     }[];
   }): Promise<LlmProvider> {
     const dto = await apiClient.call<ProviderDto>('llm', 'create_provider', {
@@ -268,6 +309,8 @@ export const llmApi = {
       supports_reasoning?: boolean;
       reasoning_enabled?: boolean;
       reasoning_effort?: string | null;
+      context_length?: number | null;
+      reasoning_modes?: string | null;
     }[];
   }): Promise<LlmProvider> {
     const dto = await apiClient.call<ProviderDto>('llm', 'update_provider', {
@@ -287,17 +330,13 @@ export const llmApi = {
 
   async probeModels(baseUrl: string, apiKey: string): Promise<ProbedModel[]> {
     const result = await apiClient.call<{
-      items: { id: string; name: string; supports_reasoning?: boolean }[];
+      items: { id: string; name: string; supports_reasoning?: boolean; context_length?: number | null; reasoning_modes?: string | null }[];
     }>('llm', 'probe_models', {
       base_url: baseUrl,
       api_key: apiKey,
     });
     const rows = result.items ?? [];
-    return rows.map((item) => ({
-      id: item.id,
-      name: item.name,
-      supportsReasoning: Boolean(item.supports_reasoning),
-    }));
+    return rows.map(mapProbed);
   },
 
   async refreshCatalog(): Promise<{ providerName: string; modelId: string; displayName: string }[]> {
@@ -414,6 +453,7 @@ export const llmApi = {
         description?: string | null;
         system_prompt?: string | null;
         model?: string | null;
+        reasoning_effort?: string | null;
         avatar_url?: string | null;
         is_active?: boolean;
         is_visible?: boolean;
@@ -427,6 +467,7 @@ export const llmApi = {
       description: String(row.description ?? ''),
       systemPrompt: String(row.system_prompt ?? ''),
       model: String(row.model ?? ''),
+      reasoningEffort: mapEffort(row.reasoning_effort ?? null),
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
       enabled: row.is_active !== false,
       visible: row.is_visible !== false,
@@ -439,6 +480,7 @@ export const llmApi = {
     agentType: AgentKind;
     systemPrompt: string;
     model: string;
+    reasoningEffort?: ReasoningEffort | null;
   }): Promise<LlmAgent> {
     const row = await apiClient.call<{
       id?: string;
@@ -447,12 +489,14 @@ export const llmApi = {
       description?: string | null;
       system_prompt?: string | null;
       model?: string | null;
+      reasoning_effort?: string | null;
       avatar_url?: string | null;
     }>('llm', 'create_agent', {
       name: input.name,
       agent_type: input.agentType,
       system_prompt: input.systemPrompt,
       model: input.model || null,
+      reasoning_effort: input.reasoningEffort ?? null,
     });
     return {
       id: String(row.id ?? ''),
@@ -461,6 +505,7 @@ export const llmApi = {
       description: String(row.description ?? ''),
       systemPrompt: String(row.system_prompt ?? input.systemPrompt),
       model: String(row.model ?? input.model),
+      reasoningEffort: mapEffort(row.reasoning_effort ?? input.reasoningEffort ?? null),
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
       enabled: true,
       visible: true,
@@ -479,17 +524,20 @@ export const llmApi = {
 
   async updateAgent(input: {
     agentId: string;
-    name: string;
-    agentType: AgentKind;
-    systemPrompt: string;
-    model: string;
+    name?: string;
+    agentType?: AgentKind;
+    systemPrompt?: string;
+    model?: string;
+    /** null/undefined — не трогать сохранённый режим. */
+    reasoningEffort?: ReasoningEffort;
   }): Promise<void> {
     await apiClient.call('llm', 'update_agent', {
       agent_id: input.agentId,
       name: input.name,
       agent_type: input.agentType,
       system_prompt: input.systemPrompt,
-      model: input.model || null,
+      model: input.model,
+      reasoning_effort: input.reasoningEffort,
     });
   },
 
@@ -526,6 +574,8 @@ export const llmApi = {
     sessionId: string;
     pipelineId?: string;
     agentId?: string;
+    /** Разовый режим поверх конфига агента; undefined — конфиг агента. */
+    reasoningEffort?: ReasoningEffort;
     signal?: AbortSignal;
   }): Promise<LlmRunUsage> {
     const row = await apiClient.call<{
@@ -543,6 +593,7 @@ export const llmApi = {
       session_id: input.sessionId,
       pipeline_id: input.pipelineId,
       agent_id: input.agentId,
+      reasoning_effort: input.reasoningEffort,
     }, { signal: input.signal });
     return asRun(row);
   },
@@ -579,10 +630,6 @@ export const llmApi = {
     const result = await apiClient.call<{
       items: { id: string; name: string; supports_reasoning?: boolean }[];
     }>('llm', 'probe_provider_models', { provider_id: providerId });
-    return (result.items ?? []).map((item) => ({
-      id: item.id,
-      name: item.name,
-      supportsReasoning: Boolean(item.supports_reasoning),
-    }));
+    return (result.items ?? []).map(mapProbed);
   },
 };

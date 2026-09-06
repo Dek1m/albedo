@@ -21,6 +21,9 @@ interface DraftModel {
   supportsReasoning: boolean;
   reasoningEnabled: boolean;
   reasoningEffort: ReasoningEffort;
+  /** Окно и режимы от провайдера — переносим в каталог, чтобы не терять при сохранении. */
+  contextLength: number | null;
+  reasoningModes: ReasoningEffort[];
 }
 
 const EFFORTS: ReasoningEffort[] = ['none', 'low', 'medium', 'high'];
@@ -34,11 +37,13 @@ function fromSaved(saved: LlmProvider['models']): DraftModel[] {
     supportsReasoning: known.supportsReasoning,
     reasoningEnabled: known.reasoningEnabled,
     reasoningEffort: known.reasoningEffort ?? 'medium',
+    contextLength: known.contextLength,
+    reasoningModes: known.reasoningModes,
   }));
 }
 
 function toDraft(
-  probed: { id: string; name: string; supportsReasoning: boolean }[],
+  probed: { id: string; name: string; supportsReasoning: boolean; contextLength: number | null; reasoningModes: ReasoningEffort[] }[],
 ): DraftModel[] {
   return probed.map((item) => ({
     id: item.id,
@@ -48,11 +53,13 @@ function toDraft(
     supportsReasoning: item.supportsReasoning,
     reasoningEnabled: false,
     reasoningEffort: 'medium',
+    contextLength: item.contextLength,
+    reasoningModes: item.reasoningModes,
   }));
 }
 
 function mergeCatalog(
-  probed: { id: string; name: string; supportsReasoning: boolean }[],
+  probed: { id: string; name: string; supportsReasoning: boolean; contextLength: number | null; reasoningModes: ReasoningEffort[] }[],
   saved: LlmProvider['models'],
 ): DraftModel[] {
   const known = new Map(saved.map((item) => [item.modelId, item]));
@@ -66,6 +73,8 @@ function mergeCatalog(
       supportsReasoning: item.supportsReasoning || Boolean(prev?.supportsReasoning),
       reasoningEnabled: prev?.reasoningEnabled ?? false,
       reasoningEffort: prev?.reasoningEffort ?? 'medium',
+      contextLength: item.contextLength ?? prev?.contextLength ?? null,
+      reasoningModes: item.reasoningModes.length ? item.reasoningModes : (prev?.reasoningModes ?? []),
     };
   });
   const seen = new Set(probed.map((item) => item.id));
@@ -81,6 +90,8 @@ function mergeCatalog(
       supportsReasoning: prev.supportsReasoning,
       reasoningEnabled: prev.reasoningEnabled,
       reasoningEffort: prev.reasoningEffort ?? 'medium',
+      contextLength: prev.contextLength,
+      reasoningModes: prev.reasoningModes,
     });
   }
   return rows;
@@ -358,6 +369,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               supports_reasoning: item.supportsReasoning,
               reasoning_enabled: item.reasoningEnabled,
               reasoning_effort: item.supportsReasoning ? item.reasoningEffort : null,
+              context_length: item.contextLength,
+              reasoning_modes: item.reasoningModes.length ? item.reasoningModes.join(',') : null,
             })),
         });
         setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
@@ -421,6 +434,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
               supports_reasoning: item.supportsReasoning,
               reasoning_enabled: item.reasoningEnabled,
               reasoning_effort: item.supportsReasoning ? item.reasoningEffort : null,
+              context_length: item.contextLength,
+              reasoning_modes: item.reasoningModes.length ? item.reasoningModes.join(',') : null,
             })),
         });
         setItems((current) => {
