@@ -26,7 +26,6 @@ interface DraftModel {
   reasoningModes: ReasoningEffort[];
 }
 
-const EFFORTS: ReasoningEffort[] = ['min', 'low', 'medium', 'high', 'max'];
 
 function fromSaved(saved: LlmProvider['models']): DraftModel[] {
   return saved.map((known) => ({
@@ -697,6 +696,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                             <ReasoningControls
                               enabled={model.reasoningEnabled}
                               effort={model.reasoningEffort ?? 'medium'}
+                              modes={model.reasoningModes}
                               onEnabled={(next) =>
                                 void patchReasoning(item, model.id, next, model.reasoningEffort ?? 'medium')
                               }
@@ -969,6 +969,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
                         <ReasoningControls
                           enabled={item.reasoningEnabled}
                           effort={item.reasoningEffort}
+                          modes={item.reasoningModes}
                           onEnabled={(next) =>
                             setDraft((current) =>
                               (current ?? []).map((row) =>
@@ -1066,14 +1067,18 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
 function ReasoningControls({
   enabled,
   effort,
+  modes,
   onEnabled,
   onEffort,
 }: {
   enabled: boolean;
   effort: ReasoningEffort;
+  /** Шкала конкретной модели из каталога; пусто — канон low/medium/high. */
+  modes: ReasoningEffort[];
   onEnabled: (next: boolean) => void;
   onEffort: (next: ReasoningEffort) => void;
 }): ReactElement {
+  const options = modes.length ? modes : (['low', 'medium', 'high'] as ReasoningEffort[]);
   return (
     <span className="albedo-ai-reasoning">
       <label className="albedo-ai-reasoning-check">
@@ -1088,10 +1093,10 @@ function ReasoningControls({
       {enabled ? (
         <select
           className="form-select form-select-sm albedo-ai-reasoning-effort"
-          value={effort}
+          value={options.includes(effort) ? effort : options[0]}
           onChange={(event) => onEffort(event.target.value as ReasoningEffort)}
         >
-          {EFFORTS.map((item) => (
+          {options.map((item) => (
             <option key={item} value={item}>
               {item}
             </option>
