@@ -15,6 +15,7 @@ import { AiWindows } from '../ai/AiWindows';
 import { WorkspaceMenu, loadCatalog } from '../workspace/WorkspaceMenu';
 import { WorkspaceModals } from '../workspace/WorkspaceModals';
 import { WorkspaceSidebar } from '../workspace/WorkspaceSidebar';
+import { InspectorSidebar } from '../inspector/InspectorSidebar';
 import { useAuthStore } from '../../auth/AuthStore';
 import {
   applySavedWorkspaceChrome,
@@ -35,6 +36,7 @@ import { UserChip } from './UserChip';
 export function AppShell(): ReactElement {
   const navigate = useNavigate();
   const active = useWorkspaceStore((s) => s.active);
+  const rightSidebarOpen = useWorkspaceStore((s) => s.rightSidebarOpen);
   const [listOpen, setListOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
@@ -57,6 +59,7 @@ export function AppShell(): ReactElement {
         const store = useWorkspaceStore.getState();
         store.setSidebarWidth(layout.sidebarWidth);
         store.setDockHeight(layout.dockHeight);
+        store.setRightSidebarWidth(layout.rightSidebarWidth);
       }
       if (layout?.workspaceId) {
         try {
@@ -141,6 +144,7 @@ export function AppShell(): ReactElement {
           </main>
           <Dock />
         </div>
+        {active && rightSidebarOpen ? <InspectorSidebar /> : null}
       </div>
       <AiWindows pane={aiPane} onClose={() => setAiPane(null)} />
       <SystemWindows pane={systemPane} onClose={() => setSystemPane(null)} />

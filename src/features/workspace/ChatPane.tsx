@@ -12,6 +12,7 @@ import { toast } from '../../shared/toast/toastStore';
 import { useWorkspaceStore } from '../../workspace/WorkspaceStore';
 import { shouldShowLive, useLoopMetrics } from '../dock/loopMetrics';
 import { AgentBubble } from './AgentBubble';
+import { ChatHud } from './ChatHud';
 import { useChatRun } from './chatRun';
 import { siblingsOf, visiblePath, withParents } from './chatBranches';
 
@@ -197,6 +198,7 @@ export function ChatPane(): ReactElement | null {
 
   return (
     <section className="albedo-chat">
+      <ChatHud />
       <div ref={logRef} className="albedo-chat-log" onScroll={onLogScroll}>
         {history.map((msg, index) => {
           const leaving = exiting && index >= exitFrom;

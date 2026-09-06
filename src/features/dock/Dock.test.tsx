@@ -70,18 +70,12 @@ describe('Dock', () => {
     });
   });
 
-  it('shows Message, Terminal and Context tabs', () => {
+  it('shows Message and Terminal tabs only', () => {
     render(<Dock />);
     expect(screen.getByRole('tab', { name: 'Message' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Terminal' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Context' })).toBeInTheDocument();
-  });
-
-  it('shows idle loop metrics on Context', () => {
-    render(<Dock />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Context' }));
-    expect(screen.getByText('Tokens in')).toBeInTheDocument();
-    expect(screen.getByText('Cache hits')).toBeInTheDocument();
+    // Context переехал в правый инспектор — вкладки в доке быть не должно.
+    expect(screen.queryByRole('tab', { name: 'Context' })).not.toBeInTheDocument();
   });
 
   it('shows composer token estimate', () => {
@@ -98,7 +92,7 @@ describe('Dock', () => {
     render(<Dock />);
     const box = document.querySelector('.albedo-md-input') as HTMLTextAreaElement;
     fireEvent.change(box, { target: { value: 'keep me' } });
-    fireEvent.click(screen.getByRole('tab', { name: 'Context' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Terminal' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Message' }));
     expect((document.querySelector('.albedo-md-input') as HTMLTextAreaElement).value).toBe('keep me');
   });

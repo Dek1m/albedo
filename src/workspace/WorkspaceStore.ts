@@ -10,6 +10,16 @@ export function clampDockHeight(height: number): number {
   return Math.min(Math.max(height, 120), dockHeightMax());
 }
 
+export const RIGHT_SIDEBAR_MIN = 220;
+export const RIGHT_SIDEBAR_MAX = 560;
+
+export function clampRightSidebarWidth(width: number): number {
+  return Math.min(Math.max(width, RIGHT_SIDEBAR_MIN), RIGHT_SIDEBAR_MAX);
+}
+
+/** Вкладки правого инспектора чата. History/Tools — заглушки. */
+export type RightSidebarTab = 'context' | 'history' | 'tools';
+
 export function mergeWorkspaceTabs(
   tabs: WsSession[],
   workspaceId: string,
@@ -48,7 +58,10 @@ interface WorkspaceState {
   focusedSessionId: SessionId | null;
   sidebarWidth: number;
   dockHeight: number;
-  dockTab: 'message' | 'terminal' | 'context';
+  dockTab: 'message' | 'terminal';
+  rightSidebarOpen: boolean;
+  rightSidebarWidth: number;
+  rightSidebarTab: RightSidebarTab;
   chatRev: number;
   scrollRequest: number;
   composerDraft: string | null;
@@ -66,7 +79,11 @@ interface WorkspaceState {
   setFocused: (id: SessionId | null) => void;
   setSidebarWidth: (width: number) => void;
   setDockHeight: (height: number) => void;
-  setDockTab: (tab: 'message' | 'terminal' | 'context') => void;
+  setDockTab: (tab: 'message' | 'terminal') => void;
+  setRightSidebarOpen: (open: boolean) => void;
+  setRightSidebarWidth: (width: number) => void;
+  setRightSidebarTab: (tab: RightSidebarTab) => void;
+  openRightSidebar: (tab: RightSidebarTab) => void;
   bumpChatRev: () => void;
   requestScroll: () => void;
   setComposerDraft: (draft: string | null) => void;
@@ -89,6 +106,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   sidebarWidth: 240,
   dockHeight: 200,
   dockTab: 'message',
+  rightSidebarOpen: false,
+  rightSidebarWidth: 320,
+  rightSidebarTab: 'context',
   chatRev: 0,
   scrollRequest: 0,
   composerDraft: null,
@@ -119,6 +139,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       expanded: [],
       branchPick: {},
       composerParent: null,
+      rightSidebarOpen: false,
     }),
   setSessions: (sessions) =>
     set((state) => ({
@@ -129,6 +150,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
   setDockHeight: (height) => set({ dockHeight: clampDockHeight(height) }),
   setDockTab: (dockTab) => set({ dockTab }),
+  setRightSidebarOpen: (rightSidebarOpen) => set({ rightSidebarOpen }),
+  setRightSidebarWidth: (width) => set({ rightSidebarWidth: clampRightSidebarWidth(width) }),
+  setRightSidebarTab: (rightSidebarTab) => set({ rightSidebarTab }),
+  openRightSidebar: (tab) => set({ rightSidebarOpen: true, rightSidebarTab: tab }),
   bumpChatRev: () => set((state) => ({ chatRev: state.chatRev + 1 })),
   requestScroll: () => set((state) => ({ scrollRequest: state.scrollRequest + 1 })),
   setComposerDraft: (composerDraft) => set({ composerDraft }),

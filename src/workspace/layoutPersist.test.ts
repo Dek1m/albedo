@@ -14,11 +14,13 @@ describe('layoutPersist', () => {
       foldersOpen: true,
       sidebarWidth: 300,
       dockHeight: 240,
+      rightSidebarWidth: 360,
       expandedByWs: {},
     });
     const got = readLayout('u1');
     expect(got?.sidebarWidth).toBe(300);
     expect(got?.dockHeight).toBe(240);
+    expect(got?.rightSidebarWidth).toBe(360);
     expect(got?.workspaceId).toBe('ws');
   });
 
@@ -35,5 +37,7 @@ describe('layoutPersist', () => {
       }),
     );
     expect(readLayout('u2')?.dockHeight).toBe(200);
+    // Старый layout без инспектора получает дефолтную ширину.
+    expect(readLayout('u2')?.rightSidebarWidth).toBe(320);
   });
 });

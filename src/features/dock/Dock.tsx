@@ -2,7 +2,6 @@ import { Suspense, lazy } from 'react';
 import type { ReactElement } from 'react';
 import { PanelGrip } from '../../shared/ui/PanelGrip';
 import { dockHeightMax, useWorkspaceStore } from '../../workspace/WorkspaceStore';
-import { ContextTab } from './ContextTab';
 import { MessageTab } from './MessageTab';
 import type { DockTab } from './dockTypes';
 
@@ -40,15 +39,6 @@ export function Dock(): ReactElement {
         >
           Terminal
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'context'}
-          className={`albedo-dock-tab${tab === 'context' ? ' is-active' : ''}`}
-          onClick={() => setDockTab('context' satisfies DockTab)}
-        >
-          Context
-        </button>
       </div>
       <div className="albedo-dock-body">
         <div className={`albedo-dock-pane${tab === 'message' ? '' : ' is-hidden'}`}>
@@ -59,9 +49,6 @@ export function Dock(): ReactElement {
             <TerminalTab />
           </Suspense>
         ) : null}
-        <div className={`albedo-dock-pane${tab === 'context' ? '' : ' is-hidden'}`}>
-          <ContextTab />
-        </div>
       </div>
     </section>
   );

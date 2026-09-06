@@ -14,6 +14,8 @@ export interface ShellLayout {
   foldersOpen: boolean;
   sidebarWidth: number;
   dockHeight: number;
+  /** Открытость/вкладку не персистим: панелька значков скрыта при открытом сайдбаре. */
+  rightSidebarWidth: number;
   expandedByWs: Record<string, string[]>;
 }
 
@@ -35,6 +37,7 @@ export function readLayout(userId: string): ShellLayout | null {
       foldersOpen: parsed.foldersOpen !== false,
       sidebarWidth: typeof parsed.sidebarWidth === 'number' ? parsed.sidebarWidth : 240,
       dockHeight: typeof parsed.dockHeight === 'number' ? parsed.dockHeight : 200,
+      rightSidebarWidth: typeof parsed.rightSidebarWidth === 'number' ? parsed.rightSidebarWidth : 320,
       expandedByWs: parsed.expandedByWs ?? {},
     };
   } catch {
@@ -81,6 +84,7 @@ export function persistCurrentLayout(): void {
     foldersOpen: state.foldersOpen,
     sidebarWidth: state.sidebarWidth,
     dockHeight: state.dockHeight,
+    rightSidebarWidth: state.rightSidebarWidth,
     expandedByWs,
   });
 }

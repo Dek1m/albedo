@@ -11,9 +11,11 @@ interface PanelGripProps {
   min: number;
   max: number;
   onChange: (next: number) => void;
+  /** Зеркальный грип: для панели, прижатой к правому краю (грип слева, рост влево). */
+  flip?: boolean;
 }
 
-export function PanelGrip({ axis, value, min, max, onChange }: PanelGripProps): ReactElement {
+export function PanelGrip({ axis, value, min, max, onChange, flip = false }: PanelGripProps): ReactElement {
   const apply = useCallback(
     (next: number): void => {
       onChange(clampValue(next, min, max));
@@ -28,8 +30,9 @@ export function PanelGrip({ axis, value, min, max, onChange }: PanelGripProps): 
     event.preventDefault();
     const start = axis === 'x' ? event.clientX : event.clientY;
     const origin = value;
+    const sign = flip ? -1 : 1;
     const move = (ev: PointerEvent): void => {
-      const delta = axis === 'x' ? ev.clientX - start : start - ev.clientY;
+      const delta = axis === 'x' ? (ev.clientX - start) * sign : start - ev.clientY;
       apply(origin + delta);
     };
     const up = (): void => {
@@ -44,7 +47,8 @@ export function PanelGrip({ axis, value, min, max, onChange }: PanelGripProps): 
     const step = 16;
     if (axis === 'x' && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
       event.preventDefault();
-      apply(value + (event.key === 'ArrowRight' ? step : -step));
+      const dir = event.key === 'ArrowRight' ? 1 : -1;
+      apply(value + dir * (flip ? -step : step));
     }
     if (axis === 'y' && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
       event.preventDefault();
@@ -54,7 +58,7 @@ export function PanelGrip({ axis, value, min, max, onChange }: PanelGripProps): 
 
   return (
     <div
-      className={`albedo-grip albedo-grip--${axis}`}
+      className={`albedo-grip albedo-grip--${axis}${flip ? ' is-flipped' : ''}`}
       role="separator"
       tabIndex={0}
       aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
