@@ -382,6 +382,7 @@ export function MessageTab(): ReactElement {
               <div className="albedo-composer-tokens">
                 Tokens: {estimatePromptTokens(draft)}
               </div>
+              <div className="albedo-composer-bar">
               <div className="albedo-composer-hud" role="toolbar" aria-label="Composer tools">
                 <button
                   type="button"
@@ -465,6 +466,7 @@ export function MessageTab(): ReactElement {
               >
                 <i className={`bi ${running || loopStatus === 'running' ? 'bi-stop-fill' : 'bi-arrow-up'}`} />
               </button>
+              </div>
             </>
           }
         />

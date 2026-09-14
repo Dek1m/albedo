@@ -41,12 +41,20 @@ export function MarkdownPrompt({
       Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom) || 0;
     const min = minRows * lineHeight + paddingY;
     const cap = maxRows * lineHeight + paddingY;
-    node.style.height = 'auto';
+    const scroll = node.parentElement;
+    if (!scroll) {
+      return;
+    }
+    scroll.style.height = 'auto';
     const byContent = Math.max(min, Math.min(node.scrollHeight, cap));
-    const container = node.closest<HTMLElement>('.albedo-message-composer');
-    const available = container ? container.clientHeight - 12 : cap;
+    const composer = node.closest<HTMLElement>('.albedo-message-composer');
+    // Нижняя полоса (капсула + кнопка) — отдельная зона, текст только над ней.
+    const editor = node.closest<HTMLElement>('.albedo-md-editor');
+    const bar = editor?.querySelector<HTMLElement>('.albedo-composer-bar');
+    const barHeight = bar ? bar.offsetHeight : 56;
+    const available = composer ? composer.clientHeight - barHeight - 12 : cap;
     const next = available < cap ? Math.max(min, available) : byContent;
-    node.style.height = `${next}px`;
+    scroll.style.height = `${next}px`;
     node.style.overflowY = node.scrollHeight > next ? 'auto' : 'hidden';
   }, [value, autoGrowRows]);
 
@@ -88,28 +96,30 @@ export function MarkdownPrompt({
         </div>
       ) : null}
       <div className="albedo-md-editor">
-        <pre
-          ref={highlightRef}
-          className="albedo-md-highlight"
-          aria-hidden
-          dangerouslySetInnerHTML={{ __html: highlightMarkdown(value) + '\n' }}
-        />
-        <textarea
-          ref={inputRef}
-          className="albedo-md-input"
-          spellCheck={false}
-          disabled={disabled}
-          value={value}
-          onScroll={(event) => {
-            const node = highlightRef.current;
-            if (node) {
-              node.scrollTop = event.currentTarget.scrollTop;
-              node.scrollLeft = event.currentTarget.scrollLeft;
-            }
-          }}
-          onKeyDown={onKeyDown}
-          onChange={(event) => onChange(event.target.value)}
-        />
+        <div className="albedo-md-scroll">
+          <pre
+            ref={highlightRef}
+            className="albedo-md-highlight"
+            aria-hidden
+            dangerouslySetInnerHTML={{ __html: highlightMarkdown(value) + '\n' }}
+          />
+          <textarea
+            ref={inputRef}
+            className="albedo-md-input"
+            spellCheck={false}
+            disabled={disabled}
+            value={value}
+            onScroll={(event) => {
+              const node = highlightRef.current;
+              if (node) {
+                node.scrollTop = event.currentTarget.scrollTop;
+                node.scrollLeft = event.currentTarget.scrollLeft;
+              }
+            }}
+            onKeyDown={onKeyDown}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </div>
         {overlay}
       </div>
     </div>
