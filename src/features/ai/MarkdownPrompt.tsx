@@ -27,8 +27,8 @@ export function MarkdownPrompt({
   const highlightRef = useRef<HTMLPreElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Авторост: высота = контент, зажатый между min и max строками, но не больше
-  // доступного места под полем (поле прижато к нижней границе дока).
+  // Авторост: высота скролл-зоны = контент от min до max строк.
+  // Док растёт сам (min-height), капсула неподвижна внизу; после max строк — скролл.
   useLayoutEffect(() => {
     const node = inputRef.current;
     if (!node || !autoGrowRows) {
@@ -46,17 +46,11 @@ export function MarkdownPrompt({
       return;
     }
     scroll.style.height = 'auto';
-    const byContent = Math.max(min, Math.min(node.scrollHeight, cap));
-    const composer = node.closest<HTMLElement>('.albedo-message-composer');
-    // Капсула плавает внутри поля — текст не заходит под неё,
-    // на доступную высоту не считаем её зону.
-    const editor = node.closest<HTMLElement>('.albedo-md-editor');
-    const hud = editor?.querySelector<HTMLElement>('.albedo-composer-hud');
-    const hudHeight = hud ? hud.offsetHeight : 44;
-    const available = composer ? composer.clientHeight - hudHeight - 12 : cap;
-    const next = available < cap ? Math.max(min, available) : byContent;
+    const next = Math.max(min, Math.min(node.scrollHeight, cap));
     scroll.style.height = `${next}px`;
-    node.style.overflowY = node.scrollHeight > next ? 'auto' : 'hidden';
+    const scrollable = node.scrollHeight > next;
+    node.style.overflowY = scrollable ? 'auto' : 'hidden';
+    scroll.classList.toggle('is-scrollable', scrollable);
   }, [value, autoGrowRows]);
 
   const loadFile = (event: ChangeEvent<HTMLInputElement>): void => {

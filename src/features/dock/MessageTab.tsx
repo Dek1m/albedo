@@ -373,7 +373,7 @@ export function MessageTab(): ReactElement {
       <div className="albedo-message-composer">
         <MarkdownPrompt
           showToolbar={false}
-          autoGrowRows={[3, 10]}
+          autoGrowRows={[2, 10]}
           value={draft}
           onChange={setDraft}
           onKeyDown={onPromptKey}

@@ -18,7 +18,7 @@ export function Dock(): ReactElement {
   const max = dockHeightMax();
 
   return (
-    <section className="albedo-dock" style={{ height }} aria-label="Dock">
+    <section className="albedo-dock" style={{ minHeight: height }} aria-label="Dock">
       <PanelGrip axis="y" value={height} min={120} max={max} onChange={setDockHeight} />
       <div className="albedo-dock-tabs" role="tablist">
         <button

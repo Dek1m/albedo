@@ -3488,6 +3488,19 @@ body {
   min-height: 0;
 }
 
+/* Плавное затенение верхней строки, когда поле прокручивается. */
+.albedo-md-scroll.is-scrollable::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 14px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--bg-deep), transparent);
+}
+
 /* ── Chat HUD: пилюля значков над облачками ── */
 
 .albedo-chat-hud {
