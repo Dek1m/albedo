@@ -3423,7 +3423,7 @@ body {
 
 .albedo-composer-tokens {
   position: absolute;
-  top: -4px;
+  top: -7px;
   right: 16px;
   font-size: 0.7rem;
   line-height: 1;
@@ -3445,6 +3445,22 @@ body {
   border-radius: 12px;
   /* Tokens нависает над верхней кромкой поля — не обрезаем. */
   overflow: visible;
+  /* Плавная оранжевая обводка при фокусе вместо жёсткой рамки выделения. */
+  transition:
+    border-color 180ms var(--ease),
+    box-shadow 180ms var(--ease);
+}
+
+.albedo-md--grow .albedo-md-editor:focus-within {
+  border-color: var(--brand);
+  box-shadow:
+    inset 0 0 0 1px var(--brand),
+    0 0 0 1px rgb(255 122 26 / 45%),
+    0 0 14px rgb(255 122 26 / 22%);
+}
+
+.albedo-md--grow .albedo-md-input {
+  outline: none;
 }
 
 .albedo-dock .albedo-md--grow .albedo-md-editor,
