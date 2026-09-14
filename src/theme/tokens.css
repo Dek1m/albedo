@@ -3337,17 +3337,13 @@ body {
   padding-top: 0;
 }
 
-/* ── Нижняя полоса композера: капсула слева, кнопка справа ── */
-
-.albedo-composer-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px 10px;
-}
+/* ── Капсула и кнопка — плавают внутри поля ввода ── */
 
 .albedo-composer-hud {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  z-index: var(--z-2);
   display: flex;
   align-items: center;
   gap: 3px;
@@ -3404,9 +3400,12 @@ body {
 /* ── Круглая кнопка отправки/стопа ── */
 
 .albedo-composer-send {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  z-index: var(--z-2);
   width: 2.15rem;
   height: 2.15rem;
-  flex-shrink: 0;
   border: 0;
   border-radius: 50%;
   background: var(--brand);
@@ -3478,6 +3477,13 @@ body {
 .albedo-dock .albedo-md--grow .albedo-md-editor,
 .albedo-dock .albedo-md--grow .albedo-md-input {
   min-height: 0;
+}
+
+.albedo-dock .albedo-md--grow .albedo-md-input,
+.albedo-dock .albedo-md--grow .albedo-md-highlight {
+  /* Текст — между верхней границей поля и капсулой: по 5px сверху/сбоку,
+     снизу 5px до капсулы (высота капсулы ~44px + 5px зазора). */
+  padding: 5px 5px 49px;
 }
 
 .albedo-dock .albedo-md--grow .albedo-md-scroll {

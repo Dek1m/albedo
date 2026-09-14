@@ -48,11 +48,12 @@ export function MarkdownPrompt({
     scroll.style.height = 'auto';
     const byContent = Math.max(min, Math.min(node.scrollHeight, cap));
     const composer = node.closest<HTMLElement>('.albedo-message-composer');
-    // Нижняя полоса (капсула + кнопка) — отдельная зона, текст только над ней.
+    // Капсула плавает внутри поля — текст не заходит под неё,
+    // на доступную высоту не считаем её зону.
     const editor = node.closest<HTMLElement>('.albedo-md-editor');
-    const bar = editor?.querySelector<HTMLElement>('.albedo-composer-bar');
-    const barHeight = bar ? bar.offsetHeight : 56;
-    const available = composer ? composer.clientHeight - barHeight - 12 : cap;
+    const hud = editor?.querySelector<HTMLElement>('.albedo-composer-hud');
+    const hudHeight = hud ? hud.offsetHeight : 44;
+    const available = composer ? composer.clientHeight - hudHeight - 12 : cap;
     const next = available < cap ? Math.max(min, available) : byContent;
     scroll.style.height = `${next}px`;
     node.style.overflowY = node.scrollHeight > next ? 'auto' : 'hidden';
