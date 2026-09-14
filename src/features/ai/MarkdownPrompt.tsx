@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
+import type { ChangeEvent, KeyboardEvent, ReactElement, ReactNode } from 'react';
 import { highlightMarkdown } from './markdownPrompt';
 
 interface MarkdownPromptProps {
@@ -8,6 +8,8 @@ interface MarkdownPromptProps {
   showToolbar?: boolean;
   /** Рост поля по контенту: [minRows, maxRows]. Не задан — фиксированная высота. */
   autoGrowRows?: [number, number];
+  /** Слот поверх области ввода (внутри рамки) — напр. капсула инструментов. */
+  overlay?: ReactNode;
   onChange: (value: string) => void;
   onKeyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
 }
@@ -17,6 +19,7 @@ export function MarkdownPrompt({
   disabled,
   showToolbar = true,
   autoGrowRows,
+  overlay,
   onChange,
   onKeyDown,
 }: MarkdownPromptProps): ReactElement {
@@ -102,6 +105,7 @@ export function MarkdownPrompt({
           onKeyDown={onKeyDown}
           onChange={(event) => onChange(event.target.value)}
         />
+        {overlay}
       </div>
     </div>
   );

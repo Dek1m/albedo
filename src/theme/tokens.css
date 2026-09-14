@@ -3446,8 +3446,8 @@ body {
 
 .albedo-dock .albedo-md--grow .albedo-md-input,
 .albedo-dock .albedo-md--grow .albedo-md-highlight {
-  /* Текст не наезжает на капсулу инструментов: низ поля выше неё на 10px. */
-  padding-bottom: 3.15rem;
+  /* Текст отстоит от капсулы на 10px: высота капсулы + нижний отступ 10px + зазор 10px. */
+  padding-bottom: 3.75rem;
 }
 
 /* ── Chat HUD: пилюля значков над облачками ── */

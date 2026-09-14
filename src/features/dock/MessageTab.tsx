@@ -380,81 +380,94 @@ export function MessageTab(): ReactElement {
           value={draft}
           onChange={setDraft}
           onKeyDown={onPromptKey}
+          overlay={
+            <>
+              <div className="albedo-composer-hud" role="toolbar" aria-label="Composer tools">
+                <button
+                  type="button"
+                  className="albedo-chat-hud-btn"
+                  title="Attach file"
+                  aria-label="Attach file"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <i className="bi bi-paperclip" />
+                </button>
+                <input ref={fileRef} className="d-none" type="file" onChange={onAttach} />
+                <select
+                  className="albedo-composer-select"
+                  aria-label="Agent"
+                  value={agentId}
+                  disabled={picker.length === 0}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    setAgentId(id);
+                    if (id) {
+                      writeLastAgentId(id);
+                    }
+                  }}
+                >
+                  {picker.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="albedo-composer-select"
+                  aria-label="Reasoning"
+                  title={agent?.reasoningEffort ? `Saved on agent: ${agent.reasoningEffort}` : 'Reasoning effort'}
+                  disabled={!reasoningSupported}
+                  value={effortAllowed(effort) ? effort : effortOptions[0]}
+                  onChange={(event) => pickEffort(event.target.value as EffortPick)}
+                >
+                  {effortOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item.charAt(0).toUpperCase() + item.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="albedo-composer-select"
+                  aria-label="Pipeline"
+                  value={pipelineId}
+                  disabled={pipelines.length === 0}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    setPipelineId(id);
+                    if (id) {
+                      writeLastPipelineId(id);
+                    }
+                  }}
+                >
+                  {pipelines.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="albedo-chat-hud-btn"
+                  title="Clear input"
+                  aria-label="Clear input"
+                  onClick={clearComposer}
+                >
+                  <i className="bi bi-trash" />
+                </button>
+              </div>
+              <button
+                type="button"
+                className="albedo-composer-send"
+                title={running || loopStatus === 'running' ? 'Stop' : 'Send'}
+                aria-label={running || loopStatus === 'running' ? 'Stop' : 'Send'}
+                disabled={!(running || loopStatus === 'running') && !canSend}
+                onClick={() => (running || loopStatus === 'running' ? void stop() : void send())}
+              >
+                <i className={`bi ${running || loopStatus === 'running' ? 'bi-stop-fill' : 'bi-arrow-up'}`} />
+              </button>
+            </>
+          }
         />
-        <div className="albedo-composer-hud" role="toolbar" aria-label="Composer tools">
-          <button
-            type="button"
-            className="albedo-chat-hud-btn"
-            title="Attach file"
-            aria-label="Attach file"
-            onClick={() => fileRef.current?.click()}
-          >
-            <i className="bi bi-paperclip" />
-          </button>
-          <input ref={fileRef} className="d-none" type="file" onChange={onAttach} />
-          <select
-            className="albedo-composer-select"
-            aria-label="Agent"
-            value={agentId}
-            disabled={picker.length === 0}
-            onChange={(event) => {
-              const id = event.target.value;
-              setAgentId(id);
-              if (id) {
-                writeLastAgentId(id);
-              }
-            }}
-          >
-            {picker.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="albedo-composer-select"
-            aria-label="Reasoning"
-            title={agent?.reasoningEffort ? `Saved on agent: ${agent.reasoningEffort}` : 'Reasoning effort'}
-            disabled={!reasoningSupported}
-            value={effortAllowed(effort) ? effort : effortOptions[0]}
-            onChange={(event) => pickEffort(event.target.value as EffortPick)}
-          >
-            {effortOptions.map((item) => (
-              <option key={item} value={item}>
-                {item.charAt(0).toUpperCase() + item.slice(1)}
-              </option>
-            ))}
-          </select>
-          <select
-            className="albedo-composer-select"
-            aria-label="Pipeline"
-            value={pipelineId}
-            disabled={pipelines.length === 0}
-            onChange={(event) => {
-              const id = event.target.value;
-              setPipelineId(id);
-              if (id) {
-                writeLastPipelineId(id);
-              }
-            }}
-          >
-            {pipelines.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          type="button"
-          className="albedo-composer-send"
-          title={running || loopStatus === 'running' ? 'Stop' : 'Send'}
-          aria-label={running || loopStatus === 'running' ? 'Stop' : 'Send'}
-          disabled={!(running || loopStatus === 'running') && !canSend}
-          onClick={() => (running || loopStatus === 'running' ? void stop() : void send())}
-        >
-          <i className={`bi ${running || loopStatus === 'running' ? 'bi-stop-fill' : 'bi-arrow-up'}`} />
-        </button>
       </div>
       {attach ? (
         <div className="albedo-attach">

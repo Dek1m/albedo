@@ -47,7 +47,9 @@ export function AppShell(): ReactElement {
     let cancelled = false;
     void (async () => {
       await workspaceApi.ensureHome().catch(() => undefined);
-      await syncLlmCatalogOnAuth();
+      // Сверка каталога тяжёлая (probe шкал reasoning, может идти десятки секунд) —
+      // не блокируем вход, пусть доезжает в фоне.
+      void syncLlmCatalogOnAuth();
       await loadWindowLayouts();
       await loadCatalog();
       const userId = useAuthStore.getState().profile?.id;
