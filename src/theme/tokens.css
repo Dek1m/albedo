@@ -3271,7 +3271,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.15rem;
-  padding: 0.2rem 0.55rem 0;
+  padding: 0.2rem 0.55rem 0 calc(0.55rem + 15px);
   min-height: 1.7rem;
 }
 
@@ -3423,12 +3423,13 @@ body {
 
 .albedo-composer-tokens {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: -4px;
+  right: 16px;
   font-size: 0.7rem;
   line-height: 1;
   color: var(--text-muted);
   pointer-events: none;
+  z-index: 3;
 }
 
 /* Авторост поля в доке: высота по контенту, поле прижато к низу, рамка за ним. */
@@ -3442,6 +3443,8 @@ body {
   flex: 0 1 auto;
   min-height: 0;
   border-radius: 12px;
+  /* Tokens нависает над верхней кромкой поля — не обрезаем. */
+  overflow: visible;
 }
 
 .albedo-dock .albedo-md--grow .albedo-md-editor,

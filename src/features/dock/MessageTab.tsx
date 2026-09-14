@@ -371,17 +371,17 @@ export function MessageTab(): ReactElement {
   return (
     <div className="albedo-message-tab">
       <div className="albedo-message-composer">
-        <div className="albedo-composer-tokens">
-          Tokens: {estimatePromptTokens(draft)}
-        </div>
         <MarkdownPrompt
           showToolbar={false}
-          autoGrowRows={[2, 10]}
+          autoGrowRows={[3, 10]}
           value={draft}
           onChange={setDraft}
           onKeyDown={onPromptKey}
           overlay={
             <>
+              <div className="albedo-composer-tokens">
+                Tokens: {estimatePromptTokens(draft)}
+              </div>
               <div className="albedo-composer-hud" role="toolbar" aria-label="Composer tools">
                 <button
                   type="button"
