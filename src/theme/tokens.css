@@ -3313,7 +3313,7 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 0 0.45rem 4px;
+  padding: 0 0.45rem 10px;
   gap: 0.25rem;
 }
 
@@ -3323,7 +3323,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-top: 0.9rem;
+  padding-top: 0;
 }
 
 /* ── Капсула инструментов композера ── */
@@ -3431,17 +3431,23 @@ body {
   pointer-events: none;
 }
 
-/* Авторост поля в доке: высоту диктует textarea, рамка следует за ней. */
+/* Авторост поля в доке: высота по контенту, поле прижато к низу, рамка за ним. */
+.albedo-md--grow {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
 .albedo-md--grow .albedo-md-editor {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-height: 0;
+  border-radius: 12px;
 }
 
 .albedo-dock .albedo-md--grow .albedo-md-editor,
 .albedo-dock .albedo-md--grow .albedo-md-input {
   min-height: 0;
   height: auto;
-  flex: 0 0 auto;
 }
 
 .albedo-dock .albedo-md--grow .albedo-md-input,
