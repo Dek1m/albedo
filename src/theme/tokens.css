@@ -1907,13 +1907,11 @@ body {
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 28%), inset 0 1px 2px rgb(0 0 0 / 22%);
 }
 
-/* Зона текста и прокрутки; нижняя полоса инструментов живёт отдельно под ней. */
+/* Зона текста и прокрутки; капсула плавает поверх её нижней части. */
 .albedo-md-scroll {
   position: relative;
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .albedo-md-highlight,
@@ -1942,7 +1940,6 @@ body {
   display: block;
   width: 100%;
   min-height: 12rem;
-  flex: 1;
   overflow: auto;
   border: 0;
   resize: none;
@@ -3434,13 +3431,13 @@ body {
 
 .albedo-composer-tokens {
   position: absolute;
-  top: -16px;
-  right: 16px;
+  top: 5px;
+  right: 6px;
   font-size: 0.7rem;
   line-height: 1;
   color: var(--text-muted);
   pointer-events: none;
-  z-index: 3;
+  z-index: 2;
 }
 
 /* Авторост поля в доке: высота по контенту, поле прижато к низу, рамка за ним. */
@@ -3454,8 +3451,8 @@ body {
   flex: 0 1 auto;
   min-height: 0;
   border-radius: 12px;
-  /* Tokens нависает над верхней кромкой поля — не обрезаем. */
-  overflow: visible;
+  /* Рамка режет содержимое: текст никогда не вылезает за границы поля. */
+  overflow: hidden;
   /* Плавная оранжевая обводка при фокусе вместо жёсткой рамки выделения. */
   transition:
     border-color 180ms var(--ease),
