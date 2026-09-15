@@ -88,4 +88,20 @@ describe('DomainFolderMenu', () => {
     expect(byId(items, 'tasks.create-group')?.disabled).toBeFalsy();
     expect(byId(items, 'delete')?.disabled).toBeFalsy();
   });
+
+  it('blocks every write on Root node', () => {
+    const items = menu.items(ou({ name: 'Root', kind: 'root', isSystem: true }));
+    expect(byId(items, 'new-folder')?.disabled).toBe(true);
+    expect(byId(items, 'rename')?.disabled).toBe(true);
+    expect(byId(items, 'delete')?.disabled).toBe(true);
+    expect(byId(items, 'tasks.create-user')?.disabled).toBe(true);
+    expect(byId(items, 'tasks.create-group')?.disabled).toBe(true);
+  });
+
+  it('locks rename and delete on builtin folder even without isSystem', () => {
+    const items = menu.items(ou({ name: 'Preset', kind: 'folder', isSystem: false, isBuiltin: true }));
+    expect(byId(items, 'rename')?.disabled).toBe(true);
+    expect(byId(items, 'delete')?.disabled).toBe(true);
+    expect(byId(items, 'new-folder')?.disabled).toBeFalsy();
+  });
 });

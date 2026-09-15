@@ -22,6 +22,7 @@ export interface WindowProps {
 
 const WINDOW_ICONS: Record<string, string> = {
   'albedo-admin': 'bi-shield-lock',
+  'albedo-admin-domain-create': 'bi-diagram-3',
   'albedo-admin-role-create': 'bi-shield-plus',
   'albedo-admin-role-edit': 'bi-shield',
   'albedo-admin-role-pick': 'bi-shield',

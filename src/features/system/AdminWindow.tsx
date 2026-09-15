@@ -6,7 +6,7 @@ import { useAuthStore } from '../../auth/AuthStore';
 import { Window } from '../../shared/ui/Window';
 import { DomainTab } from './DomainTab';
 import { RolesTab } from './RolesTab';
-import { isGroupAdmin, isRoleAdmin, isUserAdmin } from './userAdmin';
+import { isDomainAdmin, isGroupAdmin, isRoleAdmin, isUserAdmin } from './userAdmin';
 
 type AdminTab = 'domain' | 'roles';
 
@@ -34,7 +34,13 @@ export function AdminWindow({ open, onClose }: AdminWindowProps): ReactElement {
       })
       .catch(() => {
         if (!cancelled) {
-           setCaps({ usersUpdate: false, groupsCreate: false, groupsUpdate: false, rolesUpdate: false });
+          setCaps({
+            usersUpdate: false,
+            groupsCreate: false,
+            groupsUpdate: false,
+            rolesUpdate: false,
+            domainsCreate: false,
+          });
         }
       });
     return () => {
@@ -50,6 +56,7 @@ export function AdminWindow({ open, onClose }: AdminWindowProps): ReactElement {
   const userAdmin = isUserAdmin(caps, profile);
   const groupAdmin = isGroupAdmin(caps, profile);
   const roleAdmin = isRoleAdmin(caps, profile);
+  const domainAdmin = isDomainAdmin(caps, profile);
 
   return (
     <Window className="albedo-admin" windowId="albedo-admin" open={open} title="Users & Roles" onClose={close}>
@@ -74,7 +81,13 @@ export function AdminWindow({ open, onClose }: AdminWindowProps): ReactElement {
         </li>
       </ul>
       {tab === 'domain' ? (
-        <DomainTab visible={open} userAdmin={userAdmin} groupAdmin={groupAdmin} roleAdmin={roleAdmin} />
+        <DomainTab
+          visible={open}
+          userAdmin={userAdmin}
+          groupAdmin={groupAdmin}
+          roleAdmin={roleAdmin}
+          domainAdmin={domainAdmin}
+        />
       ) : (
         <RolesTab visible={open} />
       )}

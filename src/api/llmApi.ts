@@ -269,6 +269,8 @@ export const llmApi = {
     defaultModel?: string;
     apiKey?: string;
     common?: boolean;
+    /** Домен-скоуп: id домена или null для personal/organization. */
+    domainId?: string | null;
     models?: {
       model_id: string;
       display_name: string;
@@ -290,6 +292,7 @@ export const llmApi = {
       api_key: input.apiKey ?? null,
       models: input.models ?? [],
       common: Boolean(input.common),
+      domain_id: input.domainId ?? null,
     });
     return mapProvider(dto);
   },

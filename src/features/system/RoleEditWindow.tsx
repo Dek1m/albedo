@@ -5,6 +5,7 @@ import type { AdminRole } from '../../api/systemApi';
 import { humanMessage } from '../../api/errors';
 import { toast } from '../../shared/toast/toastStore';
 import { Window } from '../../shared/ui/Window';
+import { bitOn, CRUD, entitiesForModules, ROLE_MODULES, toggleBit } from './roleCaps';
 
 interface RoleEditWindowProps {
   roleId: string | null;
@@ -13,30 +14,23 @@ interface RoleEditWindowProps {
   onSaved: (role: AdminRole) => void;
 }
 
-const GROUPS = [
-  { label: 'Providers', shift: 0 },
-  { label: 'Share', shift: 12 },
-  { label: 'Users', shift: 4 },
-  { label: 'Groups', shift: 8 },
-] as const;
-
-const CRUD = ['C', 'R', 'U', 'D'] as const;
-
-function bitOn(mask: number, bit: number): boolean {
-  return (mask & (1 << bit)) !== 0;
-}
-
-function toggleBit(mask: number, bit: number): number {
-  return mask ^ (1 << bit);
-}
+/** Все модули сразу: окно редактирования показывает полную матрицу маски. */
+const ENTITIES = entitiesForModules(new Set(ROLE_MODULES.map((module) => module.id)));
 
 export function RoleEditWindow({ roleId, canEdit, onClose, onSaved }: RoleEditWindowProps): ReactElement {
   const [role, setRole] = useState<AdminRole | null>(null);
   const [mask, setMask] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [prevRoleId, setPrevRoleId] = useState(roleId);
+
+  // Сброс при смене роли: чистим во время рендера, не в useEffect.
+  if (prevRoleId !== roleId) {
+    setPrevRoleId(roleId);
+    setRole(null);
+    setMask(0);
+  }
 
   useEffect(() => {
-    setRole(null);
     if (!roleId) {
       return;
     }
@@ -60,7 +54,8 @@ export function RoleEditWindow({ roleId, canEdit, onClose, onSaved }: RoleEditWi
     };
   }, [roleId]);
 
-  const locked = !canEdit || role?.name === 'system_admin';
+  // upsert_role_mask бэка блокирует все is_builtin роли — зеркало на фронте.
+  const locked = !canEdit || Boolean(role?.isBuiltin);
 
   const save = async (): Promise<void> => {
     if (!role || locked) {
@@ -91,11 +86,11 @@ export function RoleEditWindow({ roleId, canEdit, onClose, onSaved }: RoleEditWi
     >
       {role?.description ? <p className="albedo-ai-muted">{role.description}</p> : null}
       <div className="albedo-admin-caps">
-        {GROUPS.map((group) => (
-          <fieldset key={group.label} className="albedo-admin-cap-group" disabled={locked}>
-            <legend>{group.label}</legend>
+        {ENTITIES.map((entity) => (
+          <fieldset key={entity.id} className="albedo-admin-cap-group" disabled={locked}>
+            <legend>{entity.label}</legend>
             {CRUD.map((label, index) => {
-              const bit = group.shift + index;
+              const bit = entity.shift + index;
               const id = `role-edit-${role?.id ?? 'x'}-${String(bit)}`;
               return (
                 <label key={label} className="form-check albedo-settings-check" htmlFor={id}>

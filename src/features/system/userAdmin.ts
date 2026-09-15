@@ -26,3 +26,11 @@ export function isRoleAdmin(caps: AdminCaps | null, profile: AdminIdentity | nul
   }
   return Boolean(caps?.rolesUpdate);
 }
+
+/** Создание доменов: caps.domains_create (domains_create) или bootstrap/superadmin. */
+export function isDomainAdmin(caps: AdminCaps | null, profile: AdminIdentity | null): boolean {
+  if (profile?.isBootstrapAdmin || profile?.isSuperadmin) {
+    return true;
+  }
+  return Boolean(caps?.domainsCreate);
+}

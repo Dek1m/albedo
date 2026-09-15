@@ -1,7 +1,8 @@
 import type { ChipDisplayMode } from '../domain/chipDisplayMode';
 import { apiClient } from './client';
+import { ApiError } from './errors';
 
-export type OuKind = 'folder' | 'users_bin' | 'groups_bin';
+export type OuKind = 'root' | 'domain' | 'folder' | 'users_bin' | 'groups_bin';
 
 export interface DomainUser {
   id: string;
@@ -15,6 +16,17 @@ export interface AdminCaps {
   groupsCreate: boolean;
   groupsUpdate: boolean;
   rolesUpdate: boolean;
+  domainsCreate: boolean;
+}
+
+/** Домен из system.list_domains/create_domain: фиксированные snake_case-поля контракта mia. */
+export interface DomainSummary {
+  id: string;
+  name: string;
+  displayName: string;
+  kind: string;
+  status: string;
+  rootOuId: string;
 }
 
 export interface DirectoryUser {
@@ -64,6 +76,9 @@ export interface DomainOu {
   isSystem: boolean;
   isBuiltin: boolean;
   sortOrder: number;
+  /** Additive от бэка: у узлов kind='domain' — ссылка на домен. */
+  domainId?: string;
+  domainDisplayName?: string;
   children: DomainOu[];
   users: DomainUser[];
   groups: DomainGroup[];
@@ -121,9 +136,9 @@ function pickNum(row: Record<string, unknown>, ...keys: string[]): number {
   return 0;
 }
 
-function pickKind(row: Record<string, unknown>): OuKind {
+export function pickKind(row: Record<string, unknown>): OuKind {
   const raw = pickStr(row, 'kind');
-  if (raw === 'users_bin' || raw === 'groups_bin' || raw === 'folder') {
+  if (raw === 'root' || raw === 'domain' || raw === 'users_bin' || raw === 'groups_bin' || raw === 'folder') {
     return raw;
   }
   return 'folder';
@@ -174,13 +189,14 @@ function pickChip(row: Record<string, unknown>): ChipDisplayMode {
 function mapCaps(raw: unknown): AdminCaps {
   const row = asRecord(raw);
   if (!row) {
-    return { usersUpdate: false, groupsCreate: false, groupsUpdate: false, rolesUpdate: false };
+    return { usersUpdate: false, groupsCreate: false, groupsUpdate: false, rolesUpdate: false, domainsCreate: false };
   }
   return {
     usersUpdate: pickBool(row, 'users_update', 'usersUpdate'),
     groupsCreate: pickBool(row, 'groups_create', 'groupsCreate'),
     groupsUpdate: pickBool(row, 'groups_update', 'groupsUpdate'),
     rolesUpdate: pickBool(row, 'roles_update', 'rolesUpdate'),
+    domainsCreate: pickBool(row, 'domains_create', 'domainsCreate'),
   };
 }
 
@@ -297,6 +313,8 @@ function mapOu(raw: unknown): DomainOu | null {
   }
   const parentRaw = row.parent_id ?? row.parentId;
   const parentId = parentRaw === null || parentRaw === undefined ? null : String(parentRaw);
+  const domainId = pickStr(row, 'domain_id', 'domainId');
+  const domainDisplayName = pickStr(row, 'domain_display_name', 'domainDisplayName');
   return {
     id,
     parentId: parentId === '' || parentId === 'null' ? null : parentId,
@@ -305,6 +323,8 @@ function mapOu(raw: unknown): DomainOu | null {
     isSystem: pickBool(row, 'is_system', 'isSystem'),
     isBuiltin: pickBool(row, 'is_builtin', 'isBuiltin'),
     sortOrder: pickNum(row, 'sort_order', 'sortOrder'),
+    domainId: domainId || undefined,
+    domainDisplayName: domainDisplayName || undefined,
     children: pickList(row, 'children').map(mapOu).filter((node): node is DomainOu => node !== null),
     users: pickList(row, 'users').map(mapUser).filter((node): node is DomainUser => node !== null),
     groups: pickList(row, 'groups').map(mapGroup).filter((node): node is DomainGroup => node !== null),
@@ -502,10 +522,52 @@ function mapRole(raw: unknown): AdminRole | null {
   };
 }
 
+function mapDomain(raw: unknown): DomainSummary | null {
+  const row = asRecord(raw);
+  if (!row) {
+    return null;
+  }
+  const id = pickStr(row, 'id', 'domain_id', 'domainId');
+  const name = pickStr(row, 'name');
+  if (!id || !name) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    displayName: pickStr(row, 'display_name', 'displayName') || name,
+    kind: pickStr(row, 'kind') || 'domain',
+    status: pickStr(row, 'status') || 'active',
+    rootOuId: pickStr(row, 'root_ou_id', 'rootOuId'),
+  };
+}
+
 export const systemApi = {
   async caps(): Promise<AdminCaps> {
     const raw = await apiClient.call<unknown>('system', 'caps', {});
     return mapCaps(raw);
+  },
+
+  async listDomains(): Promise<DomainSummary[]> {
+    const raw = await apiClient.call<unknown>('system', 'list_domains', {});
+    if (Array.isArray(raw)) {
+      return raw.map(mapDomain).filter((domain): domain is DomainSummary => domain !== null);
+    }
+    const row = asRecord(raw);
+    const items = row ? pickList(row, 'items', 'domains') : [];
+    return items.map(mapDomain).filter((domain): domain is DomainSummary => domain !== null);
+  },
+
+  async createDomain(name: string, displayName: string): Promise<DomainSummary> {
+    const raw = await apiClient.call<unknown>('system', 'create_domain', {
+      name,
+      display_name: displayName,
+    });
+    const domain = mapDomain(raw);
+    if (!domain) {
+      throw new ApiError('INVALID_RESPONSE', 'Malformed domain response');
+    }
+    return domain;
   },
 
   async domainTree(): Promise<DomainOu[]> {

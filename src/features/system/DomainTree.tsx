@@ -15,6 +15,12 @@ interface DomainTreeProps {
 }
 
 function ouIcon(node: DomainOu): string {
+  if (node.kind === 'root') {
+    return 'bi-diagram-3';
+  }
+  if (node.kind === 'domain') {
+    return 'bi-building';
+  }
   if (node.kind === 'users_bin') {
     return 'bi-people';
   }

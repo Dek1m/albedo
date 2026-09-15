@@ -12,6 +12,7 @@ import { SkeletonList } from '../../shared/ui/Skeleton';
 import { DomainFolderMenu } from './context/DomainFolderMenu';
 import { DomainGroupMenu } from './context/DomainGroupMenu';
 import { DomainUserMenu } from './context/DomainUserMenu';
+import { CreateDomainDialog } from './CreateDomainDialog';
 import { DirectoryGroupPane } from './DirectoryGroupPane';
 import { DirectoryOuPane } from './DirectoryOuPane';
 import { DirectoryUserPane } from './DirectoryUserPane';
@@ -21,12 +22,14 @@ import { DomainTree } from './DomainTree';
 import type { DirectoryRow, DomainFilterField } from './domainRows';
 import { visibleRows } from './domainRows';
 import type { DomainSelection } from './domainSelection';
+import { DomainBackgroundMenu } from './context/DomainBackgroundMenu';
 
 interface DomainTabProps {
   visible: boolean;
   userAdmin: boolean;
   groupAdmin: boolean;
   roleAdmin: boolean;
+  domainAdmin: boolean;
 }
 
 interface Ctx {
@@ -50,7 +53,13 @@ function findOu(nodes: DomainOu[], id: string): DomainOu | null {
   return null;
 }
 
-export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainTabProps): ReactElement {
+export function DomainTab({
+  visible,
+  userAdmin,
+  groupAdmin,
+  roleAdmin,
+  domainAdmin,
+}: DomainTabProps): ReactElement {
   const [tree, setTree] = useState<DomainOu[]>([]);
   const [loading, setLoading] = useState(true);
   const [selection, setSelection] = useState<DomainSelection | null>(null);
@@ -58,6 +67,7 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ctx, setCtx] = useState<Ctx | null>(null);
+  const [createDomainOpen, setCreateDomainOpen] = useState(false);
   const [prompt, setPrompt] = useState<{
     title: string;
     label: string;
@@ -184,6 +194,11 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
       }),
   });
 
+  const backgroundMenu = new DomainBackgroundMenu({
+    canCreateDomain: domainAdmin,
+    onCreateDomain: () => setCreateDomainOpen(true),
+  });
+
   const openMenu = (event: ReactMouseEvent, items: MenuItem[]): void => {
     event.preventDefault();
     event.stopPropagation();
@@ -246,7 +261,10 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
     <div className="albedo-admin-domain">
       <DomainSearch field={field} query={query} onField={setField} onQuery={setQuery} />
       <div className="albedo-admin-split">
-        <div className="albedo-admin-tree">
+        <div
+          className="albedo-admin-tree"
+          onContextMenu={(event) => openMenu(event, backgroundMenu.items())}
+        >
           <DomainTree
             tree={tree}
             selection={selection}
@@ -321,6 +339,11 @@ export function DomainTab({ visible, userAdmin, groupAdmin, roleAdmin }: DomainT
         </div>
       </div>
       {ctx ? <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} /> : null}
+      <CreateDomainDialog
+        open={createDomainOpen}
+        onClose={() => setCreateDomainOpen(false)}
+        onCreated={() => void load()}
+      />
       <PromptDialog
         open={Boolean(prompt)}
         title={prompt?.title ?? ''}

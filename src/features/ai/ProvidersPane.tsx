@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { authApi } from '../../api/authApi';
 import { llmApi, urlError } from '../../api/llmApi';
+import { systemApi } from '../../api/systemApi';
+import type { DomainSummary } from '../../api/systemApi';
 import { useAuthStore } from '../../auth/AuthStore';
 import type { Group } from '../../domain/group';
 import type { LlmProvider, ProviderKind, ReasoningEffort } from '../../api/llmApi';
@@ -12,6 +14,9 @@ import { SkeletonList } from '../../shared/ui/Skeleton';
 interface ProvidersPaneProps {
   visible: boolean;
 }
+
+/** Скоуп провайдера: personal (owner), common (organization), domain (привязан к домену). */
+type ProviderScope = 'personal' | 'common' | 'domain';
 
 interface DraftModel {
   id: string;
@@ -109,7 +114,9 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
   const profile = useAuthStore((state) => state.profile);
   const canCommon = Boolean(profile?.isSuperadmin || profile?.isBootstrapAdmin);
   const [items, setItems] = useState<LlmProvider[]>([]);
-  const [common, setCommon] = useState(false);
+  const [scope, setScope] = useState<ProviderScope>('personal');
+  const [domains, setDomains] = useState<DomainSummary[]>([]);
+  const [domainId, setDomainId] = useState('');
   const [busy, setBusy] = useState(true);
   const [kind, setKind] = useState<ProviderKind>('api_key');
   const [name, setName] = useState('');
@@ -167,6 +174,11 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
           setOauthVendors(rows);
         }
       })
+      .catch(() => undefined);
+    // Домены для domain-скоупа; 403 у бездоменного юзера тихо игнорируем — энфорсмент на бэке.
+    void systemApi
+      .listDomains()
+      .then(setDomains)
       .catch(() => undefined);
   }, [visible]);
 
@@ -292,7 +304,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
     setEditId(null);
     setProbeUrlError(null);
     setOauthFlow(null);
-    setCommon(false);
+    setScope('personal');
+    setDomainId('');
   };
 
   const openShare = async (provider: LlmProvider): Promise<void> => {
@@ -330,7 +343,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
 
   const startEdit = (provider: LlmProvider): void => {
     setEditId(provider.id);
-    setCommon(Boolean(provider.common));
+    setScope(provider.common ? 'common' : 'personal');
     setKind(provider.kind);
     setName(provider.name);
     setDescription(provider.description ?? '');
@@ -394,7 +407,8 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         description: description.trim() || undefined,
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim(),
-        common,
+        common: scope === 'common',
+        domainId: scope === 'domain' ? domainId : null,
         models: draft
           .filter((item) => item.enabled)
           .map((item) => ({
@@ -458,7 +472,7 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
         vendor,
         name: label,
         description: description.trim() || undefined,
-        common,
+        common: scope === 'common',
       });
       setName(label);
       setOauthFlow({
@@ -738,15 +752,20 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
             setKind(next);
             setDraft(null);
             setOauthFlow(null);
-            if (next === 'oauth' && !name.trim()) {
-              setName(oauthVendors.find((item) => item.id === oauthVendor)?.name ?? 'xAI');
+            if (next === 'oauth') {
+              if (scope === 'domain') {
+                setScope('personal');
+              }
+              if (!name.trim()) {
+                setName(oauthVendors.find((item) => item.id === oauthVendor)?.name ?? 'xAI');
+              }
             }
           }}
         >
           <option value="api_key">API</option>
           <option value="oauth">OAuth</option>
         </select>
-        {canCommon ? (
+        {canCommon || domains.length > 0 ? (
           <>
             <label className="form-label" htmlFor="ai-prov-scope">
               Scope
@@ -754,13 +773,46 @@ export function ProvidersPane({ visible }: ProvidersPaneProps): ReactElement {
             <select
               id="ai-prov-scope"
               className="form-select form-select-sm"
-              value={common ? 'common' : 'personal'}
+              value={scope}
               disabled={Boolean(editId) || Boolean(oauthFlow)}
-              onChange={(event) => setCommon(event.target.value === 'common')}
+              onChange={(event) => {
+                const next = event.target.value as ProviderScope;
+                setScope(next);
+                const [first] = domains;
+                if (next === 'domain' && !domainId && first) {
+                  setDomainId(first.id);
+                }
+              }}
             >
               <option value="personal">Personal</option>
               <option value="common">Organization</option>
+              {/* start_oauth не принимает domain_id — домен доступен только API-провайдерам. */}
+              {domains.length ? (
+                <option value="domain" disabled={kind === 'oauth'}>
+                  Domain
+                </option>
+              ) : null}
             </select>
+            {scope === 'domain' ? (
+              <>
+                <label className="form-label" htmlFor="ai-prov-domain">
+                  Domain
+                </label>
+                <select
+                  id="ai-prov-domain"
+                  className="form-select form-select-sm"
+                  value={domainId}
+                  disabled={Boolean(editId) || Boolean(oauthFlow) || !domains.length}
+                  onChange={(event) => setDomainId(event.target.value)}
+                >
+                  {domains.map((domain) => (
+                    <option key={domain.id} value={domain.id}>
+                      {domain.displayName}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
           </>
         ) : null}
 

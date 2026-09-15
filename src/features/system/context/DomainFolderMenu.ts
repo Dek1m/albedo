@@ -16,11 +16,13 @@ export class DomainFolderMenu {
 
   items(target: DomainOu): MenuItem[] {
     const bin = target.kind === 'users_bin' || target.kind === 'groups_bin';
+    // Доменные/system/builtin узлы не переименовываются и не удаляются — инвариант mia.
+    const locked = target.isSystem || target.isBuiltin;
     return [
       {
         id: 'new-folder',
         label: 'New folder',
-        disabled: bin,
+        disabled: bin || target.kind === 'root',
         action: () => this.actions.onNewFolder(target),
       },
       {
@@ -48,13 +50,13 @@ export class DomainFolderMenu {
       {
         id: 'rename',
         label: 'Rename',
-        disabled: target.isSystem,
+        disabled: locked,
         action: () => this.actions.onRename(target),
       },
       {
         id: 'delete',
         label: 'Delete',
-        disabled: target.isSystem,
+        disabled: locked,
         action: () => this.actions.onDelete(target),
       },
     ];

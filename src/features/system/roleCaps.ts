@@ -1,3 +1,4 @@
+/** Биты CRUD согласованы с mask.py mia: DOMAINS_* 16-19, FEDERATION_* 20-23, AGENTS_* 24-27. */
 export const ROLE_MODULES = [
   {
     id: 'llm',
@@ -5,6 +6,7 @@ export const ROLE_MODULES = [
     entities: [
       { id: 'providers', label: 'Providers', shift: 0 },
       { id: 'share', label: 'Share', shift: 12 },
+      { id: 'agents', label: 'Agents', shift: 24 },
     ],
   },
   {
@@ -13,6 +15,14 @@ export const ROLE_MODULES = [
     entities: [
       { id: 'users', label: 'Users', shift: 4 },
       { id: 'groups', label: 'Groups', shift: 8 },
+    ],
+  },
+  {
+    id: 'domain',
+    label: 'Domain',
+    entities: [
+      { id: 'domains', label: 'Domains', shift: 16 },
+      { id: 'federation', label: 'Federation', shift: 20 },
     ],
   },
 ] as const;
